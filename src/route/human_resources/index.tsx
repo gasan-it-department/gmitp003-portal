@@ -14,7 +14,7 @@ const index = () => {
         <div className="w-full h-[10%]">
           <Header />
         </div>
-        <div className="w-full h-[90%]">
+        <div className="w-full h-[90%] overflow-auto">
           <Outlet />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useParams } from "react-router";
+import { useAuth } from "@/provider/ProtectedRoute";
 //components and layouts
 import EmployeeSearch from "@/layout/human_resources/EmployeeSearch";
 import EmployeeList from "@/layout/human_resources/EmployeeList";
@@ -22,6 +23,8 @@ const Employee = () => {
   const currentSgTo = params.get("sgTo") || "";
   const currentQuery = params.get("query") || "";
 
+  const { lineId } = useParams();
+
   const handleChangeParams = (key: string, value: string) => {
     setParams(
       (prev) => {
@@ -30,7 +33,7 @@ const Employee = () => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -42,10 +45,13 @@ const Employee = () => {
     debounce(value);
   };
 
+  const auth = useAuth();
+
   return (
     <div className=" w-full h-full ">
       <div className=" w-full h-[15%]">
         <EmployeeSearch
+          handleChangeParams={handleChangeParams}
           office={currentOffice}
           page={currentPage}
           year={currentYear}
@@ -55,7 +61,7 @@ const Employee = () => {
         />
       </div>
 
-      <div className=" w-full h-[75%] overflow-auto">
+      <div className=" w-full h-[85%] overflow-auto ">
         <EmployeeList
           office={currentOffice}
           page={currentPage}
@@ -63,24 +69,9 @@ const Employee = () => {
           sgFrom={currentSgFrom}
           sgTo={currentSgTo}
           query={currentQuery}
+          auth={auth}
+          lineId={lineId}
         />
-      </div>
-      <div className=" w-full h-[10%] flex items-center justify-center gap-2">
-        <Button size="sm" variant="outline">
-          Prev
-        </Button>
-        <Button size="sm" variant="outline">
-          1
-        </Button>
-        <Button size="sm" variant="outline">
-          2
-        </Button>
-        <Button size="sm" variant="outline">
-          3
-        </Button>
-        <Button size="sm" variant="outline">
-          Next
-        </Button>
       </div>
     </div>
   );

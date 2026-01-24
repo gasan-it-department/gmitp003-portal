@@ -6,15 +6,23 @@ type UserProps = Pick<User, "id" | "username" | "lineId" | "departmentId">;
 interface Props {
   user: UserProps | null;
   setUser: React.Dispatch<React.SetStateAction<UserProps | null>>;
+  setlocalUser: (id: string) => string | null;
 }
 const UserContext = createContext<Props | null>(null);
 
 const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserProps | null>(null);
-  console.log({ user });
+
+  const setlocalUser = (id: string) => {
+    const user = localStorage.getItem(id);
+    if (!user) {
+      localStorage.setItem("user", id);
+    }
+    return user;
+  };
 
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, setlocalUser }}>
       {children}
     </UserContext.Provider>
   );

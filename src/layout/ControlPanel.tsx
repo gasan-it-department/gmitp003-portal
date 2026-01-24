@@ -1,83 +1,280 @@
-import React from "react";
-
+import { useNavigate, useParams } from "react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 //
-import ControlPanelItem from "./human_resources/ControlPanelItem";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { userAssignedModule } from "@/db/statement";
+//
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Box,
-  FolderPlus,
   IdCardLanyard,
   Scroll,
   LayoutDashboard,
   Users,
   Archive,
   Megaphone,
+  Pill,
   HandHelping,
+  ChevronRight,
+  Bell,
+  type LucideIcon,
 } from "lucide-react";
-//
-const panels = [
+import { cn } from "@/lib/utils";
+import type { Module } from "@/interface/data";
+
+// Control Panel Item Component
+interface ControlPanelItemProps {
+  title: string;
+  path: string;
+  desc?: string;
+  Icon: LucideIcon;
+  notifications?: number;
+}
+
+const ControlPanelItem = ({
+  title,
+  path,
+  Icon,
+  desc,
+  notifications,
+}: ControlPanelItemProps) => {
+  const nav = useNavigate();
+  const { lineId } = useParams();
+
+  const handleClick = () => {
+    nav(`/${lineId}/${path}`);
+  };
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            className={cn(
+              "group relative bg-white rounded-xl border border-gray-200 cursor-pointer",
+              "transition-all duration-300 hover:shadow-lg hover:border-blue-300 hover:scale-105",
+              "flex flex-col h-full overflow-hidden"
+            )}
+            onClick={handleClick}
+          >
+            {/* Notification Badge */}
+            {notifications && notifications > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 z-10 h-6 w-6 flex items-center justify-center p-0 text-xs"
+              >
+                {notifications > 9 ? "9+" : notifications}
+              </Badge>
+            )}
+
+            {/* Header with Icon */}
+            <div className="p-6 flex-1 flex flex-col justify-center items-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-100 rounded-full scale-0 group-hover:scale-100 transition-transform duration-300" />
+                <Icon
+                  size={48}
+                  className={cn(
+                    "relative z-10 transition-all duration-300",
+                    "text-gray-600 group-hover:text-blue-600 group-hover:scale-110"
+                  )}
+                />
+              </div>
+
+              {/* Title */}
+              <h3 className="mt-4 text-lg font-semibold text-gray-900 text-center group-hover:text-blue-700 transition-colors">
+                {title}
+              </h3>
+
+              {/* Description */}
+              {desc && (
+                <p className="mt-2 text-sm text-gray-500 text-center line-clamp-2">
+                  {desc}
+                </p>
+              )}
+            </div>
+
+            {/* Footer with Action Indicator */}
+            <div
+              className={cn(
+                "px-4 py-3 border-t border-gray-100 bg-gray-50",
+                "group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500 group-hover:text-blue-600 transition-colors">
+                  Click to access
+                </span>
+                <ChevronRight
+                  size={16}
+                  className="text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Hover Glow Effect */}
+            <div className="absolute inset-0 rounded-xl bg-blue-500 opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Go to {title}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+// Main Control Panel Component
+export const panels = [
+  // {
+  //   title: "Admin",
+  //   path: "admin",
+  //   Icon: LayoutDashboard,
+  //   desc: "System administration and settings",
+  //   notifications: 2,
+  // },
+  // {
+  //   title: "Unit",
+  //   path: "admin",
+  //   Icon: Users,
+  //   desc: "Manage organizational units and teams",
+  //   notifications: 0,
+  // },
   {
-    title: "Admin",
-    path: "admin",
-    Icon: LayoutDashboard,
-    desc: "Manage Supplies",
+    title: "Inventory",
+    path: "supplies",
+    Icon: Box,
+    desc: "Manage supplies and stock levels",
+    notifications: 5,
   },
   {
-    title: "Unit",
-    path: "admin",
-    Icon: Users,
-    desc: "Manage Unit",
+    title: "Pharmaceuticals",
+    path: "medicine",
+    Icon: Pill,
+    desc: "Manage medicine inventory and prescriptions",
+    notifications: 3,
   },
-  { title: "Inventory", path: "supplies", Icon: Box, desc: "Manage Supplies" },
+  {
+    title: "Prescribe",
+    path: "prescribe-medicine",
+    Icon: HandHelping,
+    desc: "Create and manage medical prescriptions",
+    notifications: 1,
+  },
   {
     title: "Personnel",
     path: "human-resources/home",
     Icon: IdCardLanyard,
-    desc: "Manage Human Resources",
+    desc: "Manage human resources and employee data",
+    notifications: 0,
   },
   {
     title: "Documents",
     path: "documents",
     Icon: Scroll,
-    desc: "Manage Human Resources",
+    desc: "Access and manage important documents",
+    notifications: 8,
   },
-  {
-    title: "Announcement",
-    path: "documents",
-    Icon: Megaphone,
-    desc: "Announce and notify everyone",
-  },
-  {
-    title: "Archives",
-    path: "documents",
-    Icon: Archive,
-    desc: "Manage Human Resources",
-  },
+  // {
+  //   title: "Announcement",
+  //   path: "announcements",
+  //   Icon: Megaphone,
+  //   desc: "Create and broadcast announcements",
+  //   notifications: 0,
+  // },
+  // {
+  //   title: "Archives",
+  //   path: "archives",
+  //   Icon: Archive,
+  //   desc: "Access archived records and documents",
+  //   notifications: 0,
+  // },
 ];
 
-const ControlPanel = () => {
+interface Props {
+  id: string;
+  token: string;
+}
+
+const ControlPanel = ({ id, token }: Props) => {
+  const totalNotifications = panels.reduce(
+    (sum, panel) => sum + (panel.notifications || 0),
+    0
+  );
+
+  const { data, isFetching, error } = useQuery<Module[]>({
+    queryKey: ["user-modules", id],
+    queryFn: () => userAssignedModule(token as string, id),
+    enabled: !!token || !!id,
+  });
+
+  // Solution 1: Map-based O(n) solution (FASTEST)
+  const modules = useMemo(() => {
+    if (!data) return [];
+
+    // Create a Map for O(1) lookups
+    const panelMap = new Map();
+    panels.forEach((panel) => {
+      panelMap.set(panel.path, panel);
+    });
+
+    const result = [];
+    for (let i = 0; i < data.length; i++) {
+      const mod = data[i];
+      console.log(mod);
+
+      const module = panelMap.get(mod.moduleName);
+      if (module) {
+        result.push({
+          id: mod.id,
+          Icon: module.Icon,
+          desc: module.desc,
+          title: module.title,
+          path: module.path,
+        });
+      }
+    }
+    return result;
+  }, [data]); // Add proper dependencies
+
   return (
-    <div className=" w-full h-auto grid-cols-2 lg:grid-cols-4 grid-rows-4 grid gap-2">
-      {panels.map((item, i) => (
-        <ControlPanelItem
-          key={i}
-          title={item.title}
-          desc={item.desc}
-          path={item.path}
-          Icon={item.Icon}
-        />
-      ))}
-      <div className=" border rounded hover:border-neutral-400 bg-white cursor-pointer">
-        <div className=" w-full h-1/2 p-2 flex items-center justify-between">
-          <FolderPlus size={45} color="#222831" />
+    <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Control Panel
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Manage all aspects of your organization from one centralized
+            dashboard. Access different modules to handle inventory, personnel,
+            documents, and more.
+          </p>
+
+          {totalNotifications > 0 && (
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+              <Bell size={16} />
+              <span>{totalNotifications} pending items across modules</span>
+            </div>
+          )}
         </div>
-        <div className=" p-2 bg-amber-400">
-          <h1 className=" font-medium font-sans text-lg text-neutral-700 text-right">
-            Add Module
-          </h1>
-          <h1 className="  text-xs text-neutral-800 text-right">
-            Request additional module
-          </h1>
+
+        {/* Control Panel Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {modules.map((item, index) => (
+            <ControlPanelItem
+              key={index}
+              title={item.title}
+              desc={item.desc}
+              path={item.path}
+              Icon={item.Icon}
+            />
+          ))}
         </div>
       </div>
     </div>

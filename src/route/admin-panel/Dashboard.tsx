@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAdmin } from "@/provider/AdminRouter";
+import { useAdminAuth } from "@/provider/AdminRouter";
 //
 import {
   Table,

@@ -6,35 +6,44 @@ import { useNavigate, Outlet } from "react-router";
 import { getCookie } from "@/utils/cookies";
 
 //
+import NotificationProvider from "./NotificationProvider";
 //
-import type { ProtectedRouteProps } from "@/interface/data";
 
-const AdminContext = createContext<ProtectedRouteProps>({
+const AuthContext = createContext<{
+  token: string | undefined;
+  userId: string | null;
+}>({
   token: undefined,
-  auth: false,
+  userId: null,
 });
 
 const AdminRouter = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | undefined>(undefined);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getCookie("auth_admin_token");
-    console.log({ token });
+    const user = localStorage.getItem("auth_admin");
+    if (!user) {
+      navigate("/admin-login");
+    }
+    const token = getCookie(`auth_admin_token-${user}`);
 
     if (token) {
       setToken(token);
       setIsAuthenticated(true);
+      setUserId(user);
     } else {
+      localStorage.removeItem("user");
       navigate("/admin-login");
     }
     setLoading(false);
   }, [navigate]);
 
   if (loading) {
-    return <div>Loading...</div>; // Show loading state
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -42,18 +51,22 @@ const AdminRouter = () => {
   }
 
   return (
-    <AdminContext.Provider value={{ token: token, auth: isAuthenticated }}>
-      <Outlet /> {/* This renders the child routes */}
-    </AdminContext.Provider>
+    <AuthContext.Provider value={{ token: token, userId }}>
+      <NotificationProvider>
+        <Outlet /> {/* This renders the child routes */}
+      </NotificationProvider>
+    </AuthContext.Provider>
   );
 };
 
 export default AdminRouter;
 
-export const useAdmin = () => {
-  const context = useContext(AdminContext);
+export const useAdminAuth = () => {
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("The 'useAuth' hook must be use only inside the provider.");
+    throw new Error(
+      "The 'useAdminAuth' hook must be use only inside the provider."
+    );
   }
   return context;
 };

@@ -2,13 +2,10 @@ import { Outlet } from "react-router";
 import "./App.css";
 
 //i
-import { Button } from "./components/ui/button";
 import SideBarProfile from "./layout/SideBarProfile";
 import MainHeader from "./layout/MainHeader";
-import ControlPanel from "./layout/ControlPanel";
 
 //icons
-import { ClipboardList } from "lucide-react";
 
 function App() {
   return (

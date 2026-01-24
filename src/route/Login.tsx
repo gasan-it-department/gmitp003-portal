@@ -4,20 +4,23 @@ import { useState } from "react";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormItem,
   FormMessage,
   FormField,
   FormLabel,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupButton,
+} from "@/components/ui/input-group";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 //libs
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { useUser } from "@/provider/UserProvider";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/db/axios";
 //assets
@@ -29,17 +32,16 @@ import { setCookie } from "@/utils/cookies";
 //interface
 import { LoginSchema } from "@/interface/zod";
 import type { LoginProps } from "@/interface/data";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, Eye, EyeClosed } from "lucide-react";
 const Login = () => {
   const [onOpen, setOnOpen] = useState(0);
-  const { setUser } = useUser();
   const form = useForm<LoginProps>({
     resolver: zodResolver(LoginSchema),
   });
   const {
     handleSubmit,
     setError,
-    formState: { isSubmitting, submitCount, errors },
+    formState: { isSubmitting, errors },
     control,
   } = form;
   const navigate = useNavigate();
@@ -48,8 +50,6 @@ const Login = () => {
 
   const handle = async (data: LoginProps) => {
     try {
-      console.log(data);
-
       const response = await axios.post("/auth", {
         username: data.username,
         password: data.password,
@@ -64,26 +64,18 @@ const Login = () => {
           setError("password", { message: response.data.message });
           return;
         }
-        const token = response.data.data.token;
-        console.log(response.data);
-
-        if (response.data.error === 3) {
-          setCookie("auth_token", token, 1);
-          setError("root", { message: response.data.message });
-          navigate(`/account-setup`);
-          return;
-        }
         if (response.data.error === 4) {
-          setOnOpen(1);
+          setError("root", { message: response.data.message });
           return;
         }
-        setCookie("auth_token", token, 1);
-        setUser({
-          username: response.data.data.username,
-          id: response.data.data.id,
-          lineId: response.data.data.line,
-          departmentId: response.data.data.departmentId,
-        });
+        const token = response.data.data.token;
+
+        // if (response.data.error === 4) {
+        //   setOnOpen(1);
+        //   return;
+        // }
+        setCookie(`auth_token-${response.data.data.id}`, token, 1);
+        localStorage.setItem("user", response.data.data.id);
         navigate(`/${response.data.data.line}`);
       } else {
         throw new Error("Login failed");
@@ -128,18 +120,17 @@ const Login = () => {
               name="username"
               render={({ field: { onBlur, onChange, value } }) => (
                 <FormItem>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input
                       onBlur={onBlur}
                       onChange={onChange}
                       value={value}
-                      placeholder="Username"
+                      placeholder="Enter username"
                     />
                   </FormControl>
-                  <div className=" w-full h-6">
-                    <p className="text-sm text-red-500">
-                      {errors.username && errors.username.message}
-                    </p>
+                  <div className=" w-full h-4">
+                    <FormMessage />
                   </div>
                 </FormItem>
               )}
@@ -149,36 +140,29 @@ const Login = () => {
               name="password"
               render={({ field: { onBlur, onChange, value } }) => (
                 <FormItem className=" mt-1.5">
+                  <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      value={value}
-                      placeholder="Password"
-                      type={showPassword ? "text" : "password"}
-                    />
+                    <InputGroup>
+                      <InputGroupInput
+                        onBlur={onBlur}
+                        onChange={onChange}
+                        value={value}
+                        placeholder="Enter password"
+                        type={showPassword ? "text" : "password"}
+                      />
+                      <InputGroupButton
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <Eye /> : <EyeClosed />}
+                      </InputGroupButton>
+                    </InputGroup>
                   </FormControl>
-                  <div className=" w-full h-6">
-                    <p className="text-sm text-red-500">
-                      {errors.password && errors.password.message}
-                    </p>
+                  <div className=" w-full h-4">
+                    <FormMessage />
                   </div>
                 </FormItem>
               )}
             />
-            <div className="w-auto flex gap-2 py-3">
-              <Checkbox
-                checked={showPassword}
-                onCheckedChange={() => setShowPassword(!showPassword)}
-                id="showPassword"
-              />
-              <FormLabel
-                htmlFor="showPassword"
-                className=" cursor-pointer text-xs"
-              >
-                Show password
-              </FormLabel>
-            </div>
           </Form>
         </form>
 

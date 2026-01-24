@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useAdmin } from "@/provider/AdminRouter";
+import { useAdminAuth } from "@/provider/AdminRouter";
 import { useState, useEffect } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { useSearchParams } from "react-router";
@@ -29,7 +29,7 @@ const Account = () => {
   const [onOpen, setOnOpen] = useState(0);
   const [typing, setTyping] = useState(false);
   const [params, setParams] = useSearchParams({ query: "" });
-  const admin = useAdmin();
+  const admin = useAdminAuth();
 
   const currentQuery = params.get("query") || "";
 

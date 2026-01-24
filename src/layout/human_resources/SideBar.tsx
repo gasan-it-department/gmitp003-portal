@@ -1,80 +1,84 @@
-//icons
-
-//
+import { useParams } from "react-router";
 import {
-  Briefcase,
+  Megaphone,
   Home,
   IdCardLanyard,
   File,
-  CircleEllipsis,
   LandPlot,
   Landmark,
   Blocks,
-  Box,
+  Link,
+  Component,
+  Building2,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
-import SideBarProfile from "./SideBarProfile";
-//
-const menuList = [
+
+export const menuList = [
   {
-    title: "Home",
-    path: "/human-resources/home",
+    title: "Dashboard",
+    path: "",
     Icon: Home,
     children: [],
     accord: false,
   },
   {
-    title: "Supplies",
-    path: "/human-resources/plantilla",
-    Icon: Box,
-    children: [],
-    accord: false,
-  },
-  {
-    title: "Plantilla",
-    path: "/human-resources/plantilla",
-    Icon: Briefcase,
+    title: "Announcement",
+    path: "announcement",
+    Icon: Megaphone,
     children: [],
     accord: false,
   },
   {
     title: "Employees",
-    path: "/human-resources/employees",
+    path: "employee",
     Icon: IdCardLanyard,
     children: [],
     accord: false,
   },
   {
-    title: "Application",
-    path: "/human-resources/application",
+    title: "Applications",
+    path: "application",
     Icon: File,
     children: [],
     accord: false,
   },
   {
-    title: "Others",
-    path: "/human-resources/application",
-    Icon: CircleEllipsis,
+    title: "Management",
+    path: "human-resources/management",
+    Icon: Building2,
     children: [
       {
-        title: "Salary Grade",
-        path: "/human-resources/salary",
+        title: "Module",
+        path: "module",
+        Icon: Component,
+        children: [],
+        accord: true,
+      },
+      {
+        title: "Salary Grades",
+        path: "salary",
         Icon: Landmark,
         children: [],
         accord: true,
       },
       {
         title: "Areas",
-        path: "/human-resources/areas",
+        path: "areas",
         Icon: LandPlot,
         children: [],
         accord: true,
       },
-
       {
-        title: "Unit",
-        path: "/human-resources/groups",
+        title: "Units",
+        path: "units",
         Icon: Blocks,
+        children: [],
+        accord: true,
+      },
+      {
+        title: "Invite Users",
+        path: "invite",
+        Icon: Link,
         children: [],
         accord: true,
       },
@@ -82,21 +86,32 @@ const menuList = [
     accord: true,
   },
 ];
+
 const SideBar = () => {
+  const { lineId } = useParams();
+
   return (
-    <div className=" w-full h-full flex flex-col justify-between border border-t-0 border-b-0 border-l-0 bg-white">
-      <div className=" w-full">
-        <div className=" w-full p-4">
-          <p className=" font-medium font-mono text-lg">Welcome OM!</p>
-        </div>
-        <div className=" w-full flex flex-col gap-1 p-2">
-          {menuList.map((item) => (
-            <SIdeBarItem {...item} />
-          ))}
+    <div className="w-full h-full flex flex-col bg-white border-r border-gray-200">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <Building2 className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="font-bold text-gray-900 text-lg">HR Portal</h1>
+            <p className="text-sm text-gray-500">Welcome back!</p>
+          </div>
         </div>
       </div>
-      <div className="w-full p-2">
-        <SideBarProfile />
+
+      {/* Navigation Menu */}
+      <div className="flex-1 overflow-y-auto">
+        <nav className="p-4 space-y-1">
+          {menuList.map((item, index) => (
+            <SIdeBarItem key={index} {...item} lineId={lineId} />
+          ))}
+        </nav>
       </div>
     </div>
   );

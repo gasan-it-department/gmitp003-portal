@@ -21,6 +21,7 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
+import SalaryGradeSelect from "./SalaryGradeSelect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddPositionSchema } from "@/interface/zod";
@@ -30,9 +31,13 @@ import { Save } from "lucide-react";
 
 interface Props {
   existed: boolean;
+  unitId: string;
+  lineId: string;
+  token: string;
+  userId: string;
 }
 
-const AddPosition = ({ existed }: Props) => {
+const AddPosition = ({ existed, unitId, lineId, token, userId }: Props) => {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const form = useForm<AddPositionProps>({
@@ -43,7 +48,8 @@ const AddPosition = ({ existed }: Props) => {
       itemNumber: "",
       slotCount: "1",
       level: "",
-      slot: [{ status: true, salaryGrade: "1" }],
+      slot: [],
+      exclusive: false,
     },
   });
 
@@ -52,6 +58,7 @@ const AddPosition = ({ existed }: Props) => {
     setValue,
     watch,
     formState: { errors, isSubmitting },
+    control,
   } = form;
 
   const slotCount = watch("slotCount");
@@ -77,7 +84,6 @@ const AddPosition = ({ existed }: Props) => {
   }, [slotCount, slots, setValue]);
 
   const onSubmit = async (data: AddPositionProps) => {
-    console.log(data);
     try {
       const response = await axios.post(
         "/add-position",
@@ -88,6 +94,11 @@ const AddPosition = ({ existed }: Props) => {
           slotCount: data.slotCount,
           level: data.level,
           slot: data.slot,
+          unitId: unitId,
+          designation: data.designation,
+          lineId,
+          userId,
+          exclusive: data.exclusive,
         },
         {
           headers: {
@@ -99,7 +110,7 @@ const AddPosition = ({ existed }: Props) => {
           },
         }
       );
-      if (response.status === 200 && response.data.error === 0) {
+      if (response.status === 200) {
         queryClient.invalidateQueries({
           queryKey: ["postions"],
         });
@@ -132,11 +143,26 @@ const AddPosition = ({ existed }: Props) => {
       <Form {...form}>
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Item Number */}
-
           <FormField
-            name="plantilla"
+            control={control}
+            name="exclusive"
             render={({ field }) => (
               <FormItem className="flex items-center space-x-2 cursor-pointer">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Exclusive for the Current Unit</FormLabel>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name="plantilla"
+            render={({ field }) => (
+              <FormItem className="flex items-center space-x-2 cursor-pointer mt-2">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
@@ -149,6 +175,7 @@ const AddPosition = ({ existed }: Props) => {
           />
           {plantilla && (
             <FormField
+              control={control}
               name="itemNumber"
               render={({ field }) => (
                 <FormItem className="mt-4">
@@ -166,13 +193,31 @@ const AddPosition = ({ existed }: Props) => {
 
           {/* Title */}
           <FormField
+            control={control}
             rules={{ required: true }}
             name="title"
             render={({ field }) => (
               <FormItem className="mt-4">
-                <FormLabel>Title</FormLabel>
+                <FormLabel>Position</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Type position's title here" />
+                  <Input {...field} placeholder="Enter position" />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            rules={{ required: true }}
+            name="designation"
+            render={({ field }) => (
+              <FormItem className="mt-4">
+                <FormLabel>Designation (Optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    placeholder="Enter position's designation"
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -181,6 +226,7 @@ const AddPosition = ({ existed }: Props) => {
           <FormField
             rules={{ required: true }}
             name="level"
+            control={control}
             render={({ field }) => (
               <FormItem className="mt-4">
                 <FormLabel>Level</FormLabel>
@@ -206,6 +252,7 @@ const AddPosition = ({ existed }: Props) => {
 
           {/* Slot Count */}
           <FormField
+            control={control}
             name="slotCount"
             render={({ field }) => (
               <FormItem className="mt-4">
@@ -231,6 +278,7 @@ const AddPosition = ({ existed }: Props) => {
               className="space-y-4 mt-4 border border-gray-400 p-4 rounded bg-white"
             >
               <FormField
+                control={control}
                 name={`slot.${index}.status`}
                 render={({ field }) => (
                   <FormItem className="flex items-center space-x-2 cursor-pointer">
@@ -246,26 +294,18 @@ const AddPosition = ({ existed }: Props) => {
               />
 
               <FormField
+                control={control}
                 name={`slot.${index}.salaryGrade`}
                 render={({ field }) => (
                   <FormItem className="mt-4">
                     <FormLabel>Slot {index + 1} Salary Grade</FormLabel>
                     <FormControl>
-                      <Select
-                        onValueChange={field.onChange}
+                      <SalaryGradeSelect
+                        lineId={lineId}
+                        token={token}
+                        onChange={field.onChange}
                         value={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-42">
-                          {Array.from({ length: 33 }).map((_, i) => (
-                            <SelectItem key={i} value={`${i + 1}`}>
-                              {i + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </FormControl>
                   </FormItem>
                 )}
