@@ -42,7 +42,7 @@ const PsgcRegion = ({ onChange, value }: Props) => {
         ) : data ? (
           data.length > 0 ? (
             data.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
+              <SelectItem key={item.code} value={item.code}>
                 {item.name}
               </SelectItem>
             ))
