@@ -1,6 +1,6 @@
 import { memo, useState, useRef } from "react";
 import {
-  useFieldArray,
+  //useFieldArray,
   type Control,
   type UseFormWatch,
   type UseFormSetValue,
@@ -82,7 +82,7 @@ const ApplicationReqAsset = ({
   const handleRemoveFile = (fileIndex: number) => {
     const currentAssets = assets;
     const updatedAssets = currentAssets.filter(
-      (_, index) => index !== fileIndex
+      (_, index) => index !== fileIndex,
     );
     setValue(`positions.requirements.${no}.assets`, updatedAssets);
   };

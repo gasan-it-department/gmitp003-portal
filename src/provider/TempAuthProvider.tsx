@@ -6,7 +6,7 @@ import { useNavigate, Outlet } from "react-router";
 import { getCookie } from "@/utils/cookies";
 
 //
-import NotificationProvider from "./NotificationProvider";
+//import NotificationProvider from "./NotificationProvider";
 //
 import type { ProtectedRouteProps } from "@/interface/data";
 
@@ -56,7 +56,7 @@ export const useTemAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error(
-      "The 'useTempAuth' hook must be use only inside the provider."
+      "The 'useTempAuth' hook must be use only inside the provider.",
     );
   }
   return context;

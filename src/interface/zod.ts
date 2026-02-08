@@ -1,4 +1,4 @@
-import z, { file } from "zod";
+import z from "zod";
 
 export const LoginSchema = z.object({
   username: z.string().min(4, "Username must be at least 4 characters."),

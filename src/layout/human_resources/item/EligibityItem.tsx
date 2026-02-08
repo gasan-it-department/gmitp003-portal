@@ -5,7 +5,7 @@ interface Props {
   item: EligibilityProps;
   no: number;
 }
-const EligibityItem = ({ item, no }: Props) => {
+const EligibityItem = ({ item }: Props) => {
   return (
     <div className=" w-full p-2 border bg-white">
       <p>{item.title}</p>

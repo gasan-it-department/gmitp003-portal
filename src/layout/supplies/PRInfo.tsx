@@ -1,4 +1,4 @@
-import { useParams } from "react-router";
+//import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 
 //layout and components
@@ -16,7 +16,7 @@ interface Props {
 }
 
 const PRInfo = ({ purchaseReqId, auth }: Props) => {
-  const { data, isFetching } = useQuery<SupplyBatchOrder>({
+  const { data } = useQuery<SupplyBatchOrder>({
     queryKey: ["purchaseReq", purchaseReqId],
     queryFn: () =>
       getPurchaseInfo(auth.token as string, purchaseReqId as string),

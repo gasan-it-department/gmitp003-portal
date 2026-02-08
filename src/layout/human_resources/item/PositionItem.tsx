@@ -28,7 +28,7 @@ import {
   UserCog,
   ArrowRight,
 } from "lucide-react";
-import { getSlotSalaryGradeRange } from "@/utils/helper";
+//import { getSlotSalaryGradeRange } from "@/utils/helper";
 
 //interface/schema/props
 import type { UnitPositionProps } from "@/interface/data";

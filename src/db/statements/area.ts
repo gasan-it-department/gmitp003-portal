@@ -1,4 +1,4 @@
-import axios from "../axios";
+//import axios from "../axios";
 export const getPSGSRegions = async () => {
   try {
     const response = await fetch(`https://psgc.gitlab.io/api/regions/`);

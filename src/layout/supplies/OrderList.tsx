@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { useAuth } from "@/provider/ProtectedRoute";
+//import { useAuth } from "@/provider/ProtectedRoute";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import { useInView } from "react-intersection-observer";
 //
@@ -33,7 +33,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+//import { Separator } from "@/components/ui/separator";
 //interface and props
 
 import type {

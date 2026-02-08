@@ -2,7 +2,6 @@
 import {
   Select,
   SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -15,9 +14,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 //hooks and libs
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { getAllRegion } from "@/db/statement";
-import { useEffect } from "react";
 //interface
 //interface
 import type { Region } from "@/interface/data";
@@ -28,7 +26,7 @@ interface Props {
 }
 
 const Regions = ({ selectComp, source, token }: Props) => {
-  const { data, isFetching, hasNextPage, fetchNextPage } = useInfiniteQuery<{
+  const { data, fetchNextPage } = useInfiniteQuery<{
     list: Region[];
     hasMore: boolean;
     lastCursor: string | null;

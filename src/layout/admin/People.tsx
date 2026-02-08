@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useDebounce } from "use-debounce";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { useInView } from "react-intersection-observer";
+//import { useInView } from "react-intersection-observer";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -32,7 +32,7 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormMessage,
+  //FormMessage,
   FormLabel,
 } from "@/components/ui/form";
 import SWWItem from "../item/SWWItem";
@@ -40,14 +40,13 @@ import {
   Select,
   SelectContent,
   SelectItem,
-  SelectLabel,
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
 //
 import { getUsers } from "@/db/statement";
 //icons
-import { ListFilterPlus, Printer, Mail, AtSign } from "lucide-react";
+import { ListFilterPlus, Printer } from "lucide-react";
 
 //
 import { type User } from "@/interface/data";
@@ -71,26 +70,21 @@ const People = () => {
   const form = useForm<RefinePeopleListProps>({
     resolver: zodResolver(RefinePeopleListSchema),
   });
-  const {
-    handleSubmit,
-    formState: { isSubmitting, errors },
-  } = form;
 
-  const { data, isFetchingNextPage, refetch, fetchNextPage } =
-    useInfiniteQuery<UsersProps>({
-      queryKey: ["people", lineId],
-      queryFn: async ({ pageParam }) =>
-        getUsers(
-          auth?.token as string,
-          lineId as string,
-          pageParam as string | null,
-          "20",
-          query
-        ),
-      getNextPageParam: (lastPage) => lastPage.lastCursor,
-      initialPageParam: null,
-      enabled: !!auth?.token && !!lineId,
-    });
+  const { data, refetch } = useInfiniteQuery<UsersProps>({
+    queryKey: ["people", lineId],
+    queryFn: async ({ pageParam }) =>
+      getUsers(
+        auth?.token as string,
+        lineId as string,
+        pageParam as string | null,
+        "20",
+        query,
+      ),
+    getNextPageParam: (lastPage) => lastPage.lastCursor,
+    initialPageParam: null,
+    enabled: !!auth?.token && !!lineId,
+  });
 
   useEffect(() => {
     refetch();
@@ -195,7 +189,7 @@ const People = () => {
             <div className=" w-full flex gap-1">
               <FormField
                 name="status"
-                render={({ field: { value, onBlur, onChange } }) => (
+                render={({ field: { value, onChange } }) => (
                   <FormItem className=" w-1/2">
                     <FormLabel>Status</FormLabel>
                     <FormControl>
@@ -221,7 +215,7 @@ const People = () => {
 
               <FormField
                 name="year"
-                render={({ field: { value, onBlur, onChange } }) => (
+                render={() => (
                   <FormItem className=" w-1/2">
                     <FormLabel>Year</FormLabel>
                     <FormControl>

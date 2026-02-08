@@ -1,18 +1,18 @@
 import { memo } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "react-router";
 //
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+// import {
+//   Tooltip,
+//   TooltipTrigger,
+//   TooltipContent,
+// } from "@/components/ui/tooltip";
 //
 import { inboxTypeIcon } from "@/utils/element";
 
 //icons
-import { ListChecks, Paperclip } from "lucide-react";
+//import { ListChecks, Paperclip } from "lucide-react";
 
 import { formatDate } from "@/utils/date";
 

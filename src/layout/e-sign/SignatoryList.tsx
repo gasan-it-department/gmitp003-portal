@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+//import { useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useInView } from "react-intersection-observer";
+//import { useInView } from "react-intersection-observer";
 //
 import { signatoryList } from "@/db/statements/document";
 //
@@ -16,16 +16,15 @@ interface ListProps {
   query: string;
 }
 
-const SignatoryList = ({ lineId, token, userId }: Props) => {
-  const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useInfiniteQuery<ListProps>({
-      queryKey: ["signatory-list", lineId],
-      queryFn: ({ pageParam }) =>
-        signatoryList(token, lineId, pageParam as string | null, "10", ""),
-      initialPageParam: null,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore ? lastPage.lastCursor : undefined,
-    });
+const SignatoryList = ({ lineId, token }: Props) => {
+  const {} = useInfiniteQuery<ListProps>({
+    queryKey: ["signatory-list", lineId],
+    queryFn: ({ pageParam }) =>
+      signatoryList(token, lineId, pageParam as string | null, "10", ""),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
+  });
   return <div className="w-full">SignatoryList</div>;
 };
 

@@ -3,9 +3,9 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { prescriptionData } from "@/db/statement";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
+//import { Badge } from "@/components/ui/badge";
 //utils
-import { prescriptionStatus } from "@/utils/helper";
+//import { prescriptionStatus } from "@/utils/helper";
 import { formatDate } from "@/utils/date";
 
 //icons

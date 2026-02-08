@@ -63,28 +63,23 @@ const UnitDispenseRecord = () => {
     enabled: !!unitRecipientId && !!auth.token,
   });
 
-  const {
-    data,
-    isLoading: recordsLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useInfiniteQuery<ListProps>({
-    queryKey: ["supply-user-dispense-record", unitRecipientId],
-    queryFn: ({ pageParam }) =>
-      supplyUnitDispenseRecord(
-        auth.token as string,
-        unitRecipientId,
-        pageParam as string,
-        "20",
-        ""
-      ),
-    initialPageParam: null,
-    getNextPageParam: (lastPage) => {
-      return lastPage.hasMore ? lastPage.lastCursor : undefined;
-    },
-    enabled: !!unitRecipientId && !!auth.token,
-  });
+  const { data, isFetchingNextPage, hasNextPage, fetchNextPage } =
+    useInfiniteQuery<ListProps>({
+      queryKey: ["supply-user-dispense-record", unitRecipientId],
+      queryFn: ({ pageParam }) =>
+        supplyUnitDispenseRecord(
+          auth.token as string,
+          unitRecipientId,
+          pageParam as string,
+          "20",
+          "",
+        ),
+      initialPageParam: null,
+      getNextPageParam: (lastPage) => {
+        return lastPage.hasMore ? lastPage.lastCursor : undefined;
+      },
+      enabled: !!unitRecipientId && !!auth.token,
+    });
 
   const handleCheckItem = (id: string) => {
     if (selectedItems.includes(id)) return true;
@@ -114,7 +109,7 @@ const UnitDispenseRecord = () => {
             "X-Requested-With": "XMLHttpRequest",
           },
           responseType: "blob",
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -129,7 +124,7 @@ const UnitDispenseRecord = () => {
 
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(
-          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
+          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
         );
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1].replace(/['"]/g, "");
@@ -140,7 +135,7 @@ const UnitDispenseRecord = () => {
       const url = window.URL.createObjectURL(
         new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        })
+        }),
       );
 
       const link = document.createElement("a");
@@ -178,7 +173,7 @@ const UnitDispenseRecord = () => {
   const totalItems = data?.pages?.flatMap((page) => page.list) || [];
   const totalQuantity = totalItems.reduce(
     (sum, item) => sum + parseInt(item.quantity || "0"),
-    0
+    0,
   );
 
   if (userLoading) {

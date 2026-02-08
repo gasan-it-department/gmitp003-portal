@@ -37,7 +37,7 @@ import InviteLinkItem from "@/layout/human_resources/item/InviteLinkItem";
 import SWWItem from "@/layout/item/SWWItem";
 //db
 import { inviteLinks } from "@/db/statement";
-import { createInviteLink } from "@/db/statement";
+//import { createInviteLink } from "@/db/statement";
 //
 import { Link } from "lucide-react";
 
@@ -63,28 +63,21 @@ const Invite = () => {
   const form = useForm({
     resolver: zodResolver(CreateInviteLinkSchema),
   });
-  const {
-    control,
-    handleSubmit,
-    setError,
-    setValue,
-    formState: { errors },
-  } = form;
+  const { control, handleSubmit, setValue } = form;
 
-  const { data, isFetchingNextPage, fetchNextPage, refetch } =
-    useInfiniteQuery<ListProps>({
-      queryKey: ["invitations", lineId],
-      queryFn: ({ pageParam }) =>
-        inviteLinks(
-          auth.token as string,
-          lineId as string,
-          pageParam as string | null,
-          "20",
-          ""
-        ),
-      initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.lastCursor,
-    });
+  const { data } = useInfiniteQuery<ListProps>({
+    queryKey: ["invitations", lineId],
+    queryFn: ({ pageParam }) =>
+      inviteLinks(
+        auth.token as string,
+        lineId as string,
+        pageParam as string | null,
+        "20",
+        "",
+      ),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.lastCursor,
+  });
 
   const onSubmit = async (data: CreateInviteLinkProps) => {
     console.log(data);
@@ -101,7 +94,7 @@ const Invite = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
       if (response.status !== 200) {
         toast.error(`Something went wrong!`, {

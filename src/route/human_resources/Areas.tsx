@@ -8,10 +8,10 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
-import Regions from "@/layout/Region";
-import Provinces from "@/layout/Province";
-import Municipalities from "@/layout/Municipalities";
-import Barangay from "@/layout/Barangay";
+// import Regions from "@/layout/Region";
+// import Provinces from "@/layout/Province";
+// import Municipalities from "@/layout/Municipalities";
+// import Barangay from "@/layout/Barangay";
 const Areas = () => {
   const [params, setParams] = useSearchParams({
     area: "region",
@@ -27,7 +27,7 @@ const Areas = () => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
 

@@ -11,16 +11,15 @@ import {
 import type { Province } from "@/interface/data";
 
 //props/schema/interface
-import { getProvince, getPSGSProvince } from "@/db/statement";
+import { getPSGSProvince } from "@/db/statement";
 
 interface Props {
   onChange: (...event: any[]) => void;
   regionId: string | undefined;
-  token: string | undefined;
   value: string;
 }
 
-const ProvinceSelect = ({ onChange, regionId, token, value }: Props) => {
+const ProvinceSelect = ({ onChange, regionId, value }: Props) => {
   const { data, isFetching, refetch } = useQuery<Province[]>({
     queryKey: ["province"],
     queryFn: () => getPSGSProvince(regionId as string),

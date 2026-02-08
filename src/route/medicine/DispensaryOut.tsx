@@ -12,7 +12,7 @@ import {
   Form,
   FormControl,
   FormField,
-  FormDescription,
+  //FormDescription,
   FormItem,
   FormLabel,
   FormMessage,
@@ -37,15 +37,7 @@ import { Send, Trash, User, MapPin, FileText, Pill } from "lucide-react";
 import { DispensarySchema } from "@/interface/zod";
 import type { DispensaryProps, Prescription } from "@/interface/data";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemHeader,
-  ItemTitle,
-  ItemSeparator,
-  ItemFooter,
-} from "@/components/ui/item";
+
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -75,7 +67,7 @@ const DispensaryOut = () => {
     handleSubmit,
     watch,
     resetField,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
   } = form;
   const { lineId } = useParams();
 
@@ -92,10 +84,10 @@ const DispensaryOut = () => {
     medId: string,
     comment: string,
     quantity: string,
-    medName: string
+    medName: string,
   ) => {
     const existed = prescribeMeds.fields.findIndex(
-      (item) => item.medId === medId
+      (item) => item.medId === medId,
     );
     if (existed !== -1) return;
     if (quantity === "0") {
@@ -137,7 +129,7 @@ const DispensaryOut = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -295,7 +287,6 @@ const DispensaryOut = () => {
                           <FormLabel className="text-sm">Province</FormLabel>
                           <FormControl>
                             <ProvinceSelect
-                              token={auth.token}
                               onChange={field.onChange}
                               regionId={regionId}
                               value={field.value}

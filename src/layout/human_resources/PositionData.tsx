@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 //
 
 const PositionData = () => {
-  const { positionId } = useParams();
+  const {} = useParams();
   return <div>PositionData</div>;
 };
 

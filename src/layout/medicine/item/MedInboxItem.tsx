@@ -1,7 +1,7 @@
 import { memo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 //
-import { useParams, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 //
 import { viewMedicineNotification } from "@/db/statement";
 //
@@ -9,9 +9,9 @@ import {
   Item,
   ItemContent,
   ItemHeader,
-  ItemMedia,
+  //ItemMedia,
   ItemFooter,
-  ItemTitle,
+  // ItemTitle,
   ItemDescription,
 } from "@/components/ui/item";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ import {
   ContextMenu,
   ContextMenuItem,
   ContextMenuContent,
-  ContextMenuLabel,
+  //ContextMenuLabel,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,7 +36,7 @@ interface Props {
   lineId: string | undefined;
 }
 
-const MedInboxItem = ({ item, no, token, url, lineId }: Props) => {
+const MedInboxItem = ({ item, token, lineId }: Props) => {
   const nav = useNavigate();
   const queryClient = useQueryClient();
 

@@ -1,10 +1,7 @@
 import {} from "react";
 
 //
-import type { ApplicationConversationProps } from "@/interface/data";
-interface Props {
-  item: ApplicationConversationProps;
-}
+//import type { ApplicationConversationProps } from "@/interface/data";
 
 const MessageItem = () => {
   return <div className="">MessageItem</div>;

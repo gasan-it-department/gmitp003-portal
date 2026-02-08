@@ -1,7 +1,5 @@
-import { useContext, createContext, useState, useEffect } from "react";
-import axios from "@/db/axios";
+import { createContext, useState } from "react";
 import { useNavigate } from "react-router";
-import { removeCookie } from "@/utils/cookies";
 
 import Modal from "@/components/custom/Modal";
 import { Button } from "@/components/ui/button";

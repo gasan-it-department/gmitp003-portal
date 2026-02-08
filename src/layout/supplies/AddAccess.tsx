@@ -30,19 +30,13 @@ const AddAccess = () => {
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 1000);
 
-  const { data, isFetching, isFetchingNextPage, refetch } =
-    useInfiniteQuery<Props>({
-      queryFn: ({ pageParam }) =>
-        searchUser(
-          auth.token as string,
-          query,
-          pageParam as string | null,
-          "20"
-        ),
-      queryKey: [""],
-      initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.lastCursor,
-    });
+  const { data, refetch } = useInfiniteQuery<Props>({
+    queryFn: ({ pageParam }) =>
+      searchUser(auth.token as string, query, pageParam as string | null, "20"),
+    queryKey: [""],
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.lastCursor,
+  });
 
   useEffect(() => {
     refetch();

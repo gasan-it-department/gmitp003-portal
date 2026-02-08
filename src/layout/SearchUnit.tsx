@@ -10,12 +10,12 @@ import { searchUnits } from "@/db/statements/unit";
 // UI Components
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+//import { Badge } from "@/components/ui/badge";
 import {
   Search,
   User,
-  Briefcase,
-  Building,
+  // Briefcase,
+  // Building,
   Loader2,
   X,
   Check,
@@ -59,7 +59,7 @@ const SearchUnit = ({ lineId, token, onChange, value }: Props) => {
         lineId,
         pageParam as string | null,
         "15",
-        debouncedQuery
+        debouncedQuery,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>

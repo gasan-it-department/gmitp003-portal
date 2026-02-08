@@ -8,8 +8,8 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Item, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { searchedChar } from "@/utils/element";
 //
 import { getLinetUnits } from "@/db/statement";
@@ -51,7 +51,7 @@ const SelectUnit = ({ onChange, lineId, auth, currentValue }: Props) => {
         lineId as string,
         pageParam as string | null,
         "20",
-        query
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -95,7 +95,7 @@ const SelectUnit = ({ onChange, lineId, auth, currentValue }: Props) => {
         {isFetching && !isFetchingNextPage ? (
           <p>Loading...</p>
         ) : allItems.length > 0 ? (
-          allItems.map((item, i) => (
+          allItems.map((item) => (
             <Item
               className="mt-1 hover:bg-neutral-200 cursor-pointer w-full flex justify-between"
               variant="outline"

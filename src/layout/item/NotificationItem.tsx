@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { getInitials } from "@/utils/helper";
 //
 import type { Notification } from "@/interface/data";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 //
 import { ArrowRight, User } from "lucide-react";
@@ -67,7 +67,7 @@ const NotificationItem = ({ item, token, userId }: Props) => {
           <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
             {item.sender ? (
               `${getInitials(item.sender.firstName)}${getInitials(
-                item.sender.lastName
+                item.sender.lastName,
               )}`
             ) : (
               <User className="h-4 w-4" />

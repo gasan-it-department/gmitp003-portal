@@ -1,29 +1,24 @@
-import React from "react";
+//import React from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
 //
 import { getPurchaseRequest } from "@/db/statement";
 //
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-  TableHeader,
-  TableHead,
-} from "@/components/ui/table";
-import PRItems from "./items/PRItems";
-import SWWItem from "../item/SWWItem";
+// import { Button } from "@/components/ui/button";
+// import { Input } from "@/components/ui/input";
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableRow,
+//   TableHeader,
+//   TableHead,
+// } from "@/components/ui/table";
+// import PRItems from "./items/PRItems";
+// import SWWItem from "../item/SWWItem";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import PRInfo from "./PRInfo";
 import PRList from "./PRList";
 import PRConversation from "./PRConversation";
@@ -31,7 +26,7 @@ import PRConversation from "./PRConversation";
 import { ListCheck, Info, MessageCircle } from "lucide-react";
 
 //
-import type { ProtectedRouteProps, SupplyOrder } from "@/interface/data";
+import type { SupplyOrder } from "@/interface/data";
 
 interface ListProps {
   list: SupplyOrder[];
@@ -47,7 +42,7 @@ const PurchaseRequest = () => {
   const { lineId, purchaseReqId } = useParams();
   const [params, setParams] = useSearchParams({ tabs: "info" });
   const auth = useAuth();
-  const { data, isFetching, refetch } = useInfiniteQuery<ListProps>({
+  const {} = useInfiniteQuery<ListProps>({
     queryKey: ["purchase-request", lineId],
     queryFn: ({ pageParam }) =>
       getPurchaseRequest(
@@ -55,7 +50,7 @@ const PurchaseRequest = () => {
         lineId as string,
         pageParam as string | null,
         "20",
-        ""
+        "",
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.lastCursor,
@@ -71,7 +66,7 @@ const PurchaseRequest = () => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
   return (

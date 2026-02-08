@@ -13,7 +13,7 @@ interface Props {
   query: string;
   onClick: () => void;
 }
-const SelectPosItem = ({ no, item, onChange, query, onClick }: Props) => {
+const SelectPosItem = ({ no, item, query, onClick }: Props) => {
   return (
     <TableRow
       onClick={onClick}

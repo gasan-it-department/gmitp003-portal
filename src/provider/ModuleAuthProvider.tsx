@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { useLocation } from "react-router";
 import { useAuth } from "./ProtectedRoute";
 import { useQuery } from "@tanstack/react-query";
 import axios from "@/db/axios";
@@ -36,7 +36,7 @@ const ModuleAuthProvider = ({ children }: ModuleAuthProviderProps) => {
 
   const location = useLocation();
   const auth = useAuth();
-  const nav = useNavigate();
+  //const nav = useNavigate();
 
   // Create a map of panel paths for O(1) lookup
   const panelPaths = useMemo(() => {

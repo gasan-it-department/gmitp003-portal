@@ -37,7 +37,7 @@ interface Props {
   userId: string;
 }
 
-const AddPosition = ({ existed, unitId, lineId, token, userId }: Props) => {
+const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const form = useForm<AddPositionProps>({
@@ -57,7 +57,7 @@ const AddPosition = ({ existed, unitId, lineId, token, userId }: Props) => {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
     control,
   } = form;
 
@@ -108,7 +108,7 @@ const AddPosition = ({ existed, unitId, lineId, token, userId }: Props) => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
       if (response.status === 200) {
         queryClient.invalidateQueries({
@@ -241,7 +241,7 @@ const AddPosition = ({ existed, unitId, lineId, token, userId }: Props) => {
                           <SelectItem key={item} value={item}>
                             {item}
                           </SelectItem>
-                        )
+                        ),
                       )}
                     </SelectContent>
                   </Select>

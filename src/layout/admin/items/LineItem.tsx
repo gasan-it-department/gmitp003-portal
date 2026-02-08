@@ -1,4 +1,4 @@
-import { memo, useState, type SetStateAction } from "react";
+import { memo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 //
@@ -36,12 +36,9 @@ import {
   Settings,
   PauseCircle,
   Wrench,
-  Eye,
-  Edit,
   Trash2,
   Power,
   Copy,
-  Archive,
 } from "lucide-react";
 
 interface Props {
@@ -52,16 +49,11 @@ interface Props {
   token: string;
 }
 
-const LineItem = ({ item, query, onAction, token, userId }: Props) => {
+const LineItem = ({ item, query, token, userId }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const [onOpen, setOnOpen] = useState(0);
   const statusInfo = getStatusBadge(item.status);
   const queryClient = useQueryClient();
-
-  const handleAction = (action: string) => {
-    setIsOpen(false);
-    onAction?.(action, item);
-  };
 
   const getStatusIcon = () => {
     switch (item.status) {

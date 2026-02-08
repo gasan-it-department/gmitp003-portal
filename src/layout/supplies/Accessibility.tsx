@@ -5,11 +5,11 @@ import { useAuth } from "@/provider/ProtectedRoute";
 //
 import {
   Table,
-  TableBody,
-  TableCell,
+  // TableBody,
+  // TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  // TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 //stmt
@@ -31,13 +31,13 @@ const Accessibility = () => {
   const auth = useAuth();
   const nav = useNavigate();
 
-  const { data, isFetchingNextPage, isFetching } = useInfiniteQuery<Props>({
+  const {} = useInfiniteQuery<Props>({
     queryFn: ({ pageParam }) =>
       inventoryAccessList(
         auth.token as string,
         containerId as string,
         pageParam as string | null,
-        "20"
+        "20",
       ),
     queryKey: ["accessiblity", containerId],
     initialPageParam: null,
@@ -50,7 +50,7 @@ const Accessibility = () => {
           size="sm"
           onClick={() =>
             nav(
-              `/${lineId}/supplies/container/${containerId}/add-accessibility`
+              `/${lineId}/supplies/container/${containerId}/add-accessibility`,
             )
           }
         >

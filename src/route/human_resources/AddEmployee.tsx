@@ -12,7 +12,7 @@ import {
   FormDescription,
   FormField,
   FormItem,
-  FormMessage,
+  //FormMessage,
   FormLabel,
 } from "@/components/ui/form";
 import Modal from "@/components/custom/Modal";
@@ -32,22 +32,22 @@ import type { NewEmployeeProps } from "@/interface/data";
 import { Link } from "lucide-react";
 
 //
-import { useAuth } from "@/provider/ProtectedRoute";
+//import { useAuth } from "@/provider/ProtectedRoute";
 
 const AddEmployee = () => {
   const form = useForm<NewEmployeeProps>({
     resolver: zodResolver(NewEmployeeSchema),
   });
   const {
-    handleSubmit,
-    formState: { isSubmitting, errors },
-    setError,
+    //handleSubmit,
+    //formState: { isSubmitting, errors },
+    //setError,
     control,
   } = form;
 
   const [onOpen, setOnOpen] = useState(0);
 
-  const auth = useAuth();
+  //const auth = useAuth();
 
   return (
     <div className=" w-full h-full  overflow-auto">
@@ -131,7 +131,7 @@ const AddEmployee = () => {
               <FormField
                 control={control}
                 name="birthDate"
-                render={({ field: { value, onBlur, onChange } }) => (
+                render={({ field: { onBlur, onChange } }) => (
                   <FormItem>
                     <FormLabel>Date of Birth (DD/MM/YYYY)</FormLabel>
                     <FormControl>

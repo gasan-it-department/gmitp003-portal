@@ -86,7 +86,7 @@ const SelectStorage = ({ lineId, token, onChange, currentValue }: Props) => {
         {isFetching && !isFetchingNextPage ? (
           <p>Loading...</p>
         ) : allItems.length > 0 ? (
-          allItems.map((item, i) => (
+          allItems.map((item) => (
             <Item
               className="mt-1 hover:bg-neutral-200 cursor-pointer w-full flex justify-between"
               variant="outline"

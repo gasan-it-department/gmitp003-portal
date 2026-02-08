@@ -36,7 +36,7 @@ import {
   Shield,
   BookMarked,
   Lightbulb,
-  MessageSquareText,
+  //MessageSquareText,
   PhoneOutgoing,
 } from "lucide-react";
 //interface/Schema/props

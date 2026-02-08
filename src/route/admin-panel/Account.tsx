@@ -27,7 +27,6 @@ interface LoadProps {
 
 const Account = () => {
   const [onOpen, setOnOpen] = useState(0);
-  const [typing, setTyping] = useState(false);
   const [params, setParams] = useSearchParams({ query: "" });
   const admin = useAdminAuth();
 
@@ -50,7 +49,7 @@ const Account = () => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -60,7 +59,7 @@ const Account = () => {
       handleChangeParams("query", value);
     },
     // delay in ms
-    1000
+    1000,
   );
 
   useEffect(() => {

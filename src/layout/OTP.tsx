@@ -34,24 +34,13 @@ const otpSchema = z.object({
 });
 
 interface Props {
-  email?: string;
-  onVerify?: (otp: string) => void;
-  onResend?: () => void;
   id?: string;
   title?: string;
   to?: number;
   note?: string;
 }
 
-const OTP = ({
-  email = "user@example.com",
-  onVerify,
-  onResend,
-  id,
-  title,
-  to = 1,
-  note,
-}: Props) => {
+const OTP = ({ id, title, to = 1, note }: Props) => {
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const hasSentInitialOTP = useRef(false);
@@ -90,7 +79,7 @@ const OTP = ({
       JSON.stringify({
         timestamp: Date.now(),
         initialSent: initialSent,
-      })
+      }),
     );
   };
 

@@ -5,7 +5,7 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableFooter,
+  // TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -13,7 +13,7 @@ import {
 
 //
 import { getOrderItems } from "@/db/statement";
-import type { SupplyOrder, SupplyBatchOrder } from "@/interface/data";
+import type { SupplyOrder } from "@/interface/data";
 
 interface Props {
   lastCursor: string | null;
@@ -25,14 +25,14 @@ const SupplyOrderItem = () => {
   const auth = useAuth();
   const { orderId } = useParams();
 
-  const { data, isFetching, isFetchingNextPage } = useInfiniteQuery<Props>({
+  const { data } = useInfiniteQuery<Props>({
     queryFn: ({ pageParam }) =>
       getOrderItems(
         auth.token as string,
         "",
         pageParam as string | null,
         "20",
-        orderId as string
+        orderId as string,
       ),
     queryKey: ["order", orderId],
     enabled: !!orderId,

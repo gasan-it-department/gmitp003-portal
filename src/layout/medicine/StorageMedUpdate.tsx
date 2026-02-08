@@ -130,7 +130,7 @@ const StorageMedUpdate = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -223,7 +223,7 @@ const StorageMedUpdate = () => {
                       <FormField
                         control={control}
                         name="unitOfmeasure"
-                        render={({ field: { onChange, value, onBlur } }) => (
+                        render={({ field: { onChange, value } }) => (
                           <FormItem>
                             <FormLabel>Unit of Measure</FormLabel>
                             <FormControl>

@@ -5,7 +5,7 @@ import {
   ClipboardList,
   SearchCheck,
   CircleCheck,
-  Truck,
+  //Truck,
   PackageCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -78,8 +78,8 @@ const OrderProgress = ({ status }: Props) => {
                       isCompleted
                         ? "bg-green-100"
                         : isCurrent
-                        ? "bg-blue-100"
-                        : "bg-neutral-100"
+                          ? "bg-blue-100"
+                          : "bg-neutral-100"
                     }`}
                   >
                     <div
@@ -87,8 +87,8 @@ const OrderProgress = ({ status }: Props) => {
                         isCompleted
                           ? "bg-green-500"
                           : isCurrent
-                          ? "bg-blue-500"
-                          : "bg-neutral-300"
+                            ? "bg-blue-500"
+                            : "bg-neutral-300"
                       }`}
                     >
                       {React.cloneElement(phase.icon, {
@@ -120,8 +120,8 @@ const OrderProgress = ({ status }: Props) => {
                         isCompleted
                           ? "text-green-700"
                           : isCurrent
-                          ? "text-blue-700"
-                          : "text-neutral-500"
+                            ? "text-blue-700"
+                            : "text-neutral-500"
                       }`}
                     >
                       {phase.title}

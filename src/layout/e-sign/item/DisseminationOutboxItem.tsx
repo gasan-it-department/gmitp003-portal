@@ -1,7 +1,7 @@
-import React from "react";
+//import React from "react";
 
 //
-interface Props {}
+// interface Props {}
 const DisseminationOutboxItem = () => {
   return <div>DisseminationOutboxItem</div>;
 };

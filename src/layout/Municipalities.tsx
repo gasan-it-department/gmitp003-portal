@@ -26,7 +26,7 @@ interface Props {
 }
 
 const Municipalities = ({ selectComp, code }: Props) => {
-  const { data, isFetching } = useQuery<Region[]>({
+  const { data } = useQuery<Region[]>({
     queryKey: ["municipalities"],
     queryFn: () => getAllProvincesMunicipalities(code),
   });

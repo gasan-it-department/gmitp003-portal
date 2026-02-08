@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Calendar,
@@ -28,9 +28,6 @@ import {
   Heart,
   Home,
   Smartphone,
-  EllipsisVertical,
-  CirclePause,
-  Trash,
 } from "lucide-react";
 import type { User } from "@/interface/data";
 import UserProfileAction from "./UserProfileAction";
@@ -52,7 +49,7 @@ const UserProfile = () => {
       getUserData(
         auth.token as string,
         employeeId as string,
-        auth.userId as string
+        auth.userId as string,
       ),
   });
 
@@ -532,7 +529,7 @@ const UserProfile = () => {
               <CardContent>
                 {user.modules && user.modules.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {user.modules.map((module, index) => (
+                    {user.modules.map((_, index) => (
                       <Card
                         key={index}
                         className="hover:shadow-md transition-shadow"

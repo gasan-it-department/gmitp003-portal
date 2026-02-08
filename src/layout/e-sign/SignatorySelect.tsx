@@ -2,15 +2,15 @@ import { useState } from "react";
 import { useDebounce } from "use-debounce";
 //
 import Modal from "@/components/custom/Modal";
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 import SignatoryList from "./SignatoryList";
 //
 import { Search } from "lucide-react";
 
 const SignatorySelect = () => {
   const [onOpen, setOnOpen] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm] = useDebounce(searchTerm, 1000);
+  const [searchTerm] = useState("");
+  const [] = useDebounce(searchTerm, 1000);
   return (
     <div className=" w-full h-full">
       <div className=" w-full p-2">

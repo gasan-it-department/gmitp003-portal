@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
@@ -7,14 +7,7 @@ import { useInView } from "react-intersection-observer";
 //
 import { getLinetUnits } from "@/db/statement";
 //icons
-import {
-  Check,
-  ChevronsUpDown,
-  Search,
-  Building2,
-  Users,
-  Hash,
-} from "lucide-react";
+import { Check, ChevronsUpDown, Search, Building2, Hash } from "lucide-react";
 
 import {
   Popover,

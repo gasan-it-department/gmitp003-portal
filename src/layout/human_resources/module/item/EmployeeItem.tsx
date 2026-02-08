@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/db/axios";
 //
@@ -8,10 +8,10 @@ import {
   ItemContent,
   ItemTitle,
   ItemHeader,
-  ItemFooter,
+  //ItemFooter,
 } from "@/components/ui/item";
 import { Button } from "@/components/ui/button";
-import { Mail, Building, Badge } from "lucide-react";
+import { Mail, Building } from "lucide-react";
 import {
   Form,
   FormControl,

@@ -7,7 +7,6 @@ import { publicApplicationData } from "@/db/statement";
 import OTP from "@/layout/OTP";
 //
 import type { SubmittedApplicationProps } from "@/interface/data";
-import { useState } from "react";
 import {
   formatPureDate,
   formatDate,
@@ -39,14 +38,12 @@ import {
   Lightbulb,
   BookMarked,
   Trophy,
-  MessageSquare,
 } from "lucide-react";
 import PublicApplicationContact from "@/layout/PublicApplicationContact";
 
 const PublicApplication = () => {
   const { applicationId } = useParams();
   const { token } = useTemAuth();
-  const [openModal, setOpenModal] = useState<string | null>(null);
 
   const { data, isFetching } = useQuery<SubmittedApplicationProps>({
     queryKey: ["public-application-data", applicationId],

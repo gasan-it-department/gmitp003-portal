@@ -2,10 +2,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import axios from "@/db/axios";
 //
-import {
-  applicationPublicConversation,
-  sendPublicApplication,
-} from "@/db/statement";
+import { applicationPublicConversation } from "@/db/statement";
 //
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +11,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 //
@@ -44,27 +41,21 @@ const PublicApplicationContact = ({ applicationId, token }: Props) => {
 
   const queryClient = useQueryClient();
 
-  const {
-    data,
-    isFetchingNextPage,
-    hasNextPage,
-    isFetching,
-    fetchNextPage,
-    refetch,
-  } = useInfiniteQuery<ListProps>({
-    queryKey: ["application-conversation", applicationId],
-    queryFn: ({ pageParam }) =>
-      applicationPublicConversation(
-        token,
-        applicationId,
-        pageParam as string | null,
-        "20",
-      ),
-    initialPageParam: null,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.lastCursor : undefined,
-    enabled: !!applicationId && isOpen,
-  });
+  const { data, isFetchingNextPage, hasNextPage, isFetching, fetchNextPage } =
+    useInfiniteQuery<ListProps>({
+      queryKey: ["application-conversation", applicationId],
+      queryFn: ({ pageParam }) =>
+        applicationPublicConversation(
+          token,
+          applicationId,
+          pageParam as string | null,
+          "20",
+        ),
+      initialPageParam: null,
+      getNextPageParam: (lastPage) =>
+        lastPage.hasMore ? lastPage.lastCursor : undefined,
+      enabled: !!applicationId && isOpen,
+    });
 
   // Scroll to bottom when new messages are added
   useEffect(() => {

@@ -1,17 +1,5 @@
-import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAdminAuth } from "@/provider/AdminRouter";
-//
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+
 import { dashboardReport } from "@/db/statement";
 import { getCookie } from "@/utils/cookies";
 
@@ -20,7 +8,7 @@ import type { DashboardOverall } from "@/interface/data";
 
 const Dashboard = () => {
   const token = getCookie("auth_admin_token");
-  const { data, isFetching, error } = useQuery<DashboardOverall>({
+  const { data, error } = useQuery<DashboardOverall>({
     queryFn: () => dashboardReport(token),
     queryKey: ["dashboard-report", token],
     enabled: !!token,

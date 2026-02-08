@@ -22,7 +22,6 @@ import {
   Pill,
   HandHelping,
   ChevronRight,
-  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";

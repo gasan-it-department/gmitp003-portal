@@ -122,7 +122,7 @@ const DataSetSupplies = ({ onSelect, selected, setSelected }: Props) => {
       }
       if (
         selectedItem &&
-        selectedItem.description?.toLowerCase() !== data.desc.toLowerCase()
+        selectedItem.description?.toLowerCase() !== data.desc?.toLowerCase()
       ) {
         toUpdata.description = data.desc;
       }
@@ -178,7 +178,7 @@ const DataSetSupplies = ({ onSelect, selected, setSelected }: Props) => {
         dataSetId as string,
         pageParam as string | null,
         "20",
-        text
+        text,
       ),
     queryKey: ["dataSetSupplies", dataSetId],
     initialPageParam: null,
@@ -188,7 +188,7 @@ const DataSetSupplies = ({ onSelect, selected, setSelected }: Props) => {
 
   const handleAddToList = (id: string) => {
     setSelected((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -198,7 +198,7 @@ const DataSetSupplies = ({ onSelect, selected, setSelected }: Props) => {
         auth.token as string,
         selectedItem?.id as string,
         auth.userId as string,
-        containerId as string
+        containerId as string,
       ),
     onError: (err) => {
       toast.error("Failed to delete", {
@@ -341,7 +341,7 @@ const DataSetSupplies = ({ onSelect, selected, setSelected }: Props) => {
                       checked={selectAll}
                       onCheckedChange={(checked) => {
                         setSelectAll(
-                          checked === "indeterminate" ? false : checked
+                          checked === "indeterminate" ? false : checked,
                         );
                       }}
                     />

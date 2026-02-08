@@ -1,14 +1,9 @@
 import { TableHead } from "@/components/ui/table";
 import { ListChecks, OctagonAlert } from "lucide-react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbSeparator,
-  BreadcrumbEllipsis,
-} from "@/components/ui/breadcrumb";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 export const searchedChar = (
   query: string,
-  value: string | undefined | null
+  value: string | undefined | null,
 ) => {
   if (!value) return null; // Handle undefined/null value
   if (!query) return value; // Return original value if query is empty

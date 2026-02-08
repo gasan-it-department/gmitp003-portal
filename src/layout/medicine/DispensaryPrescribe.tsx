@@ -17,13 +17,13 @@ import {
   TableHeader,
   TableHead,
   TableRow,
-  TableCell,
+  //TableCell,
 } from "@/components/ui/table";
 import SWWItem from "../item/SWWItem";
-import { searchedChar } from "@/utils/element";
+//import { searchedChar } from "@/utils/element";
 import { toast } from "sonner";
 //
-import { Search, Filter, Package, AlertCircle, Loader2 } from "lucide-react";
+import { Search, Package, AlertCircle, Loader2 } from "lucide-react";
 
 //props/interface/schema
 import type { MedicineStock } from "@/interface/data";
@@ -40,7 +40,7 @@ interface Props {
     medId: string,
     comment: string,
     quantity: string,
-    medName: string
+    medName: string,
   ) => void;
 }
 
@@ -75,7 +75,7 @@ const DispensaryPrescribe = ({
         pageParam as string | null,
         "20",
         query,
-        lineId as string
+        lineId as string,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>

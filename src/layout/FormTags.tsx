@@ -7,7 +7,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 //
 
 import {
-  officesTags,
+  //officesTags,
   fieldTags,
   adminSupport,
   itRoles,
@@ -19,7 +19,7 @@ import {
   humanResources,
   financeAccountng,
 } from "@/utils/helper";
-import { iconMainColor } from "@/utils/helper";
+//import { iconMainColor } from "@/utils/helper";
 //icons
 import {
   ShieldUser,
@@ -83,7 +83,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
         category: "Finance & Accounting",
       })),
     ],
-    []
+    [],
   );
 
   // Filter tags based on search query
@@ -94,7 +94,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
       (item) =>
         item.cont.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.tag.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase())
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [searchQuery, allTags]);
 
@@ -168,11 +168,14 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
             <div className="space-y-4">
               {/* Group results by category */}
               {Object.entries(
-                filteredTags.reduce((acc, item) => {
-                  if (!acc[item.category]) acc[item.category] = [];
-                  acc[item.category].push(item);
-                  return acc;
-                }, {} as { [key: string]: typeof filteredTags })
+                filteredTags.reduce(
+                  (acc, item) => {
+                    if (!acc[item.category]) acc[item.category] = [];
+                    acc[item.category].push(item);
+                    return acc;
+                  },
+                  {} as { [key: string]: typeof filteredTags },
+                ),
               ).map(([category, items]) => (
                 <div key={category} className="space-y-2">
                   <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">

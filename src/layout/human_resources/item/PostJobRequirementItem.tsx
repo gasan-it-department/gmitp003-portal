@@ -8,12 +8,12 @@ import axios from "@/db/axios";
 import { removeRequirements, removePostJobRequirements } from "@/db/statement";
 //components/layouts
 import {
-  Item,
+  //Item,
   ItemActions,
   ItemTitle,
   ItemContent,
-  ItemFooter,
-  ItemHeader,
+  // ItemFooter,
+  // ItemHeader,
 } from "@/components/ui/item";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

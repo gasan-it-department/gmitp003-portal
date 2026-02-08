@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearchParams, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 //
 import { Input } from "@/components/ui/input";
@@ -34,11 +34,11 @@ interface Props {
 
 const EmployeeSearch = ({
   office,
-  page,
-  year,
-  sgFrom,
-  sgTo,
-  query,
+  // page,
+  // year,
+  // sgFrom,
+  // sgTo,
+  // query,
   handleChangeParams,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(false);

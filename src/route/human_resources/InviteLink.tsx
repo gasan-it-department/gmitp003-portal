@@ -46,7 +46,7 @@ const InviteLink = () => {
   const workExpId = useId();
   const eligibityId = useId();
 
-  const { data, isFetching, error } = useQuery<{
+  const { data, isFetching } = useQuery<{
     data: InvitationLinkProps;
     error: number;
     message: string;
@@ -93,7 +93,7 @@ const InviteLink = () => {
   const {
     handleSubmit,
     control,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
     resetField,
   } = form;
 
@@ -455,7 +455,7 @@ const InviteLink = () => {
                               field.onChange(
                                 e.target.value
                                   ? new Date(e.target.value)
-                                  : undefined
+                                  : undefined,
                               );
                             }}
                           />
@@ -869,7 +869,7 @@ const InviteLink = () => {
                                         field.onChange(
                                           e.target.value
                                             ? new Date(e.target.value)
-                                            : undefined
+                                            : undefined,
                                         );
                                       }}
                                     />
@@ -1070,7 +1070,7 @@ const InviteLink = () => {
                         <FormField
                           control={control}
                           name={`civiService.${index}.dateExami`}
-                          render={({ field }) => (
+                          render={() => (
                             <FormItem>
                               <FormLabel className="text-gray-700">
                                 Examination Date

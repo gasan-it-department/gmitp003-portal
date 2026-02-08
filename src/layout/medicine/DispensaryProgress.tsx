@@ -5,17 +5,10 @@ import { prescriptionProgress } from "@/db/statement";
 //hooks
 import { useInfiniteQuery } from "@tanstack/react-query";
 //
-import {
-  Table,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHeader,
-  TableHead,
-} from "@/components/ui/table";
+
 import {
   Item,
-  ItemActions,
+  //ItemActions,
   ItemTitle,
   ItemDescription,
   ItemFooter,
@@ -48,7 +41,7 @@ const DispensaryProgress = ({ token, id }: Props) => {
         id,
         pageParam as string | null,
         "20",
-        ""
+        "",
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>

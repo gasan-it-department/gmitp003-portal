@@ -7,8 +7,6 @@ import {
   SelectItem,
   SelectValue,
   SelectTrigger,
-  SelectGroup,
-  SelectLabel,
 } from "@/components/ui/select";
 import type { SuppliesQualityProps } from "@/interface/data";
 

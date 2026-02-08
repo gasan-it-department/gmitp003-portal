@@ -1,4 +1,4 @@
-import React from "react";
+//import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
@@ -20,8 +20,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 //
 import {
   User,
@@ -32,7 +32,6 @@ import {
   MessageSquare,
   ArrowLeft,
   Download,
-  Share2,
   Clock,
   Stethoscope,
   AlertCircle,
@@ -509,7 +508,7 @@ const PrescribedData = () => {
                       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
 
                       {data.progress &&
-                        data.progress.map((progress, index) => (
+                        data.progress.map((progress) => (
                           <div
                             key={progress.id}
                             className="relative mb-6 last:mb-0"

@@ -27,17 +27,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+//import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import {
-  Key,
-  Eye,
-  EyeOff,
-  RefreshCw,
-  Shield,
-  CheckCircle,
-  Lock,
-} from "lucide-react";
+import { Key, Eye, EyeOff, RefreshCw, Shield, Lock } from "lucide-react";
 
 // Define the form schema with Zod
 const formSchema = z
@@ -50,7 +42,7 @@ const formSchema = z
       .regex(/[0-9]/, "Password must contain at least one number")
       .regex(
         /[^A-Za-z0-9]/,
-        "Password must contain at least one special character"
+        "Password must contain at least one special character",
       ),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
@@ -226,8 +218,8 @@ const ResetUserPassword = () => {
                           isPasswordValid
                             ? "bg-green-500"
                             : passwordStrength > 50
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
                         }`}
                         style={{ width: `${passwordStrength}%` }}
                       />

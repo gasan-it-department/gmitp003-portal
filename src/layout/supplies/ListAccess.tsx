@@ -6,7 +6,7 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 //
@@ -17,7 +17,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 //
 import { accessUserList } from "@/db/statement";
 //
-import { UserRoundPlus } from "lucide-react";
+//import { UserRoundPlus } from "lucide-react";
 import type { SupplyBatchAccessProps } from "@/interface/data";
 
 //
@@ -36,14 +36,13 @@ const ListAccess = ({ token, listId }: Props) => {
   const [] = useState(false);
   const [query] = useDebounce(text, 1000);
 
-  const { data, isFetchingNextPage, fetchNextPage, refetch } =
-    useInfiniteQuery<ListProps>({
-      queryFn: ({ pageParam }) =>
-        accessUserList(token as string, query, pageParam, "20", listId),
-      queryKey: ["listAccess", listId],
-      initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.lastCursor,
-    });
+  const { data, refetch } = useInfiniteQuery<ListProps>({
+    queryFn: ({ pageParam }) =>
+      accessUserList(token as string, query, pageParam, "20", listId),
+    queryKey: ["listAccess", listId],
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.lastCursor,
+  });
 
   useEffect(() => {
     refetch();

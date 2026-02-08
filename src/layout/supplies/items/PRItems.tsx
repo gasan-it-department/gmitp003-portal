@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { useState } from "react";
 
 import Modal from "@/components/custom/Modal";
 import { TableRow, TableCell } from "@/components/ui/table";

@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate } from "react-router";
 
 //
 import { Button } from "@/components/ui/button";
 import SignatorySelect from "@/layout/e-sign/SignatorySelect";
 
 const NewDisseminationRoom = () => {
-  const [step, set] = useState(0);
+  const [step] = useState(0);
   const nav = useNavigate();
-  const { newRoomId } = useParams();
 
   const screen = [<SignatorySelect />];
   return (

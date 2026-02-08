@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction, useEffect } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { AlertTriangle, ShieldAlert, Key, X, Check } from "lucide-react";
 
 //
@@ -25,6 +25,7 @@ const ConfirmDelete = ({
   const [error, setError] = useState("");
 
   const handleProceed = async () => {
+    if (isLoading) return;
     // Clear previous error
     setError("");
 
@@ -96,8 +97,8 @@ const ConfirmDelete = ({
                   error
                     ? "border-red-300 bg-red-50 focus-visible:ring-red-500"
                     : isInputValid
-                    ? "border-green-300 bg-green-50 focus-visible:ring-green-500"
-                    : ""
+                      ? "border-green-300 bg-green-50 focus-visible:ring-green-500"
+                      : ""
                 }`}
                 autoComplete="off"
                 spellCheck="false"

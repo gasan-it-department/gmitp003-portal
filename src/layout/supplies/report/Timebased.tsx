@@ -6,7 +6,7 @@ import { supplyTimeBaseReport } from "@/db/statement";
 //
 import { switchYearIndex } from "@/utils/helper";
 //hooks and libs
-import { useSearchParams } from "react-router";
+//import { useSearchParams } from "react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 //components
 import {
@@ -65,27 +65,27 @@ const Timebased = ({ id, auth, lineId }: Props) => {
     delay: 100,
   });
 
-  const [params, setParams] = useSearchParams({
-    opt: "Quarterly",
-    inTotal: "yes",
-  });
+  // const [params, setParams] = useSearchParams({
+  //   opt: "Quarterly",
+  //   inTotal: "yes",
+  // });
 
   const rangeYear = switchYearIndex(currentYear);
 
-  const option = params.get("opt") || "Quarterly";
-  const inTotal = params.get("inTotal") || "no";
+  // const option = params.get("opt") || "Quarterly";
+  // const inTotal = params.get("inTotal") || "no";
 
-  const handleChangeParams = (key: string, value: string) => {
-    setParams(
-      (prev) => {
-        prev.set(key, value);
-        return prev;
-      },
-      {
-        replace: true,
-      },
-    );
-  };
+  // const handleChangeParams = (key: string, value: string) => {
+  //   setParams(
+  //     (prev) => {
+  //       prev.set(key, value);
+  //       return prev;
+  //     },
+  //     {
+  //       replace: true,
+  //     },
+  //   );
+  // };
 
   const {
     data,

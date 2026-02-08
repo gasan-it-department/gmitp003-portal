@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
 import SlotSelection from "./SlotSelection";
 //icons
-import { Mail, AtSign, Send, X, UserPlus, MessageSquare } from "lucide-react";
+import { AtSign, Send, X, UserPlus, MessageSquare } from "lucide-react";
 
 //
 import type {

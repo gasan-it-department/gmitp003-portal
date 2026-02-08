@@ -3,12 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isAxiosError } from "axios";
 import axios from "@/db/axios";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 //
 import {
   Form,
   FormControl,
-  FormDescription,
+  //FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -56,7 +56,7 @@ const AddRequirementForm = ({ postId, token, setOnOpen }: Props) => {
   const handleRemoveFile = (fileIndex: number) => {
     const currentAssets = [...assets]; // Create a copy of the current assets
     const updatedAssets = currentAssets.filter(
-      (_, index) => index !== fileIndex
+      (_, index) => index !== fileIndex,
     );
     setValue("assets", updatedAssets);
   };
@@ -94,7 +94,7 @@ const AddRequirementForm = ({ postId, token, setOnOpen }: Props) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       if (response.status !== 200) {

@@ -12,14 +12,14 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Item, ItemContent, ItemHeader, ItemTitle } from "@/components/ui/item";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Item, ItemContent, ItemTitle } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+// import { Badge } from "@/components/ui/badge";
+// import { Button } from "@/components/ui/button";
 import EmployeeItem from "@/layout/human_resources/module/item/EmployeeItem";
 //
-import { Search, User, Mail, Building } from "lucide-react";
+import { Search, User } from "lucide-react";
 //
 import type { User as UserType } from "@/interface/data";
 
@@ -51,7 +51,7 @@ const AddModuleUser = () => {
         pageParam as string | null,
         "20",
         query,
-        ""
+        "",
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>

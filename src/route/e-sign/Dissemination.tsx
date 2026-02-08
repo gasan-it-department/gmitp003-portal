@@ -1,19 +1,19 @@
 import {} from "react";
-import { useSearchParams, Outlet } from "react-router";
+import { useSearchParams } from "react-router";
 //
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import DisseminationInbox from "@/layout/e-sign/DisseminationInbox";
 import DisseminationOutbox from "@/layout/e-sign/DisseminationOutbox";
 //icons
-import { Inbox, ExternalLink, Send, FileText } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Inbox, ExternalLink } from "lucide-react";
+// import {
+//   Card,
+//   CardContent,
+//   CardDescription,
+//   CardHeader,
+//   CardTitle,
+// } from "@/components/ui/card";
+// import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
 const Dissemination = () => {

@@ -13,7 +13,7 @@ import {
   FormField,
   FormControl,
   FormItem,
-  FormLabel,
+  //FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import {
@@ -21,7 +21,7 @@ import {
   Tooltip,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+//import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 
 //
@@ -310,7 +310,7 @@ const DispensaryMedItem = ({ no, item, control, status }: Props) => {
               <FormField
                 control={control}
                 name={`prescribeMed.${no}.quantity`}
-                render={({ field: { onChange, value } }) => (
+                render={({ field: { onChange } }) => (
                   <FormItem>
                     <FormControl>
                       <div className="relative">
@@ -412,8 +412,8 @@ const DispensaryMedItem = ({ no, item, control, status }: Props) => {
               {isCompleted
                 ? "✓ Dispensed"
                 : isLowStock
-                ? `⚠ Low stock (${currentQuantity} units)`
-                : "✓ Verify before dispensing"}
+                  ? `⚠ Low stock (${currentQuantity} units)`
+                  : "✓ Verify before dispensing"}
             </span>
           </div>
         </div>
