@@ -23,7 +23,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import PublicRegionSelect from "../PublicRegionSelect";
+import PsgcRegion from "../PsgcRegion";
 import PublicProvinceSelect from "../PublicProvinceSelect";
 import PublicMunicipalSelect from "../PublicMunicipalSelect";
 import PublicBarangaySelect from "../PublicBarangaySelect";
@@ -234,7 +234,7 @@ const NewLineForm = ({ setOpen }: Props) => {
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <PublicRegionSelect
+                            <PsgcRegion
                               onChange={field.onChange}
                               value={field.value}
                             />
