@@ -10,7 +10,6 @@ import {
   FileEdit,
   ArrowUp,
   ArrowDown,
-  BarChart3,
 } from "lucide-react";
 
 import {
@@ -135,17 +134,6 @@ const Dashboard = () => {
     },
   ];
 
-  const quickActions = [
-    { label: "Post New Job", icon: Briefcase, action: "/jobs/create" },
-    {
-      label: "Create Announcement",
-      icon: Megaphone,
-      action: "/announcements/create",
-    },
-    { label: "View Applications", icon: FileText, action: "/applications" },
-    { label: "Manage Employees", icon: Users, action: "/employees" },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 overflow-auto">
       <div className="max-w-7xl mx-auto">
@@ -194,23 +182,6 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500 mt-1">
                       {stat.description}
                     </p>
-                  </div>
-                  <div className="flex items-center">
-                    {stat.trend > 0 ? (
-                      <>
-                        <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
-                        <span className="text-green-500 text-sm font-medium">
-                          +{stat.trend}%
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowDown className="h-4 w-4 text-red-500 mr-1" />
-                        <span className="text-red-500 text-sm font-medium">
-                          {stat.trend}%
-                        </span>
-                      </>
-                    )}
                   </div>
                 </div>
               </CardContent>

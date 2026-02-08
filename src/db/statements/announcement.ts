@@ -5,7 +5,7 @@ export const announcements = async (
   listId: string,
   lastCursor: string | null,
   limit: string,
-  query?: string
+  query?: string,
 ) => {
   const response = await axios.get("/announcement/list", {
     headers: {
@@ -31,7 +31,7 @@ export const announcements = async (
 export const announcementData = async (
   token: string,
   id: string,
-  userId: string
+  userId: string,
 ) => {
   const response = await axios.get("/announcement/data", {
     headers: {
@@ -57,7 +57,7 @@ export const announcementStatusUpdate = async (
   id: string,
   userId: string,
   status: number,
-  lineId: string
+  lineId: string,
 ) => {
   const response = await axios.patch(
     "/announcement/status/update",
@@ -74,7 +74,7 @@ export const announcementStatusUpdate = async (
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-    }
+    },
   );
 
   if (response.status !== 200) {
@@ -86,7 +86,7 @@ export const announcementStatusUpdate = async (
 export const viewAnnouncement = async (
   token: string,
   id: string,
-  userId: string
+  userId: string,
 ) => {
   const response = await axios.patch(
     "/announcement/view-announcement",
@@ -101,7 +101,7 @@ export const viewAnnouncement = async (
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-    }
+    },
   );
 
   if (response.status !== 200) {
@@ -114,7 +114,7 @@ export const toogleReaction = async (
   token: string,
   id: string,
   userId: string,
-  status?: boolean
+  status?: boolean,
 ) => {
   const response = await axios.patch(
     "/announcement/toogle-react",
@@ -130,8 +130,34 @@ export const toogleReaction = async (
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
       },
-    }
+    },
   );
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};
+
+export const removeAnnouncement = async (
+  token: string,
+  id: string,
+  lineId: string,
+  userId: string,
+) => {
+  const response = await axios.delete("/announcement/delete", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lineId,
+      userId,
+    },
+  });
 
   if (response.status !== 200) {
     throw new Error(response.data);

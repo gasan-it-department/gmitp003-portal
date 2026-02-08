@@ -19,8 +19,6 @@ import { LogOut } from "lucide-react";
 const UserSideProfile = () => {
   const auth = useAuth();
 
-  console.log({ auth });
-
   const nav = useNavigate();
   const { data, isFetching, refetch } = useQuery({
     queryKey: ["userProfile", auth.userId],
@@ -32,6 +30,8 @@ const UserSideProfile = () => {
       ),
     enabled: !!auth.token && !!auth.userId,
   });
+
+  console.log({ data });
 
   const handleLogout = () => {
     localStorage.removeItem("user");

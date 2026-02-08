@@ -38,7 +38,6 @@ interface ListProps {
 
 const EmployeeList = ({
   office,
-  page,
   year,
   sgFrom,
   sgTo,
@@ -127,6 +126,9 @@ const EmployeeList = ({
               </TableHead>
               <TableHead className="py-3.5 font-semibold text-gray-700">
                 Unit
+              </TableHead>
+              <TableHead className="py-3.5 font-semibold text-gray-700">
+                Pos./Designation
               </TableHead>
             </TableRow>
           </TableHeader>

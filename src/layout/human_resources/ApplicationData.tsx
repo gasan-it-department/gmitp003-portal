@@ -149,16 +149,7 @@ const ApplicationData = ({ applicationId }: Props) => {
               </span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <MessageSquareText />
-              Convesation
-            </Button>
-            <Button variant="outline" size="sm">
-              Download CV
-            </Button>
-            {progressButton[data.status]}
-          </div>
+          <div className="flex gap-2">{progressButton[data.status]}</div>
         </div>
 
         {/* Main Content Grid */}

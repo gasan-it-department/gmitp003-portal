@@ -51,6 +51,7 @@ import {
   Package,
   RefreshCw,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import Modal from "@/components/custom/Modal";
 import { formatDate } from "@/utils/date";
@@ -106,7 +107,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -142,7 +143,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
         debouncedQuery,
         pageParam as string | null,
         "20",
-        listId as string
+        listId as string,
       ),
     queryKey: ["orders", listId],
     initialPageParam: null,
@@ -181,7 +182,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
     return (
       <Badge
         style={{ backgroundColor: statusColor }}
-        className="text-white border-0 text-xs px-2 py-1"
+        className="text-white border-0 text-xs px-2 py-1 whitespace-nowrap"
       >
         {statusText}
       </Badge>
@@ -190,30 +191,30 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
 
   if (isLoading) {
     return (
-      <div className="h-full space-y-4 p-4">
+      <div className="h-full space-y-3 sm:space-y-4 p-2 sm:p-3">
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-8 w-64" />
-                <Skeleton className="h-4 w-32" />
+              <div className="space-y-1.5 sm:space-y-2">
+                <Skeleton className="h-6 sm:h-8 w-40 sm:w-64" />
+                <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
               </div>
-              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
             </div>
           </CardHeader>
         </Card>
         <Card>
           <CardContent className="p-0">
-            <div className="p-4 border-b">
-              <div className="flex gap-4">
+            <div className="p-2 border-b">
+              <div className="flex flex-wrap gap-2 sm:gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-24" />
+                  <Skeleton key={i} className="h-5 sm:h-6 w-16 sm:w-24" />
                 ))}
               </div>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-10 sm:h-12 w-full" />
               ))}
             </div>
           </CardContent>
@@ -224,17 +225,22 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
 
   if (error) {
     return (
-      <Card className="h-full border-destructive/20 bg-destructive/5">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-semibold text-destructive mb-2">
+      <Card className="h-full border-destructive/20 bg-destructive/5 m-2 sm:m-3">
+        <CardContent className="flex flex-col items-center justify-center py-6 sm:py-12 px-3 sm:px-6">
+          <AlertTriangle className="h-8 w-8 sm:h-12 sm:w-12 text-destructive mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-destructive mb-1.5 sm:mb-2 text-center">
             Failed to load orders
           </h3>
-          <p className="text-sm text-muted-foreground text-center mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-3 sm:mb-4">
             {error.message || "An error occurred while loading orders"}
           </p>
-          <Button onClick={() => refetch()} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 sm:gap-2"
+          >
+            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
             Retry
           </Button>
         </CardContent>
@@ -243,24 +249,28 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-4 p-4">
+    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
       {/* Header Card */}
       <Card className="border shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <CardContent className="p-4 sm:p-5 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="space-y-1">
-              <CardTitle className="text-2xl font-bold tracking-tight">
+              <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
                 Supply Orders
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Manage purchase requests and track order status
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button onClick={() => setOnOpen(1)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Order
+              <Button
+                onClick={() => setOnOpen(1)}
+                className="gap-1.5 sm:gap-2"
+                size="sm"
+              >
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">New Order</span>
               </Button>
             </div>
           </div>
@@ -269,29 +279,29 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
 
       {/* Search and Stats Card */}
       <Card className="border">
-        <CardContent className="p-4">
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="space-y-3 sm:space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 placeholder="Search by reference, subject, or status..."
                 value={searchText}
                 onChange={handleSearchChange}
-                className="pl-9 pr-8"
+                className="pl-8 sm:pl-9 pr-7 sm:pr-8 h-9 sm:h-10 text-xs sm:text-sm"
               />
               {searchText && (
                 <button
                   onClick={clearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 >
-                  ×
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               )}
             </div>
 
             {debouncedQuery && (
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">
                   {isEmpty
                     ? "No orders found"
@@ -300,9 +310,11 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                       }`}
                 </span>
                 {isFetching && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     <RefreshCw className="h-3 w-3 animate-spin" />
-                    <span className="text-muted-foreground">Searching...</span>
+                    <span className="text-muted-foreground whitespace-nowrap">
+                      Searching...
+                    </span>
                   </div>
                 )}
               </div>
@@ -314,37 +326,48 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
       {/* Orders Table Card */}
       <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
-          <div className="h-full overflow-auto">
+          <div className="w-full h-full overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
                 <TableRow>
-                  <TableHead className="w-12 p-4">#</TableHead>
-                  <TableHead className="p-4 min-w-32">Ref. No</TableHead>
-                  <TableHead className="p-4 min-w-48">Subject</TableHead>
-                  <TableHead className="p-4 min-w-24 text-center">
+                  <TableHead className="w-10 sm:w-12 p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
+                    #
+                  </TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
+                    Ref. No
+                  </TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[120px] sm:min-w-48 text-xs sm:text-sm">
+                    Subject
+                  </TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[60px] sm:min-w-24 text-center text-xs sm:text-sm">
                     Items
                   </TableHead>
-                  <TableHead className="p-4 min-w-32">Date Ordered</TableHead>
-                  <TableHead className="p-4 min-w-32">Status</TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
+                    Date Ordered
+                  </TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
+                    Status
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {showEmptyState ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64">
-                      <div className="flex flex-col items-center justify-center text-center py-8">
-                        <FileText className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                        <p className="text-muted-foreground font-medium">
+                    <TableCell colSpan={6} className="h-48 sm:h-64">
+                      <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
+                        <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
+                        <p className="text-sm sm:text-base text-muted-foreground font-medium">
                           No orders yet
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                           Create your first order to get started
                         </p>
                         <Button
                           onClick={() => setOnOpen(1)}
-                          className="mt-4 gap-2"
+                          className="mt-3 sm:mt-4 gap-1.5 sm:gap-2"
+                          size="sm"
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                           Create New Order
                         </Button>
                       </div>
@@ -352,20 +375,20 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                   </TableRow>
                 ) : isEmpty ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64">
-                      <div className="flex flex-col items-center justify-center text-center py-8">
-                        <Search className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                        <p className="text-muted-foreground font-medium">
+                    <TableCell colSpan={6} className="h-48 sm:h-64">
+                      <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
+                        <Search className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
+                        <p className="text-sm sm:text-base text-muted-foreground font-medium">
                           No orders found for "{debouncedQuery}"
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                           Try a different search term
                         </p>
                         <Button
                           onClick={clearSearch}
                           variant="outline"
                           size="sm"
-                          className="mt-4"
+                          className="mt-3 sm:mt-4"
                         >
                           Clear Search
                         </Button>
@@ -380,41 +403,41 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                         onClick={() => nav(`order/${order.id}`)}
                         className="group cursor-pointer hover:bg-accent/50 transition-colors"
                       >
-                        <TableCell className="p-4 font-medium">
+                        <TableCell className="p-2 sm:p-3 md:p-4 font-medium text-xs sm:text-sm">
                           {i + 1}
                         </TableCell>
-                        <TableCell className="p-4">
-                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono">
+                        <TableCell className="p-2 sm:p-3 md:p-4">
+                          <code className="text-xs bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-mono truncate block max-w-[85px] sm:max-w-none">
                             {order.refNumber || "N/A"}
                           </code>
                         </TableCell>
-                        <TableCell className="p-4">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
+                        <TableCell className="p-2 sm:p-3 md:p-4">
+                          <div className="min-w-0 max-w-[120px] sm:max-w-none">
+                            <p className="text-xs sm:text-sm font-medium truncate">
                               {order.title || "Untitled Order"}
                             </p>
-                            <p className="text-xs text-muted-foreground truncate mt-1">
-                              ID: {order.id.slice(0, 8)}...
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              ID: {order.id.slice(0, 6)}...
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="p-4 text-center">
+                        <TableCell className="p-2 sm:p-3 md:p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
                             <Package className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm font-medium">
+                            <span className="text-xs sm:text-sm font-medium">
                               {order._count?.order || 0}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">
+                        <TableCell className="p-2 sm:p-3 md:p-4">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs sm:text-sm whitespace-nowrap">
                               {formatDate(order.timestamp)}
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="p-4">
+                        <TableCell className="p-2 sm:p-3 md:p-4">
                           {getStatusBadge(order.status)}
                         </TableCell>
                       </TableRow>
@@ -423,10 +446,10 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                     {/* Infinite Scroll Loader */}
                     {isFetchingNextPage && (
                       <TableRow>
-                        <TableCell colSpan={6} className="p-4">
+                        <TableCell colSpan={6} className="p-3 sm:p-4">
                           <div className="flex items-center justify-center gap-2">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span className="text-sm text-muted-foreground">
+                            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                            <span className="text-xs sm:text-sm text-muted-foreground">
                               Loading more orders...
                             </span>
                           </div>
@@ -437,8 +460,8 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                     {/* Infinite Scroll Trigger */}
                     {hasNextPage && !isFetchingNextPage && (
                       <TableRow ref={ref}>
-                        <TableCell colSpan={6} className="p-4">
-                          <div className="h-4" />
+                        <TableCell colSpan={6} className="p-2 sm:p-3">
+                          <div className="h-2 sm:h-4" />
                         </TableCell>
                       </TableRow>
                     )}
@@ -446,9 +469,9 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                     {/* End of Results */}
                     {!hasNextPage && totalOrders > 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="p-4 border-t">
+                        <TableCell colSpan={6} className="p-3 sm:p-4 border-t">
                           <div className="text-center">
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Showing all {totalOrders} order
                               {totalOrders !== 1 ? "s" : ""}
                             </p>
@@ -467,19 +490,19 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
       {/* New Order Modal */}
       <Modal
         title={
-          <div className="flex items-center gap-3">
-            <Plus className="h-5 w-5" />
-            Create New Order
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-sm sm:text-base">Create New Order</span>
           </div>
         }
         children={
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Form {...form}>
               <FormField
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">
+                    <FormLabel className="text-xs sm:text-sm font-medium">
                       Order Subject (Optional)
                     </FormLabel>
                     <FormControl>
@@ -487,22 +510,27 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                         placeholder="e.g., Office Supplies Q4 2024"
                         {...field}
                         autoFocus
+                        className="text-xs sm:text-sm"
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground mt-1">
                       A descriptive title helps identify this order later
                     </p>
                     {errors.title && (
-                      <FormMessage>{errors.title.message}</FormMessage>
+                      <FormMessage className="text-xs">
+                        {errors.title.message}
+                      </FormMessage>
                     )}
                   </FormItem>
                 )}
               />
             </Form>
 
-            <div className="bg-muted/30 rounded-lg p-4">
-              <p className="text-sm font-medium mb-2">Order Information</p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">
+                Order Information
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
                 <span className="text-muted-foreground">List:</span>
                 <span className="font-medium truncate">
                   {listId?.slice(0, 8)}...
@@ -516,7 +544,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md"
+        className="max-w-md mx-3 sm:mx-auto"
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         onFunction={handleSubmit(onSubmit)}

@@ -10,10 +10,8 @@ import { supplyStats } from "@/db/statement";
 import {
   Package,
   Search,
-  BarChart3,
   AlertCircle,
   TrendingUp,
-  Filter,
   Download,
   RefreshCw,
 } from "lucide-react";
@@ -50,7 +48,6 @@ const SuppliesOverview = () => {
   };
 
   const handleExport = () => {
-    // Implement export logic here
     console.log("Exporting data...");
   };
 
@@ -214,21 +211,6 @@ const SuppliesOverview = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 gap-2"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className="w-4 h-4" />
-                Refresh
-              </Button>
-
-              <Button variant="outline" size="sm" className="h-9 gap-2">
-                <Filter className="w-4 h-4" />
-                Filter
-              </Button>
-
               <Button
                 variant="outline"
                 size="sm"

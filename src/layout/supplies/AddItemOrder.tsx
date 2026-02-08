@@ -44,7 +44,7 @@ const AddItemOrder = ({ setSelected, selected }: Props) => {
   const form = useForm<AddItemOrderProps>({
     resolver: zodResolver(AddItemOrderSchema),
     defaultValues: {
-      quantity: "",
+      quantity: "1",
       desc: "",
       unit: "",
     },
@@ -89,7 +89,7 @@ const AddItemOrder = ({ setSelected, selected }: Props) => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {

@@ -88,7 +88,7 @@ const EmployeeItem = ({
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -99,6 +99,8 @@ const EmployeeItem = ({
       }
       toast.success("Successfully granted module access.");
     } catch (error) {
+      console.log(error);
+
       toast.error("FaIled to submit");
     } finally {
       setOnOpen(0);

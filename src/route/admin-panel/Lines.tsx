@@ -26,10 +26,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import Modal from "@/components/custom/Modal";
 import NewLineForm from "@/layout/admin/NewLineForm";
 import LineItem from "@/layout/admin/items/LineItem";
+
 //
 
 //
@@ -41,11 +41,6 @@ import {
   Server,
   Users,
   Calendar,
-  MoreVertical,
-  ChevronRight,
-  Globe,
-  Building,
-  MapPin,
 } from "lucide-react";
 
 import type { LineProps } from "@/interface/data";
@@ -78,7 +73,7 @@ const Lines = () => {
         auth.token as string,
         pageParam as string | null,
         "20",
-        query
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -281,7 +276,15 @@ const Lines = () => {
                 ) : allLines.length > 0 ? (
                   // Lines data
                   allLines.map((line) => {
-                    return <LineItem item={line} key={line.id} query={query} />;
+                    return (
+                      <LineItem
+                        item={line}
+                        key={line.id}
+                        query={query}
+                        token={auth.token as string}
+                        userId={auth.userId as string}
+                      />
+                    );
                   })
                 ) : (
                   // Empty state
@@ -347,7 +350,7 @@ const Lines = () => {
         title={undefined}
         children={<NewLineForm setOpen={setOpen} />}
         onOpen={onOpen === 1}
-        className="min-w-xl max-w-2xl overflow-auto"
+        className="min-w-2xl max-w-2xl overflow-auto"
         setOnOpen={() => setOpen(0)}
         footer={1}
       />

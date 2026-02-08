@@ -63,7 +63,7 @@ export const prescriptionProgressStatus = [
 export const getStatusBadge = (status: number) => {
   const statusMap = {
     0: {
-      label: "Inactive",
+      label: "Deactivated",
       variant: "destructive" as const,
       color: "bg-red-100 text-red-800",
     },
@@ -139,7 +139,7 @@ export const handleSupplyTrend = (recentPrice: number, lastPrice: number) => {
 
 export const handleSupplyTrendReport = (
   recentPrice: number,
-  lastPrice: number
+  lastPrice: number,
 ) => {
   if (lastPrice === 0) return "NO report to show";
   if (recentPrice === lastPrice) return "NO report to show";
@@ -395,6 +395,7 @@ export const unitOfMeasure = [
 ];
 
 export const getSlotSalaryGradeRange = (slots: PositionSlotProps[]) => {
+  if (slots.length === 0) return "N/A";
   const count = slots.length;
 
   if (count === 1) return `${slots[count - 1].salaryGrade.grade}`;

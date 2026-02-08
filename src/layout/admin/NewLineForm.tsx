@@ -7,11 +7,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
-  FormField,
   FormMessage,
   FormItem,
   FormLabel,
   FormDescription,
+  FormField,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,7 +29,15 @@ import PublicMunicipalSelect from "../PublicMunicipalSelect";
 import PublicBarangaySelect from "../PublicBarangaySelect";
 import { toast } from "sonner";
 //icons
-import { Building2, MapPin, Navigation, Globe, Home, Tag } from "lucide-react";
+import {
+  Building2,
+  MapPin,
+  Navigation,
+  Globe,
+  Home,
+  Tag,
+  Mail,
+} from "lucide-react";
 //
 import { NewLineFormSchema } from "@/interface/zod";
 import type { NewLineFormProps } from "@/interface/data";
@@ -51,6 +59,7 @@ const NewLineForm = ({ setOpen }: Props) => {
       province: "",
       region: "",
       name: "",
+      defaultUserEmail: "",
     },
   });
 
@@ -76,6 +85,7 @@ const NewLineForm = ({ setOpen }: Props) => {
           municipalId: data.municipal,
           provinceId: data.province,
           regionId: data.region,
+          email: data.defaultUserEmail,
         },
         {
           headers: {
@@ -84,7 +94,7 @@ const NewLineForm = ({ setOpen }: Props) => {
             Accept: "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -96,6 +106,8 @@ const NewLineForm = ({ setOpen }: Props) => {
       });
       setOpen(0);
     } catch (error) {
+      console.log(error);
+
       toast.error("FAILED TO SUBMIT", {
         description: `${error}`,
       });
@@ -156,6 +168,35 @@ const NewLineForm = ({ setOpen }: Props) => {
                       </FormControl>
                       <FormDescription className="text-xs">
                         Enter a descriptive name for this line/office
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Email Field - Added here */}
+                <FormField
+                  control={control}
+                  name="defaultUserEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2 text-sm font-medium">
+                        <Mail className="w-3 h-3" />
+                        Default User Email
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type="email"
+                            placeholder="e.g., manager@example.com"
+                            {...field}
+                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          />
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Email address for the default line user/manager
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -325,6 +366,11 @@ const NewLineForm = ({ setOpen }: Props) => {
                     {form.watch("name") && (
                       <p className="text-blue-700 font-medium">
                         Line: {form.watch("name")}
+                      </p>
+                    )}
+                    {form.watch("defaultUserEmail") && (
+                      <p className="text-blue-700 font-medium">
+                        Default Email: {form.watch("defaultUserEmail")}
                       </p>
                     )}
                   </div>

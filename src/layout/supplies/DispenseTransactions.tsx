@@ -58,7 +58,7 @@ const DispenseTransactions = ({ listId, token }: Props) => {
         listId,
         pageParam as string | null,
         "20",
-        query
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -83,7 +83,7 @@ const DispenseTransactions = ({ listId, token }: Props) => {
   // Calculate total items
   const totalItems = data?.pages.reduce(
     (total, page) => total + page.list.length,
-    0
+    0,
   );
 
   // Calculate total quantity dispensed
@@ -92,9 +92,9 @@ const DispenseTransactions = ({ listId, token }: Props) => {
       total +
       page.list.reduce(
         (pageTotal, record) => pageTotal + parseInt(record.quantity || "0"),
-        0
+        0,
       ),
-    0
+    0,
   );
 
   if (isError) {

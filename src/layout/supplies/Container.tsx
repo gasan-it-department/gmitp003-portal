@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useState } from "react";
+import { useState, type SetStateAction } from "react";
 //
 import { getContainerData } from "@/db/statement";
 //
@@ -18,6 +18,7 @@ import { CreateListSchame } from "@/interface/zod";
 //
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
+import ConfirmDelete from "../ConfirmDelete";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -66,10 +67,10 @@ const Container = () => {
       getContainerData(
         token as string,
         containerId as string,
-        userId as string
+        userId as string,
       ),
     queryKey: ["container", containerId],
-    enabled: !!token,
+    enabled: !!token || !!containerId,
   });
 
   const form = useForm<CreateListProps>({
@@ -142,7 +143,7 @@ const Container = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
       if (response.status !== 200) {
         toast.error("Failed to create list", {
@@ -163,57 +164,66 @@ const Container = () => {
   return (
     <div className="w-full h-full flex flex-col bg-gray-50/30">
       {/* Header Section */}
-      <div className="p-6 border-b bg-white shadow-sm">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FolderOpen className="h-8 w-8 text-blue-600" />
+      <div className="p-4 sm:p-6 border-b bg-white shadow-sm">
+        <div className="flex items-start justify-between mb-4 sm:mb-6">
+          <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl flex-shrink-0">
+              <FolderOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
             </div>
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-gray-800">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col xs:flex-row xs:items-center gap-2 mb-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
                   {data?.data?.name || "Loading..."}
                 </h1>
-                <Badge variant="outline" className="font-mono text-xs">
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs self-start xs:self-center"
+                >
                   {data?.data?.code || "..."}
                 </Badge>
               </div>
-              {/* <p className="text-sm text-gray-500">
-                {data?.data?. ||
+              {/* Optional description */}
+              {/* <p className="text-xs sm:text-sm text-gray-500 truncate">
+                {data?.data?.description ||
                   "Manage lists and items in this container"}
               </p> */}
             </div>
           </div>
 
           {isFetching && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-              <span>Loading container...</span>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 flex-shrink-0 ml-2">
+              <div className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+              <span className="hidden xs:inline">Loading container...</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex-1 max-w-md">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex-1 w-full">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Search lists and items..."
                 onChange={(e) => setText(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200"
+                className="pl-10 bg-gray-50 border-gray-200 w-full"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="sm" variant="outline" className="gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 flex-1 sm:flex-none"
+                >
                   <CircleEllipsis className="h-4 w-4" />
-                  Manage
+                  <span className="hidden xs:inline">Manage</span>
+                  <span className="xs:hidden">Menu</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end">
+              <PopoverContent className="w-48 sm:w-56 p-2" align="end">
                 <div className="space-y-1">
                   <Button
                     size="sm"
@@ -230,7 +240,7 @@ const Container = () => {
                     className="w-full justify-start gap-2"
                     onClick={() =>
                       nav(
-                        `/${lineId}/supplies/container/${containerId}/data-set-config`
+                        `/${lineId}/supplies/container/${containerId}/data-set-config`,
                       )
                     }
                   >
@@ -243,7 +253,7 @@ const Container = () => {
                     className="w-full justify-start gap-2"
                     onClick={() =>
                       nav(
-                        `/${lineId}/supplies/container/${containerId}/accessibility`
+                        `/${lineId}/supplies/container/${containerId}/accessibility`,
                       )
                     }
                     disabled
@@ -270,17 +280,18 @@ const Container = () => {
             <Button
               size="sm"
               onClick={() => setOnOpen(1)}
-              className="gap-2 bg-blue-600 hover:bg-blue-700"
+              className="gap-2 bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
             >
               <ScrollText className="h-4 w-4" />
-              Create List
+              <span className="hidden xs:inline">Create List</span>
+              <span className="xs:hidden">New List</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
         <Card className="border shadow-sm">
           <CardContent className="p-0">
             <InventoryList query={query} />
@@ -298,8 +309,8 @@ const Container = () => {
           <div className="w-full space-y-4">
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
               <Package className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-blue-800">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-blue-800 truncate">
                   {data?.data?.name || "Container"}
                 </p>
                 <p className="text-xs text-blue-600">
@@ -338,65 +349,37 @@ const Container = () => {
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md"
+        className="max-w-md mx-4 sm:mx-auto"
         setOnOpen={() => setOnOpen(0)}
         loading={isSubmitting}
       />
 
       {/* Remove Container Modal */}
       <Modal
-        title="Remove Container"
-        children={
-          <div className="space-y-6">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-4 bg-red-50 rounded-full mb-4">
-                <Trash2 className="h-12 w-12 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Remove Container
-              </h3>
-              <p className="text-sm text-gray-600">
-                Are you sure you want to remove this container permanently?
-              </p>
+        title={
+          <div className="flex flex-col items-center text-center">
+            <div className="p-3 sm:p-4 bg-red-50 rounded-full mb-3 sm:mb-4">
+              <Trash2 className="h-8 w-8 sm:h-12 sm:w-12 text-red-600" />
             </div>
-
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg border">
-                <div className="flex items-center gap-3 mb-2">
-                  <FolderOpen className="h-5 w-5 text-gray-500" />
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {data?.data?.name || "Container"}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      ID: {containerId?.slice(-8)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm text-amber-800 mb-1">
-                      Warning: This action is permanent
-                    </p>
-                    <ul className="text-sm text-amber-700 space-y-1">
-                      <li>• All lists and items will be permanently deleted</li>
-                      <li>• This action cannot be undone</li>
-                      <li>• Make sure you have backed up important data</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">
+              Remove Container
+            </h3>
           </div>
         }
+        children={
+          <ConfirmDelete
+            confirmation={"confirm"}
+            setOnOpen={setOnOpen}
+            onFunction={() => {
+              removeContainer.mutateAsync();
+            }}
+            isLoading={removeContainer.isPending}
+          />
+        }
         onOpen={onOpen === 2}
-        className="max-w-lg"
+        className="max-w-lg max-h-[95vh] overflow-auto mx-4 sm:mx-auto"
         setOnOpen={() => setOnOpen(0)}
-        footer={true}
+        footer={1}
         loading={removeContainer.isPending}
         onFunction={() => {
           if (isFetching) return;

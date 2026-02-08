@@ -346,7 +346,7 @@ export const NewOrderSchema = z.object({
 export const AddNewSupplySchema = z.object({
   name: z.string().min(2, "Name must be at least have 2 characters"),
   comsumable: z.boolean(),
-  desc: z.string(),
+  desc: z.string().optional(),
 });
 
 export const AddItemOrderSchema = z.object({
@@ -645,6 +645,20 @@ export const NewLineFormSchema = z.object({
   municipal: z.string(),
   province: z.string(),
   region: z.string(),
+  defaultUserEmail: z
+    .string()
+    .min(1, "Email is required")
+    // Optional: add additional constraints
+    .refine(
+      (email) => {
+        // Basic but more complete regex pattern
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      },
+      {
+        message: "Invalid email format",
+      },
+    ),
 });
 
 export const TimebaseFilterSchema = z.object({
@@ -656,7 +670,16 @@ export const AnnouncementFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
   // status: z.enum(["draft", "published", "scheduled", "archived"]),
-  //mentions: z.array(z.string()),
+  mentions: z
+    .array(
+      z.object({
+        username: z.string(),
+        id: z.string(),
+        firstname: z.string(),
+        lastname: z.string(),
+      }),
+    )
+    .optional(),
   //files: z.array(z.file().optional()),
 });
 
@@ -700,4 +723,58 @@ export const SignatoryFormSchema = z.object({
 
 export const UpdateSalaryGradeSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
+});
+
+export const LineRegisterSchema = z.object({
+  firstname: z.string().min(2, "First name is required"),
+  lastname: z.string().min(2, "Last name required"),
+  username: z.string().min(4, "Username is required"),
+  password: z.string().min(8, "Must at least have 8 characters"),
+  viewPassword: z.boolean(),
+  teleNumber: z.string().optional(),
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .refine(
+      (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      },
+      {
+        message: "Invalid email format",
+      },
+    ),
+  personalEmail: z
+    .string()
+    .min(1, "Email is required")
+    .refine(
+      (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      },
+      {
+        message: "Invalid email format",
+      },
+    ),
+  personalPhoneNumber: z.string().optional(),
+});
+
+export const PositionInvitationSchema = z.object({
+  slot: z.string().min(1, "Slot is required"),
+  mail: z.string().refine(
+    (email) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    },
+    {
+      message: "Invalid email format",
+    },
+  ),
+  message: z.string().optional(),
+});
+
+export const FillPositionSchema = z.object({
+  username: z.string().min(4, "Username is required"),
+  password: z.string().min(8, "Must at least have 8 characters"),
+  viewPassword: z.boolean(),
 });

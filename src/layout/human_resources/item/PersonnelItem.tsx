@@ -1,4 +1,4 @@
-import React from "react";
+import { memo } from "react";
 
 //
 
@@ -14,12 +14,16 @@ const PersonnelItem = ({ item, no }: Props) => {
   return (
     <>
       <TableRow>
-        <TableCell className=" font-medium">{no + 1}</TableCell>
+        <TableCell className=" font-medium">{no}</TableCell>
         <TableCell className=" font-medium">{item.lastName}</TableCell>
         <TableCell className=" font-medium">{item.firstName}</TableCell>
+        <TableCell className=" font-medium">{item.middleName}</TableCell>
+        <TableCell className=" font-medium">
+          {item.Position?.name || "N/A"}
+        </TableCell>
       </TableRow>
     </>
   );
 };
 
-export default PersonnelItem;
+export default memo(PersonnelItem);

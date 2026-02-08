@@ -18,6 +18,7 @@ interface SelectUnitOfMeasureProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  defaultValue?: string;
 }
 
 const SelectUnitOfMeasure = ({
@@ -26,6 +27,7 @@ const SelectUnitOfMeasure = ({
   placeholder = "Select unit...",
   disabled = false,
   className,
+  defaultValue,
 }: SelectUnitOfMeasureProps) => {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -47,7 +49,12 @@ const SelectUnitOfMeasure = ({
   };
 
   return (
-    <Select value={value} onValueChange={handleValueChange} disabled={disabled}>
+    <Select
+      defaultValue={defaultValue}
+      value={value}
+      onValueChange={handleValueChange}
+      disabled={disabled}
+    >
       <SelectTrigger className={className}>
         <SelectValue placeholder={placeholder} className=" capitalize">
           {value || placeholder}

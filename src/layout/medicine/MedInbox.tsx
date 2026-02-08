@@ -1,21 +1,17 @@
 // React component
 import { useEffect } from "react";
-import { useMutation, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 //db and libs
-import axios from "@/db/axios";
 import { getMedInbox } from "@/db/statement";
 import { url } from "@/db/axios";
 //components and layout
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import MedInboxItem from "./item/MedInboxItem";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 //icons
-import { RotateCcw, CircleAlert } from "lucide-react";
-
-import { socket } from "@/db/socket";
+import { CircleAlert } from "lucide-react";
 
 //
 import type { MedicineNotification } from "@/interface/data";
@@ -32,54 +28,22 @@ interface ListProps {
 
 const MedInbox = ({ lineId, token }: Props) => {
   const { ref, inView } = useInView();
-  const sendNotification = async () => {
-    try {
-      const response = await axios.post("/notification/send", {
-        userId: "3e8d2296-4806-430c-8b1e-b888b7afa0e9",
-        title: "Test Notification",
-        message: "This is a test notification message",
-        type: "info",
-      });
 
-      console.log("Notification sent:", response.data);
-    } catch (error) {
-      console.error("Error sending notification:", error);
-    }
-  };
-
-  const { mutateAsync, isPending } = useMutation({
-    mutationFn: sendNotification,
-    onSuccess: () => {
-      console.log("OK");
-    },
-    onError: (err) => {
-      console.log(err);
-    },
-  });
-
-  const {
-    data,
-    isFetchingNextPage,
-    fetchNextPage,
-    refetch,
-    isFetching,
-    hasNextPage,
-  } = useInfiniteQuery<ListProps>({
-    queryKey: ["medIbox", lineId],
-    queryFn: ({ pageParam }) =>
-      getMedInbox(
-        token as string,
-        lineId,
-        pageParam as string | null,
-        "10",
-        ""
-      ),
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.lastCursor : undefined,
-    initialPageParam: null,
-  });
-
-  console.log({ data });
+  const { data, isFetchingNextPage, fetchNextPage, isFetching, hasNextPage } =
+    useInfiniteQuery<ListProps>({
+      queryKey: ["medIbox", lineId],
+      queryFn: ({ pageParam }) =>
+        getMedInbox(
+          token as string,
+          lineId,
+          pageParam as string | null,
+          "10",
+          "",
+        ),
+      getNextPageParam: (lastPage) =>
+        lastPage.hasMore ? lastPage.lastCursor : undefined,
+      initialPageParam: null,
+    });
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
@@ -91,22 +55,10 @@ const MedInbox = ({ lineId, token }: Props) => {
   }, [inView, hasNextPage, isFetching, isFetchingNextPage, fetchNextPage]);
 
   // Calculate flattened data once
-  const allMedicines = data?.pages.flatMap((page) => page.list) || [];
-  const totalCount = allMedicines.length;
 
   return (
     <ScrollArea className="w-full h-full ">
       <ScrollBar />
-      <div className="w-full flex justify-end">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={isPending}
-          onClick={() => mutateAsync()}
-        >
-          <RotateCcw />
-        </Button>
-      </div>
       {isFetchingNextPage || isFetching ? (
         <Skeleton className=" w-full h-30 mt-2" />
       ) : data ? (

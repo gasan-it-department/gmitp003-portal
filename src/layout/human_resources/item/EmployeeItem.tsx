@@ -21,8 +21,7 @@ interface Props {
 
 const EmployeeItem = ({ item, no, query, token, userId }: Props) => {
   const nav = useNavigate();
-
-  const handleView = async () => {};
+  console.log({ item });
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: () => viewUserProfile(token, item.id, userId),
@@ -42,16 +41,12 @@ const EmployeeItem = ({ item, no, query, token, userId }: Props) => {
         }}
         className=" hover:bg-neutral-200 cursor-pointer"
       >
-        <TableCell>{no + 1}</TableCell>
+        <TableCell>{no}</TableCell>
         <TableCell>{searchedChar(query, item.lastName)}</TableCell>
         <TableCell>{searchedChar(query, item.firstName)}</TableCell>
         <TableCell>{searchedChar(query, item.middleName) || "N/A"}</TableCell>
         <TableCell>{searchedChar(query, item.username) || "N/A"}</TableCell>
-        <TableCell>
-          {(item.PositionSlot &&
-            searchedChar(query, item.PositionSlot.pos.name)) ||
-            "N/A"}
-        </TableCell>
+        <TableCell>{item.department?.name || "N/A"}</TableCell>
       </TableRow>
     </>
   );

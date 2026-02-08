@@ -6,7 +6,6 @@ import { useSearchParams } from "react-router";
 import { getUnitInfo } from "@/db/statement";
 //
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 //

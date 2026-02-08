@@ -13,7 +13,6 @@ import Unauthorized from "./provider/Unauthorized.tsx";
 import TempAuthProvider from "./provider/TempAuthProvider.tsx";
 //route
 import HrInex from "@/route/human_resources/index.tsx";
-import HrHome from "./route/human_resources/Home.tsx";
 import HrEmployee from "./route/human_resources/Employee.tsx";
 import HrApplication from "./route/human_resources/Application.tsx";
 import AddEmployee from "./route/human_resources/AddEmployee.tsx";
@@ -57,6 +56,8 @@ import AnnouncementData from "./route/human_resources/AnnouncementData.tsx";
 import AnnouncementDataPublic from "./layout/AnnouncementData.tsx";
 import UnitDispenseRecord from "./layout/supplies/UnitDispenseRecord.tsx";
 import Dashboard from "./layout/human_resources/Dashboard.tsx";
+import LineRegistration from "./route/LineRegistration.tsx";
+import PositionInvitation from "./route/PositionInvitation.tsx";
 //E-signature
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
@@ -86,6 +87,7 @@ import Test from "./route/Test.tsx";
 import PurchaseRequest from "./layout/supplies/PurchaseRequest.tsx";
 import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
+import UserDataRegistration from "./route/UserDataRegistration.tsx";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +97,19 @@ createRoot(document.getElementById("root")!).render(
       <UserProvider>
         <BrowserRouter>
           <Routes>
+            <Route
+              path="line/register/:lineId/:unitPosId/:sgId"
+              element={<LineRegistration />}
+            />
+            <Route
+              path="position/register/:positionInviteLinkId"
+              element={<UserDataRegistration />}
+            />
+
+            <Route
+              path="position/register/:positionInviteLinkId/:linkApplicationId"
+              element={<PositionInvitation />}
+            />
             <Route path="/auth" element={<Login />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin-panel" element={<AdminRouter />}>
@@ -225,7 +240,7 @@ createRoot(document.getElementById("root")!).render(
                   path="announcement/:announcementId"
                   element={<AnnouncementData />}
                 />
-                <Route index={true} element={<Dashboard />} />
+                <Route index={true} path="dashboard" element={<Dashboard />} />
                 <Route path="employee" element={<HrEmployee />} />
                 <Route path="employee/:employeeId" element={<UserProfile />} />
                 <Route path="employees/add" element={<AddEmployee />} />

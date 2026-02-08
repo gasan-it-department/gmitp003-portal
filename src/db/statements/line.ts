@@ -4,7 +4,7 @@ export const getAllLines = async (
   token: string,
   lastCursor: string | null,
   limit: string,
-  query: string
+  query: string,
 ) => {
   const resposne = await axios.get("/line/list", {
     headers: {
@@ -32,7 +32,7 @@ export const searchLineUser = async (
   id: string,
   lastCursor: string | null,
   limit: string,
-  query: string
+  query: string,
 ) => {
   const response = await axios.get("/users/search", {
     params: {
@@ -51,6 +51,57 @@ export const searchLineUser = async (
   });
   if (response.status !== 200) {
     throw new Error("Fetched failed");
+  }
+  return response.data;
+};
+
+export const updateLineStatus = async (
+  token: string,
+  id: string,
+  status: number,
+  userId: string,
+) => {
+  const response = await axios.patch(
+    "/line/update/status",
+    {
+      id,
+      status,
+      userId,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
+    },
+  );
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};
+
+export const deleteLine = async (token: string, id: string, userId: string) => {
+  const response = await axios.delete("/line/delete", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
+    params: {
+      id,
+      userId,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
   }
   return response.data;
 };

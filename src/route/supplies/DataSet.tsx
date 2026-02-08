@@ -74,6 +74,11 @@ const DataSet = () => {
 
   const form = useForm<AddNewSupplyProps>({
     resolver: zodResolver(AddNewSupplySchema),
+    defaultValues: {
+      comsumable: false,
+      desc: "",
+      name: "",
+    },
   });
 
   const {
@@ -107,7 +112,7 @@ const DataSet = () => {
         transformRequest: (data) => data,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+            (progressEvent.loaded * 100) / (progressEvent.total || 1),
           );
           setUploadProgress(percentCompleted);
         },
@@ -162,7 +167,7 @@ const DataSet = () => {
       handleExportDataSetSupplies(
         dataSetId as string,
         auth.token as string,
-        `${data?.data.title}-Items`
+        `${data?.data.title}-Items`,
       ),
     onError: (err) => {
       console.log(err);
@@ -176,7 +181,7 @@ const DataSet = () => {
         data?.data.id as string,
         auth.userId as string,
         containerId as string,
-        password
+        password,
       ),
     onError: (err) => {
       toast.error("Failed to delete", {
@@ -597,16 +602,7 @@ const DataSet = () => {
       {/* Delete Data Set Modal */}
       <Modal
         footer={true}
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="h-5 w-5 text-red-600" />
-            </div>
-            <span className="text-lg font-semibold text-red-800">
-              Delete Data Set
-            </span>
-          </div>
-        }
+        title={undefined}
         children={
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center">
@@ -679,7 +675,7 @@ const DataSet = () => {
           </div>
         }
         onOpen={onOpen === 3}
-        className="max-w-lg"
+        className="max-w-lg max-h-[95vh] overflow-auto"
         setOnOpen={() => {
           if (deleteDateSetMutation.isPending) return;
           setOnOpen(0);

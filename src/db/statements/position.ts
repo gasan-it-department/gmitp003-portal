@@ -40,7 +40,7 @@ export const positionUserHistory = async (token: string, id: string) => {
 
 export const positionSalarayGradeHistory = async (
   token: string,
-  id: string
+  id: string,
 ) => {
   const response = await axios.get("/position/user/records", {
     headers: {
@@ -57,5 +57,24 @@ export const positionSalarayGradeHistory = async (
   if (response.status !== 200) {
     throw new Error(response.data);
   }
+  return response.data;
+};
+
+export const checkPositionInvitation = async (inviteId: string) => {
+  const response = await axios.get("/position/check-invitation", {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id: inviteId,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+
   return response.data;
 };

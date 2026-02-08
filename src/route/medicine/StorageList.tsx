@@ -79,7 +79,7 @@ const StorageList = () => {
         lineId as string,
         pageParam as string | null,
         "10",
-        ""
+        "",
       ),
     enabled: !!lineId,
   });
@@ -90,7 +90,6 @@ const StorageList = () => {
 
   const {
     handleSubmit,
-    setError,
     formState: { isSubmitting },
     control,
     resetField,
@@ -118,7 +117,7 @@ const StorageList = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
       if (response.status !== 200) {
         return toast.error("Failed to add storage location.");

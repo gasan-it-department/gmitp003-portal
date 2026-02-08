@@ -15,10 +15,10 @@ import {
   Box,
   IdCardLanyard,
   Scroll,
-  LayoutDashboard,
-  Users,
-  Archive,
-  Megaphone,
+  // LayoutDashboard,
+  // Users,
+  // Archive,
+  // Megaphone,
   Pill,
   HandHelping,
   ChevronRight,
@@ -59,7 +59,7 @@ const ControlPanelItem = ({
             className={cn(
               "group relative bg-white rounded-xl border border-gray-200 cursor-pointer",
               "transition-all duration-300 hover:shadow-lg hover:border-blue-300 hover:scale-105",
-              "flex flex-col h-full overflow-hidden"
+              "flex flex-col h-full overflow-hidden",
             )}
             onClick={handleClick}
           >
@@ -81,7 +81,7 @@ const ControlPanelItem = ({
                   size={48}
                   className={cn(
                     "relative z-10 transition-all duration-300",
-                    "text-gray-600 group-hover:text-blue-600 group-hover:scale-110"
+                    "text-gray-600 group-hover:text-blue-600 group-hover:scale-110",
                   )}
                 />
               </div>
@@ -103,7 +103,7 @@ const ControlPanelItem = ({
             <div
               className={cn(
                 "px-4 py-3 border-t border-gray-100 bg-gray-50",
-                "group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors"
+                "group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors",
               )}
             >
               <div className="flex items-center justify-between">
@@ -168,7 +168,7 @@ export const panels = [
   },
   {
     title: "Personnel",
-    path: "human-resources/home",
+    path: "human-resources",
     Icon: IdCardLanyard,
     desc: "Manage human resources and employee data",
     notifications: 0,
@@ -202,12 +202,7 @@ interface Props {
 }
 
 const ControlPanel = ({ id, token }: Props) => {
-  const totalNotifications = panels.reduce(
-    (sum, panel) => sum + (panel.notifications || 0),
-    0
-  );
-
-  const { data, isFetching, error } = useQuery<Module[]>({
+  const { data } = useQuery<Module[]>({
     queryKey: ["user-modules", id],
     queryFn: () => userAssignedModule(token as string, id),
     enabled: !!token || !!id,
@@ -255,13 +250,6 @@ const ControlPanel = ({ id, token }: Props) => {
             dashboard. Access different modules to handle inventory, personnel,
             documents, and more.
           </p>
-
-          {totalNotifications > 0 && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-              <Bell size={16} />
-              <span>{totalNotifications} pending items across modules</span>
-            </div>
-          )}
         </div>
 
         {/* Control Panel Grid */}

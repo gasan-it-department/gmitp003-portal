@@ -48,6 +48,9 @@ import {
   PrintTimebaseReport,
   SignatoryFormSchema,
   UpdateSalaryGradeSchema,
+  LineRegisterSchema,
+  PositionInvitationSchema,
+  FillPositionSchema,
 } from "./zod";
 import z from "zod";
 export type LoginProps = z.infer<typeof LoginSchema>;
@@ -110,6 +113,9 @@ export type SignatoryFormProps = z.infer<typeof SignatoryFormSchema>;
 
 export type TimebasedPrintProps = z.infer<typeof PrintTimebaseReport>;
 export type UpdateSalaryGradeProps = z.infer<typeof UpdateSalaryGradeSchema>;
+export type LineRegisterProps = z.infer<typeof LineRegisterSchema>;
+export type PositionInvitationProps = z.infer<typeof PositionInvitationSchema>;
+export type FillPositionProps = z.infer<typeof FillPositionSchema>;
 // Department Interface
 export interface Department {
   id: string;
@@ -120,6 +126,9 @@ export interface Department {
   headId?: string | null;
   users: User[];
   email?: string;
+  _count: {
+    users: number;
+  };
 }
 
 export interface AccountProps {
@@ -229,6 +238,7 @@ export interface PositionSlotProps {
   id: string;
   salaryGrade: SalaryGrade;
   pos: Position;
+  occupied: boolean;
 }
 // SalaryGrade Interface
 export interface SalaryGrade {
@@ -1161,4 +1171,20 @@ export interface UnitPosition {
   line: LineProps;
   position: Position;
   jobPosts: JobPostProps[];
+}
+
+export interface FillPositionInvitationProps {
+  id: string;
+  lineId: string;
+  email: string;
+  message: string | null;
+  concluded: boolean;
+  concludedAt: string | null;
+  timestamp: string;
+  unitPositionId: string;
+  line?: LineProps;
+  unitPoistion?: UnitPositionProps;
+  positionSlotId: string;
+  step: number;
+  submittedApplicationId?: string;
 }

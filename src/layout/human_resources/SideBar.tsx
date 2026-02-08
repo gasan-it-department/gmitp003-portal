@@ -4,10 +4,8 @@ import {
   Home,
   IdCardLanyard,
   File,
-  LandPlot,
   Landmark,
   Blocks,
-  Link,
   Component,
   Building2,
 } from "lucide-react";
@@ -16,7 +14,7 @@ import SIdeBarItem from "./SIdeBarItem";
 export const menuList = [
   {
     title: "Dashboard",
-    path: "",
+    path: "dashboard",
     Icon: Home,
     children: [],
     accord: false,
@@ -61,13 +59,13 @@ export const menuList = [
         children: [],
         accord: true,
       },
-      {
-        title: "Areas",
-        path: "areas",
-        Icon: LandPlot,
-        children: [],
-        accord: true,
-      },
+      // {
+      //   title: "Areas",
+      //   path: "areas",
+      //   Icon: LandPlot,
+      //   children: [],
+      //   accord: true,
+      // },
       {
         title: "Units",
         path: "units",
@@ -76,12 +74,19 @@ export const menuList = [
         accord: true,
       },
       {
-        title: "Invite Users",
-        path: "invite",
-        Icon: Link,
+        title: "Document Room",
+        path: "document-room",
+        Icon: Blocks,
         children: [],
         accord: true,
       },
+      // {
+      //   title: "Invite Users",
+      //   path: "invite",
+      //   Icon: Link,
+      //   children: [],
+      //   accord: true,
+      // },
     ],
     accord: true,
   },

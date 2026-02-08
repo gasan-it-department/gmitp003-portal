@@ -26,9 +26,10 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import SWWItem from "@/layout/item/SWWItem";
 import { Spinner } from "@/components/ui/spinner";
 import PrescriptionItem from "@/layout/medicine/item/PrescriptionItem";
+import { Badge } from "@/components/ui/badge";
 
 //
-import { Search, CalendarDays } from "lucide-react";
+import { Search, CalendarDays, FileText, Filter } from "lucide-react";
 
 //
 import type { Prescription } from "@/interface/data";
@@ -61,7 +62,7 @@ const Prescriptions = () => {
         lineId,
         pageParam as string | null,
         "20",
-        query
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -85,84 +86,216 @@ const Prescriptions = () => {
 
   const allMedicines = data?.pages.flatMap((page) => page.list) || [];
   const totalCount = allMedicines.length;
+  const isLoading = isFetching && !isFetchingNextPage && totalCount === 0;
 
   return (
-    <div className=" w-full h-full relative overflow-auto">
-      <div className=" w-full px-2 h-[10%] bg-white flex items-center sticky top-0 z-50 gap-2">
-        <InputGroup className=" lg:w-1/3 ">
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            className=""
-            placeholder="Search Ref. #/ Last name/ First name"
-            onChange={(e) => setText(e.target.value)}
-          />
-        </InputGroup>
-
-        <InputGroup className=" w-auto ">
-          <InputGroupAddon>
-            <CalendarDays />
-          </InputGroupAddon>
-          <InputGroupInput
-            className=""
-            type="date"
-            placeholder="Search Ref. #/ Last name/ First name"
-            onChange={(e) => setText(e.target.value)}
-          />
-        </InputGroup>
+    <div className="w-full h-full flex flex-col bg-gray-50">
+      {/* Header */}
+      <div className="px-4 py-3 sm:px-6 bg-white border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex p-2 bg-blue-50 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Prescriptions
+              </h2>
+              <p className="text-sm text-gray-500">
+                Manage and view prescription records
+              </p>
+            </div>
+          </div>
+          {totalCount > 0 && !isLoading && (
+            <Badge variant="outline" className="self-start sm:self-auto">
+              {totalCount} record{totalCount !== 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
       </div>
-      <ScrollArea className=" w-full h-[90%] overflow-auto">
-        <Table className=" w-full h-[90%] ">
-          <TableHeader className="border bg-neutral-700">
-            <TableHead className="text-white">No</TableHead>
-            <TableHead className="text-white">Ref. #</TableHead>
-            <TableHead className="text-white">Last name</TableHead>
-            <TableHead className="text-white">First name</TableHead>
-            <TableHead className="text-white">Date Recieved</TableHead>
-            <TableHead className="text-white">Status</TableHead>
-          </TableHeader>
 
-          <TableBody>
-            {isFetching || isFetchingNextPage ? (
-              <TableRow>
-                <TableCell colSpan={6} className="w-full flex items-center">
-                  <div className="flex gap-2 items-center">
-                    <Spinner /> Loading...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : data ? (
-              data.pages.flatMap((item) => item.list).length > 0 ? (
-                data.pages
-                  .flatMap((item) => item.list)
-                  .map((item, i) => (
-                    <PrescriptionItem
-                      key={item.id}
-                      item={item}
-                      no={i}
-                      query={query}
-                    />
-                  ))
-              ) : (
-                <TableRow>
-                  <TableCell className=" text-center" colSpan={6}>
-                    No Prescription found!
-                  </TableCell>
-                </TableRow>
-              )
-            ) : (
-              <SWWItem colSpan={6} />
-            )}
-            <TableRow ref={ref}>
-              <TableCell colSpan={6} className="text-center py-4">
-                {isFetchingNextPage && <p>Loading more...</p>}
-                {!hasNextPage && totalCount > 0 && <p>All items loaded</p>}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </ScrollArea>
+      {/* Search and Filters */}
+      <div className="p-4 bg-white border-b">
+        <div className="flex flex-col md:flex-row gap-3">
+          {/* Search Input */}
+          <div className="flex-1">
+            <InputGroup className="w-full">
+              <InputGroupAddon className="pl-3">
+                <Search className="h-4 w-4 text-gray-500" />
+              </InputGroupAddon>
+              <InputGroupInput
+                placeholder="Search by reference, last name, or first name..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="pl-2"
+              />
+            </InputGroup>
+          </div>
+
+          {/* Date Filter */}
+          <div className="w-full md:w-auto">
+            <InputGroup className="w-full">
+              <InputGroupAddon className="pl-3">
+                <CalendarDays className="h-4 w-4 text-gray-500" />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="date"
+                placeholder="Filter by date"
+                onChange={(e) => setText(e.target.value)}
+                className="pl-2"
+              />
+            </InputGroup>
+          </div>
+
+          {/* Mobile Filter Button */}
+          <button className="md:hidden flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <Filter className="h-4 w-4" />
+            More Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-3">
+              <Spinner className="w-8 h-8 mx-auto" />
+              <p className="text-gray-600">Loading prescriptions...</p>
+            </div>
+          </div>
+        ) : (
+          <ScrollArea className="h-full">
+            <div className="min-w-full">
+              <Table className="w-full">
+                <TableHeader className="sticky top-0 bg-gray-100 z-10">
+                  <TableRow className="hover:bg-gray-100">
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold w-16">
+                      No.
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[120px]">
+                      Ref. #
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[140px]">
+                      Last Name
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[140px]">
+                      First Name
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[140px]">
+                      Date Received
+                    </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[100px]">
+                      Status
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {totalCount > 0 ? (
+                    <>
+                      {allMedicines.map((item, i) => (
+                        <PrescriptionItem
+                          key={item.id}
+                          item={item}
+                          no={i + 1}
+                          query={query}
+                        />
+                      ))}
+
+                      {/* Infinite scroll loading */}
+                      {isFetchingNextPage && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-6">
+                            <div className="flex items-center justify-center gap-3">
+                              <Spinner className="w-5 h-5" />
+                              <span className="text-sm text-gray-600">
+                                Loading more prescriptions...
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Infinite scroll trigger */}
+                      <TableRow ref={ref}>
+                        <TableCell colSpan={6} className="h-10">
+                          {/* Empty cell for trigger */}
+                        </TableCell>
+                      </TableRow>
+
+                      {/* End of list */}
+                      {!hasNextPage && totalCount > 0 && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="py-4 text-center border-t"
+                          >
+                            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                              <span className="h-px w-8 bg-gray-300"></span>
+                              <span>All prescriptions loaded</span>
+                              <span className="h-px w-8 bg-gray-300"></span>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">
+                              Showing {totalCount} prescription
+                              {totalCount !== 1 ? "s" : ""}
+                            </p>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                            <FileText className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                              No prescriptions found
+                            </h3>
+                            <p className="text-gray-500 text-sm">
+                              {query
+                                ? "Try a different search term"
+                                : "No prescription records yet"}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {/* Error state */}
+                  {!data && !isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <SWWItem colSpan={6} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
+      </div>
+
+      {/* Mobile loading indicator */}
+      {isFetchingNextPage && (
+        <div className="md:hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white border shadow-lg rounded-full px-4 py-2 flex items-center gap-2 z-50">
+          <Spinner className="w-4 h-4" />
+          <span className="text-sm font-medium">Loading more...</span>
+        </div>
+      )}
+
+      {/* Mobile search summary */}
+      {query && totalCount > 0 && (
+        <div className="md:hidden fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-blue-50 text-blue-700 text-sm font-medium px-3 py-1.5 rounded-full shadow-sm">
+          {totalCount} result{totalCount !== 1 ? "s" : ""} for "{query}"
+        </div>
+      )}
     </div>
   );
 };

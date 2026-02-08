@@ -1,43 +1,35 @@
 import { useSearchParams } from "react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+// import { Separator } from "@/components/ui/separator";
+// import { Badge } from "@/components/ui/badge";
 import {
   BookUser,
-  Component,
-  Gauge,
-  LandPlot,
+  // Component,
+  // Gauge,
+  // LandPlot,
   Server,
-  Logs,
+  // Logs,
   Shield,
-  Settings,
+  //Settings,
   Bell,
   Menu,
   X,
-  Home,
+  //Home,
 } from "lucide-react";
 
 //tabs
-import Dashboard from "./admin-panel/Dashboard";
-import Areas from "./admin-panel/Areas";
+// import Dashboard from "./admin-panel/Dashboard";
+// import Areas from "./admin-panel/Areas";
 import Account from "./admin-panel/Account";
 import Lines from "./admin-panel/Lines";
 
 const AdminPanel = () => {
-  const [params, setParams] = useSearchParams({ tab: "dashboard" });
+  const [params, setParams] = useSearchParams({ tab: "account" });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState({
-    dashboard: 0,
-    account: 3,
-    module: 5,
-    line: 2,
-    area: 1,
-    logs: 8,
-  });
 
-  const currentTab = params.get("tab") || "dashboard";
+  const currentTab = params.get("tab") || "account";
 
   const handleChangeParams = (key: string, value: string) => {
     setParams(
@@ -45,58 +37,56 @@ const AdminPanel = () => {
         prev.set(key, value);
         return prev;
       },
-      { replace: true }
+      { replace: true },
     );
     setIsMobileMenuOpen(false);
   };
 
   // Tabs configuration with icons and badges
   const tabs = [
-    {
-      value: "dashboard",
-      label: "Dashboard",
-      icon: Gauge,
-      badge: notifications.dashboard,
-      component: <Dashboard />,
-    },
+    // {
+    //   value: "dashboard",
+    //   label: "Dashboard",
+    //   icon: Gauge,
+    //   badge: notifications.dashboard,
+    //   component: <Dashboard />,
+    // },
     {
       value: "account",
       label: "Account",
       icon: BookUser,
-      badge: notifications.account,
       component: <Account />,
     },
-    {
-      value: "module",
-      label: "Modules",
-      icon: Component,
-      badge: notifications.module,
-      component: <div className="p-6">Modules Content</div>,
-    },
+    // {
+    //   value: "module",
+    //   label: "Modules",
+    //   icon: Component,
+    //   badge: notifications.module,
+    //   component: <div className="p-6">Modules Content</div>,
+    // },
     {
       value: "line",
       label: "Lines",
       icon: Server,
-      badge: notifications.line,
       component: <Lines />,
     },
-    {
-      value: "area",
-      label: "Areas",
-      icon: LandPlot,
-      badge: notifications.area,
-      component: <Areas />,
-    },
-    {
-      value: "logs",
-      label: "Audit Logs",
-      icon: Logs,
-      badge: notifications.logs,
-      component: <div className="p-6">Audit Logs Content</div>,
-    },
+    // {
+    //   value: "area",
+    //   label: "Areas",
+    //   icon: LandPlot,
+    //   badge: notifications.area,
+    //   component: <Areas />,
+    // },
+    // {
+    //   value: "logs",
+    //   label: "Audit Logs",
+    //   icon: Logs,
+    //   badge: notifications.logs,
+    //   component: <div className="p-6">Audit Logs Content</div>,
+    // },
   ];
 
-  const activeTab = tabs.find((tab) => tab.value === currentTab);
+  // const activeTab = tabs.find((tab) => tab.value === currentTab);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -117,21 +107,6 @@ const AdminPanel = () => {
                   <p className="text-xs text-gray-500">System Administration</p>
                 </div>
               </div>
-
-              {/* Active Tab Indicator */}
-              {activeTab && (
-                <div className="hidden md:flex items-center gap-2 ml-6 pl-6 border-l border-gray-200">
-                  <activeTab.icon className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {activeTab.label}
-                  </span>
-                  {activeTab.badge > 0 && (
-                    <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                      {activeTab.badge}
-                    </Badge>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* Actions */}
@@ -139,18 +114,18 @@ const AdminPanel = () => {
               <Button variant="outline" size="sm" className="hidden sm:flex">
                 <Bell className="h-4 w-4 mr-2" />
                 <span className="hidden lg:inline">Notifications</span>
-                <Badge
+                {/* <Badge
                   variant="destructive"
                   className="ml-2 h-5 w-5 p-0 text-xs"
                 >
                   12
-                </Badge>
+                </Badge> */}
               </Button>
-
+              {/* 
               <Button variant="outline" size="sm">
                 <Settings className="h-4 w-4 mr-2" />
                 <span className="hidden lg:inline">Settings</span>
-              </Button>
+              </Button> */}
 
               {/* Mobile Menu Toggle */}
               <Button
@@ -184,14 +159,6 @@ const AdminPanel = () => {
                     <div className="flex items-center gap-3">
                       <tab.icon className="h-4 w-4" />
                       <span>{tab.label}</span>
-                      {tab.badge > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-auto h-5 px-1.5 text-xs"
-                        >
-                          {tab.badge}
-                        </Badge>
-                      )}
                     </div>
                   </TabsTrigger>
                 ))}
@@ -220,14 +187,6 @@ const AdminPanel = () => {
                     <div className="flex items-center gap-2">
                       <tab.icon className="h-4 w-4" />
                       <span className="font-medium">{tab.label}</span>
-                      {tab.badge > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="ml-2 h-5 px-1.5 text-xs bg-red-100 text-red-700"
-                        >
-                          {tab.badge}
-                        </Badge>
-                      )}
                     </div>
                     {currentTab === tab.value && (
                       <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
@@ -268,12 +227,6 @@ const AdminPanel = () => {
                           </p>
                         </div>
                       </div>
-                      {tab.badge > 0 && (
-                        <Button variant="outline" size="sm">
-                          <Bell className="h-4 w-4 mr-2" />
-                          {tab.badge} pending
-                        </Button>
-                      )}
                     </div>
                   </div>
 
@@ -282,35 +235,6 @@ const AdminPanel = () => {
                 </TabsContent>
               ))}
             </Tabs>
-          </div>
-
-          {/* Footer Stats */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Total Tabs</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {tabs.length}
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Total Notifications</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {Object.values(notifications).reduce((a, b) => a + b, 0)}
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">Active Tab</div>
-              <div className="text-xl font-bold text-blue-600">
-                {activeTab?.label || "Dashboard"}
-              </div>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <div className="text-sm text-gray-500">System Status</div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-lg font-bold text-green-600">Online</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

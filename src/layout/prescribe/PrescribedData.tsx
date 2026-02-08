@@ -170,14 +170,6 @@ const PrescribedData = () => {
           <div className="mb-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full h-10 w-10 p-0"
-                  onClick={() => window.history.back()}
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                     Prescription Details
@@ -201,21 +193,6 @@ const PrescribedData = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  <Download className="w-4 h-4" />
-                  Export PDF
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
               </div>
             </div>
 
@@ -474,7 +451,7 @@ const PrescribedData = () => {
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback className="bg-purple-100 text-purple-700">
                                   {getInitials(
-                                    `${comment.User.firstName} ${comment.User.lastName}`
+                                    `${comment.User.firstName} ${comment.User.lastName}`,
                                   )}
                                 </AvatarFallback>
                               </Avatar>
@@ -559,7 +536,7 @@ const PrescribedData = () => {
                                   </p>
                                   <span className="text-xs text-gray-500">
                                     {moment(progress.timestamp).format(
-                                      "h:mm A"
+                                      "h:mm A",
                                     )}
                                   </span>
                                 </div>
@@ -588,7 +565,7 @@ const PrescribedData = () => {
                           <Avatar className="h-10 w-10">
                             <AvatarFallback className="bg-blue-100 text-blue-700">
                               {getInitials(
-                                `${data.processBy.firstName} ${data.processBy.lastName}`
+                                `${data.processBy.firstName} ${data.processBy.lastName}`,
                               )}
                             </AvatarFallback>
                           </Avatar>
@@ -614,7 +591,7 @@ const PrescribedData = () => {
                           <Avatar className="h-10 w-10">
                             <AvatarFallback className="bg-green-100 text-green-700">
                               {getInitials(
-                                `${data.respondedBy.firstName} ${data.respondedBy.lastName}`
+                                `${data.respondedBy.firstName} ${data.respondedBy.lastName}`,
                               )}
                             </AvatarFallback>
                           </Avatar>

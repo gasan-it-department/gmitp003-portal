@@ -22,7 +22,7 @@ import SWWItem from "../item/SWWItem";
 import PersonnelItem from "./item/PersonnelItem";
 
 // Icons
-import { Loader2, Users, User, Mail, Briefcase } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 
 interface ListProps {
   list: UserProps[];
@@ -86,17 +86,9 @@ const OfficePersonnel = () => {
                 <TableHead className="font-semibold text-gray-700">
                   Middle
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  Suffix
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  Email
-                </TableHead>
+
                 <TableHead className="font-semibold text-gray-700">
                   Position
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  SG
                 </TableHead>
               </TableRow>
             </TableHeader>

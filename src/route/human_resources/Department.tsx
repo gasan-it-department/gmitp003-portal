@@ -1,20 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useInView } from "react-intersection-observer";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useForm } from "react-hook-form";
 import axios from "@/db/axios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getLinetUnits } from "@/db/statement";
 //
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -42,7 +36,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 //
-import { FolderPlus, Building2, Users, Hash, Calendar } from "lucide-react";
+import { FolderPlus, Building2, Users, Hash } from "lucide-react";
 
 //
 import type {
@@ -64,24 +58,41 @@ const Department = () => {
   } | null>(null);
   const [onOpen, setOnOpen] = useState(0);
 
+  // Add useInView hook for infinite scroll
+  const { ref, inView } = useInView();
+
   const { lineId } = useParams();
   const auth = useAuth();
   const queryClient = useQueryClient();
 
-  const { data, isFetching, fetchNextPage, isFetchingNextPage, hasNextPage } =
-    useInfiniteQuery<ListProps>({
-      queryKey: ["departments", lineId],
-      queryFn: ({ pageParam }) =>
-        getLinetUnits(
-          auth.token as string,
-          lineId as string,
-          pageParam as string | null,
-          "20",
-          "",
-        ),
-      initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.lastCursor,
-    });
+  const {
+    data,
+    isFetching,
+    fetchNextPage,
+    isFetchingNextPage,
+    hasNextPage,
+    error,
+  } = useInfiniteQuery<ListProps>({
+    queryKey: ["departments", lineId],
+    queryFn: ({ pageParam }) =>
+      getLinetUnits(
+        auth.token as string,
+        lineId as string,
+        pageParam as string | null,
+        "20",
+        "",
+      ),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
+  });
+
+  // Infinite scroll trigger effect
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const form = useForm<AddUnitProps>({
     resolver: zodResolver(AddUnitSchema),
@@ -89,7 +100,7 @@ const Department = () => {
 
   const {
     handleSubmit,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
     reset,
     control,
   } = form;
@@ -138,6 +149,34 @@ const Department = () => {
   const totalDepartments = allDepartments.length;
   const isLoading =
     isFetching && !isFetchingNextPage && allDepartments.length === 0;
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <Card className="w-full h-full flex flex-col border-none shadow-none">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  Departments & Units
+                </CardTitle>
+                <CardDescription>
+                  Manage organizational departments and units
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 flex items-center justify-center">
+          <SWWItem colSpan={1} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full h-full flex flex-col border-none shadow-none">
@@ -227,6 +266,9 @@ const Department = () => {
               {allDepartments.map((item, i) => (
                 <UnitItem key={item.id} item={item} no={i + 1} />
               ))}
+
+              {/* Infinite scroll trigger element - add ref here */}
+              <div ref={ref} className="h-1" />
 
               {/* Infinite scroll loading */}
               {isFetchingNextPage && (

@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo } from "react";
 import { useNavigate, NavLink } from "react-router";
 //
 import type { SupplyDispenseRecordProps } from "@/interface/data";
@@ -22,7 +22,6 @@ interface Props {
 const DispenseTransactionItem = ({
   item,
   ref,
-  onSelect,
   multiSelect,
   handleCheckItem,
   handleSelectItem,

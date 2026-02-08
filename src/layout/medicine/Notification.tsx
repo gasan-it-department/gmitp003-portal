@@ -6,7 +6,7 @@ import { newInboxCount } from "@/db/statement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 //
-import { Inbox, Bell } from "lucide-react";
+import { Inbox } from "lucide-react";
 
 //
 import MedInbox from "./MedInbox";
@@ -49,10 +49,6 @@ const Notification = ({ lineId, token }: Props) => {
                 </Badge>
               )
             )}
-          </TabsTrigger>
-          <TabsTrigger value="notification">
-            <Bell />
-            Notification
           </TabsTrigger>
         </TabsList>
         <TabsContent value="inbox" className=" w-full h-[90%] overflow-auto">

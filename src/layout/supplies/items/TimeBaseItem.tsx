@@ -1,4 +1,4 @@
-import React from "react";
+import { memo } from "react";
 
 //components and Layout
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -27,12 +27,12 @@ const TimeBaseItem = ({ index, item, rangeYear }: Props) => {
         </TableCell>
 
         <TableCell>
-          {rangeYear.length === 1
+          {rangeYear.length !== 2
             ? item.firstHalfRecieved
             : item.secondhalfRecieved}
         </TableCell>
         <TableCell>
-          {rangeYear.length === 1 ? item.firstHalfCost : item.secondhalfCost}
+          {rangeYear.length !== 2 ? item.firstHalfCost : item.secondhalfCost}
         </TableCell>
         <TableCell>{item.totalQuantity}</TableCell>
         <TableCell>
@@ -49,4 +49,4 @@ const TimeBaseItem = ({ index, item, rangeYear }: Props) => {
   );
 };
 
-export default TimeBaseItem;
+export default memo(TimeBaseItem);

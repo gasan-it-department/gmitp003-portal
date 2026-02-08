@@ -1,5 +1,5 @@
-import { useId, useState } from "react";
-import { useParams } from "react-router";
+import { useId, useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 //
@@ -33,37 +33,42 @@ import { toast } from "sonner";
 //icons
 import { CircleAlert, Plus, Send, Tags, Trash } from "lucide-react";
 //
-import type { JobPostProps, AddUserProps } from "@/interface/data";
+import type {
+  FillPositionInvitationProps,
+  AddUserProps,
+} from "@/interface/data";
 import { AddUserSchema } from "@/interface/zod";
 
 //statements
-import { publicJobPost } from "@/db/statement";
-import { frontendUrl } from "@/db/axios";
+import { checkPositionInvitation } from "@/db/statements/position";
 //utils
 import { fileSizeConverter } from "@/utils/helper";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ApplicantTagsSelect from "@/layout/human_resources/ApplicantTagsSelect";
 import { Textarea } from "@/components/ui/textarea";
 import axios from "@/db/axios";
+import { Badge } from "@/components/ui/badge";
 
-const ApplicationForm = () => {
+const UserDataRegistration = () => {
   const [onOpen, setOnOpen] = useState(0);
-  const [applicationId, setApplicationId] = useState("");
+
   const [uploadingFiles, setUploadingFiles] = useState<{
     [key: string]: boolean;
   }>({});
-  const { jobPostId, municipalId } = useParams<{
-    jobPostId: string | undefined;
+  const { positionInviteLinkId } = useParams<{
+    positionInviteLinkId: string | undefined;
     municipalId: string | undefined;
   }>();
   const uniqueId = useId();
   const workExpId = useId();
   const eligibityId = useId();
 
-  const { data, isFetching } = useQuery<JobPostProps>({
-    queryKey: ["jobPost", jobPostId],
-    queryFn: () => publicJobPost(jobPostId as string),
-    enabled: !!jobPostId,
+  const nav = useNavigate();
+
+  const { data, isFetching } = useQuery<FillPositionInvitationProps>({
+    queryKey: ["invitationLink", positionInviteLinkId],
+    queryFn: () => checkPositionInvitation(positionInviteLinkId as string),
+    enabled: !!positionInviteLinkId,
   });
 
   const form = useForm<AddUserProps>({
@@ -174,10 +179,7 @@ const ApplicationForm = () => {
   const handleOnSubmit = async (formInput: AddUserProps) => {
     const formData = new FormData();
 
-    if (!jobPostId) {
-      return toast.warning("INVALID REQUIRED ID");
-    }
-    if (!municipalId) {
+    if (!positionInviteLinkId) {
       return toast.warning("INVALID REQUIRED ID");
     }
 
@@ -191,9 +193,10 @@ const ApplicationForm = () => {
         formData.append(`fileTitles[${index}]`, item.title);
       });
     }
-    formData.append("jobPostId", jobPostId);
-    formData.append("municipalId", municipalId);
-    formData.append("positionId", data.positionId);
+    formData.append("positionInviteLinkId", positionInviteLinkId);
+    formData.append("municipalId", "");
+    formData.append("unitPositionId", data.unitPositionId);
+    formData.append("positionSlotId", data.positionSlotId);
     formData.append("profilePicture", formInput.profilePicture!);
 
     Object.entries(formInput).forEach(([key, value]) => {
@@ -217,7 +220,7 @@ const ApplicationForm = () => {
     });
 
     try {
-      const response = await axios.post("/application/submission", formData, {
+      const response = await axios.post("/position/register", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -225,7 +228,6 @@ const ApplicationForm = () => {
 
       if (response.data) {
         setOnOpen(3);
-        setApplicationId(response.data.applicationId);
       }
 
       toast.success("Submitted Successfully", {
@@ -428,6 +430,15 @@ const ApplicationForm = () => {
     });
   };
 
+  useEffect(() => {
+    if (data && data.step === 1 && data.submittedApplicationId) {
+      nav(
+        `/position/register/${positionInviteLinkId}/${data.submittedApplicationId}`,
+        { replace: true },
+      );
+    }
+  }, [data, positionInviteLinkId]);
+
   if (isFetching) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -458,6 +469,55 @@ const ApplicationForm = () => {
     );
   }
 
+  if (data.concluded) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-white rounded-xl shadow-lg border p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Invitation Concluded
+            </h3>
+
+            <p className="text-gray-600 mb-6">
+              This invitation has already been processed and is no longer
+              available.
+            </p>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
+                  <span className="font-medium">Status:</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-gray-100 text-gray-700"
+                  >
+                    Concluded
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <TooltipProvider>
@@ -466,10 +526,10 @@ const ApplicationForm = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Application Form
+                PERSONAL DATA SHEET
               </h1>
               <h1 className="text-xl font-bold text-gray-900 mb-2 mt-10">
-                APPLYING FOR: {data.position.name}
+                {data.unitPoistion?.position.name || "Unknown"}
               </h1>
               <p className="text-gray-600 mb-4">
                 Please fill out all required fields.
@@ -2654,7 +2714,7 @@ const ApplicationForm = () => {
                     size="lg"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Submit Application
+                    Submit
                   </Button>
                 </div>
               </div>
@@ -2739,7 +2799,7 @@ const ApplicationForm = () => {
                 d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            Application Submitted Successfully!
+            Submitted Successfully!
           </div>
         }
         children={
@@ -2762,57 +2822,6 @@ const ApplicationForm = () => {
             </div>
 
             {/* Message */}
-            <div className="space-y-3">
-              <p className="text-gray-700 leading-relaxed">
-                You can track your application progress using the link below or
-                check your email for updates.
-              </p>
-              <p className="text-gray-600 font-medium">
-                Thank you for your application!
-              </p>
-            </div>
-
-            {/* Application Link */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-medium text-blue-800 mb-2">
-                Your Application Link:
-              </p>
-              <div className="flex items-center justify-between bg-white border border-blue-300 rounded px-3 py-2">
-                <code className="text-sm text-blue-600 truncate">
-                  `${frontendUrl}public/application/${applicationId}`
-                </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `${frontendUrl}/public/application/${applicationId}`,
-                    );
-                    toast.success("Link copied to clipboard!");
-                  }}
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </Button>
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="text-xs text-gray-500">
-              We've also sent a confirmation email with these details.
-            </div>
           </div>
         }
         onOpen={onOpen === 3}
@@ -2820,7 +2829,7 @@ const ApplicationForm = () => {
         cancelTitle="Close"
         setOnOpen={() => {
           setOnOpen(0);
-          setApplicationId("");
+
           //nav(-1);
         }}
       />
@@ -3089,4 +3098,4 @@ const FamilyMemberSection = ({
   </div>
 );
 
-export default ApplicationForm;
+export default UserDataRegistration;

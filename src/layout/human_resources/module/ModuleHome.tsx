@@ -4,7 +4,6 @@ import { useAuth } from "@/provider/ProtectedRoute";
 import { Spinner } from "@/components/ui/spinner";
 import { getLineModuleData } from "@/db/statement";
 import { panels } from "@/layout/ControlPanel";
-import { Button } from "@/components/ui/button";
 import ModuleItem from "./item/ModuleItem";
 
 interface ModuleWithUserCount {
@@ -23,9 +22,10 @@ const ModuleHome = () => {
       getLineModuleData(
         auth.token as string,
         lineId as string,
-        panels.map((_, i) => i + 1)
+        panels.map((_, i) => i),
       ),
   });
+  console.log({ panels, data });
 
   const modules = panels.map((item, i) => {
     if (!data) {
@@ -38,6 +38,7 @@ const ModuleHome = () => {
       };
     }
     const module = data.find((_, j) => j === i);
+
     if (!module) {
       return {
         module: item.title,
@@ -48,7 +49,7 @@ const ModuleHome = () => {
       };
     }
     return {
-      module: module.moduleName,
+      module: item.title,
       users: module.totalUsers || 0,
       index: i + 1,
       Icon: item.Icon,
@@ -83,12 +84,11 @@ const ModuleHome = () => {
           <h1 className="text-2xl font-bold">Line Modules</h1>
           <p className="text-gray-600">Manage and view module access</p>
         </div>
-        <Button size="sm">Set</Button>
       </div>
 
       <div className="w-full grid grid-cols-4 gap-4">
         {modules
-          .filter((module) => module.path !== "human-resources/home")
+          .filter((module) => module.path !== "human-resources")
           .map((item) => (
             <ModuleItem item={item} key={item.index} />
           ))}

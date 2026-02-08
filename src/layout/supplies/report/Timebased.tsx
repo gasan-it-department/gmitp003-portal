@@ -17,14 +17,7 @@ import {
   TableCell,
   TableBody,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectItem,
-  SelectTrigger,
-  SelectContent,
-  SelectValue,
-} from "@/components/ui/select";
-import ExcelTemplate from "../ExcelTemplate";
+
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -33,19 +26,11 @@ import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
 import Modal from "@/components/custom/Modal";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+
 import TimebaseFilter from "./TimebaseFilter";
 import TimebasePrint from "./TimebasePrint";
 //icons
-import { Printer, PhilippinePeso, FunnelPlus } from "lucide-react";
+import { Printer, FunnelPlus } from "lucide-react";
 
 //interfaces, props and schema
 import type {
@@ -69,10 +54,9 @@ interface ListProps {
 
 const Timebased = ({ id, auth, lineId }: Props) => {
   const [currentYear, setCurrentYear] = useState(
-    new Date().getFullYear().toString()
+    new Date().getFullYear().toString(),
   );
   const [onOpen, setOpen] = useState(0);
-  const [selectedYear, setSelectedYear] = useState<number[]>([]);
 
   console.log({ currentYear });
 
@@ -99,7 +83,7 @@ const Timebased = ({ id, auth, lineId }: Props) => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -117,7 +101,7 @@ const Timebased = ({ id, auth, lineId }: Props) => {
         id as string,
         pageParam as string | null,
         "20",
-        currentYear
+        currentYear,
       ),
     queryKey: ["timebase", id],
     initialPageParam: null,
@@ -154,7 +138,7 @@ const Timebased = ({ id, auth, lineId }: Props) => {
 
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(
-          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
+          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
         );
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1].replace(/['"]/g, "");
@@ -165,7 +149,7 @@ const Timebased = ({ id, auth, lineId }: Props) => {
       const url = window.URL.createObjectURL(
         new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        })
+        }),
       );
 
       const link = document.createElement("a");

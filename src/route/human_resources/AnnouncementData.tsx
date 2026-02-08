@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import {
   announcementData,
   announcementStatusUpdate,
+  removeAnnouncement,
 } from "@/db/statements/announcement";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/db/axios";
 
@@ -20,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import Modal from "@/components/custom/Modal";
+import ConfirmDelete from "@/layout/ConfirmDelete";
+import UserSelection from "@/layout/UserSelection";
 // import {
 //   InputGroup,
 //   InputGroupAddon,
@@ -39,34 +43,34 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
 //
-import {
-  BookOpenCheck,
-  PauseCircle,
-  Archive,
-  PresentationIcon,
-  Undo2,
-} from "lucide-react";
+import { AtSign, BookOpenCheck, ClipboardX, PauseCircle } from "lucide-react";
 //inteface/schema/props
 import { AnnouncementFormSchema } from "@/interface/zod";
-import type { Announcement, AnnouncementFormProps } from "@/interface/data";
+import type {
+  Announcement,
+  AnnouncementFormProps,
+  User,
+} from "@/interface/data";
 
 const AnnouncementData = () => {
   const [onOpen, setOnOpen] = useState(0);
   const auth = useAuth();
+  const nav = useNavigate();
   const { announcementId, lineId } = useParams();
 
   const queryClient = useQueryClient();
 
   const { data, isFetching } = useQuery<Announcement>({
-    queryKey: ["announcement-data", announcementId],
+    queryKey: ["announcement-data", announcementId, "announcements", lineId],
     queryFn: () =>
-      announcementData(auth.token as string, announcementId as string),
+      announcementData(
+        auth.token as string,
+        announcementId as string,
+        auth.userId as string,
+      ),
     enabled: !!auth.token || !!auth.userId,
   });
-
-  console.log({ data });
 
   const form = useForm<AnnouncementFormProps>({
     resolver: zodResolver(AnnouncementFormSchema),
@@ -74,6 +78,7 @@ const AnnouncementData = () => {
       title: data ? data.title : "N/A",
       content: data ? data.content : "N/A",
       //files: [],
+      mentions: [],
     },
   });
 
@@ -115,7 +120,11 @@ const AnnouncementData = () => {
     if (!announcementId) throw new Error("INVALID REQUIRED DATA");
 
     if (!lineId || !auth.userId) throw new Error("INVALID REQUIRED ID");
+
+    if (!data) throw new Error("INVALID DATA");
     try {
+      //const formDatas = new FormData();
+
       const response = await axios.patch(
         "/announcement/publish",
         {
@@ -124,6 +133,10 @@ const AnnouncementData = () => {
           authorId: auth.userId,
           lineId: lineId,
           id: announcementId,
+          status: data.status === 1 ? 0 : 1,
+          mentions: formData.mentions
+            ? formData.mentions.map((item) => item.id)
+            : [],
         },
         {
           headers: {
@@ -132,7 +145,7 @@ const AnnouncementData = () => {
             Accept: "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
       if (response.status !== 200) {
         throw new Error(response.data.message);
@@ -156,7 +169,7 @@ const AnnouncementData = () => {
       announcementId,
       auth.userId,
       status,
-      lineId as string
+      lineId as string,
     );
   };
 
@@ -170,78 +183,123 @@ const AnnouncementData = () => {
     },
   });
 
-  const statusButtons = [
-    <Button
-      onClick={() => setOnOpen(1)}
-      disabled={isSubmitting}
-      size="sm"
-      className="gap-2"
-    >
-      {isSubmitting ? (
-        <Spinner className="w-4 h-4" />
-      ) : (
-        <BookOpenCheck className="w-4 h-4" />
-      )}
-      Publish Announcement
-    </Button>,
-    <div className=" w-auto flex gap-2">
-      <Button
-        size="sm"
-        variant="destructive"
-        disabled={updateStatus.isPending}
-        onClick={() => {
-          updateStatus.mutateAsync(2);
-        }}
-      >
-        <PauseCircle /> Pause
-      </Button>
+  const removeAnnouncementMutation = useMutation({
+    mutationFn: () =>
+      removeAnnouncement(
+        auth.token as string,
+        announcementId as string,
+        lineId as string,
+        auth.userId as string,
+      ),
+    onSuccess: (error) => {
+      console.log(error);
 
-      {data && data.status === 3 ? (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={updateStatus.isPending || (data && data.status === 3)}
-          onClick={() => updateStatus.mutateAsync(3)}
-        >
-          <Archive /> Archive
-        </Button>
-      ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={updateStatus.isPending || (data && data.status === 3)}
-          onClick={() => updateStatus.mutateAsync(3)}
-        >
-          <Undo2 /> Restore
-        </Button>
-      )}
-    </div>,
+      nav(`${lineId}/human-resources/announcement`, { replace: true });
+    },
+    onError: () => {
+      toast.error("TRANSACTION FAILED", {
+        description: `Please try again`,
+      });
+    },
+  });
 
-    <div className=" w-auto flex gap-2">
-      {data && (
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={updateStatus.isPending}
-          onClick={() => {
-            updateStatus.mutateAsync(1);
-          }}
-        >
-          <PresentationIcon /> Publish
-        </Button>
-      )}
-      {data && data.status === 3 && (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={updateStatus.isPending || (data && data.status === 3)}
-          onClick={() => updateStatus.mutateAsync(1)}
-        >
-          <Undo2 /> Restore
-        </Button>
-      )}
-    </div>,
-  ];
+  const mentions = useFieldArray({
+    control,
+    name: "mentions",
+  });
+
+  const handleAddMention = (user: User) => {
+    const check = mentions.fields.find((item) => item.id === user.id);
+
+    if (check) {
+      return;
+    }
+
+    mentions.append({
+      id: user.id,
+      username: user.username,
+      firstname: user.firstName,
+      lastname: user.lastName,
+    });
+    toast.success(`Added @${user.username}`);
+  };
+
+  const handleRemoveMention = (index: number) => {
+    mentions.remove(index);
+  };
+
+  // const statusButtons = [
+  //   <Button
+  //     onClick={() => setOnOpen(1)}
+  //     disabled={isSubmitting}
+  //     size="sm"
+  //     className="gap-2"
+  //   >
+  //     {isSubmitting ? (
+  //       <Spinner className="w-4 h-4" />
+  //     ) : (
+  //       <BookOpenCheck className="w-4 h-4" />
+  //     )}
+  //     Publish Announcement
+  //   </Button>,
+  //   <div className=" w-auto flex gap-2">
+  //     <Button
+  //       size="sm"
+  //       variant="destructive"
+  //       disabled={updateStatus.isPending}
+  //       onClick={() => {
+  //         updateStatus.mutateAsync(2);
+  //       }}
+  //     >
+  //       <PauseCircle /> Pause
+  //     </Button>
+
+  //     {data && data.status === 3 ? (
+  //       <Button
+  //         size="sm"
+  //         variant="outline"
+  //         disabled={updateStatus.isPending || (data && data.status === 3)}
+  //         onClick={() => updateStatus.mutateAsync(3)}
+  //       >
+  //         <Archive /> Archive
+  //       </Button>
+  //     ) : (
+  //       <Button
+  //         size="sm"
+  //         variant="outline"
+  //         disabled={updateStatus.isPending || (data && data.status === 3)}
+  //         onClick={() => updateStatus.mutateAsync(3)}
+  //       >
+  //         <Undo2 /> Restore
+  //       </Button>
+  //     )}
+  //   </div>,
+
+  //   <div className=" w-auto flex gap-2">
+  //     {data && (
+  //       <Button
+  //         size="sm"
+  //         variant="destructive"
+  //         disabled={updateStatus.isPending}
+  //         onClick={() => {
+  //           updateStatus.mutateAsync(1);
+  //         }}
+  //       >
+  //         <PresentationIcon /> Publish
+  //       </Button>
+  //     )}
+  //     {data && data.status === 3 && (
+  //       <Button
+  //         size="sm"
+  //         variant="outline"
+  //         disabled={updateStatus.isPending || (data && data.status === 3)}
+  //         onClick={() => updateStatus.mutateAsync(1)}
+  //       >
+  //         <Undo2 /> Restore
+  //       </Button>
+  //     )}
+  //   </div>,
+  // ];
 
   if (isFetching) {
     return (
@@ -260,7 +318,15 @@ const AnnouncementData = () => {
               {data ? "Edit Announcement" : "Create Announcement"}
             </CardTitle>
             {data && (
-              <>
+              <div className=" w-auto flex gap-2">
+                <Button
+                  disabled={removeAnnouncementMutation.isPending}
+                  size="sm"
+                  onClick={() => setOnOpen(2)}
+                >
+                  <ClipboardX />
+                  Discard
+                </Button>
                 {data.status === 0 && (
                   <Button
                     onClick={() => setOnOpen(1)}
@@ -286,10 +352,10 @@ const AnnouncementData = () => {
                       updateStatus.mutateAsync(status);
                     }}
                   >
-                    {/* <PauseCircle /> {data.status === 2 ? "Publish" : "P"} */}
+                    <PauseCircle /> {data.status === 1 ? "Withdraw" : "Publish"}
                   </Button>
                 )}
-              </>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -301,6 +367,7 @@ const AnnouncementData = () => {
                 {/* Title Section */}
                 <div className="space-y-4">
                   <FormField
+                    disabled={data?.status === 1}
                     control={control}
                     name="title"
                     render={({ field }) => (
@@ -333,6 +400,7 @@ const AnnouncementData = () => {
                 {/* Content Section */}
                 <div className="space-y-4">
                   <FormField
+                    disabled={data?.status === 1}
                     control={control}
                     name="content"
                     render={({ field }) => (
@@ -365,8 +433,42 @@ const AnnouncementData = () => {
                   />
                 </div>
 
-                {/* <Separator /> */}
+                <Separator />
 
+                <div className=" space-y-4">
+                  <Button
+                    disabled={data?.status === 1}
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setOnOpen(3);
+                    }}
+                  >
+                    <AtSign />
+                    Mention
+                  </Button>
+                  {mentions.fields.map((user, i) => (
+                    <div
+                      key={user.id}
+                      className="w-full border p-2 flex justify-between bg-white hover:bg-gray-100 rounded"
+                    >
+                      <div>
+                        <p>
+                          {user.lastname}, {user.firstname}
+                        </p>
+                        <p>{user.username}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRemoveMention(i)}
+                      >
+                        X
+                      </Button>
+                    </div>
+                  ))}
+                </div>
                 {/* File Upload Section */}
                 <div className="space-y-4">
                   <div>
@@ -472,6 +574,38 @@ const AnnouncementData = () => {
         footer={true}
         loading={isSubmitting}
         onFunction={handleSubmit(onSubmit)}
+      />
+
+      <Modal
+        title={undefined}
+        children={
+          <ConfirmDelete
+            confirmation={"confirm"}
+            setOnOpen={setOnOpen}
+            onFunction={() => {
+              removeAnnouncementMutation.mutateAsync();
+            }}
+            isLoading={removeAnnouncementMutation.isPending}
+          />
+        }
+        onOpen={onOpen === 2}
+        className={""}
+        footer={1}
+        setOnOpen={() => setOnOpen(0)}
+      />
+
+      <Modal
+        title={undefined}
+        children={
+          <UserSelection
+            lineId={lineId as string}
+            token={auth.token as string}
+            onSelect={handleAddMention}
+          />
+        }
+        onOpen={onOpen === 3}
+        className={" min-w-2xl max-h-11/12 overflow-auto"}
+        setOnOpen={() => setOnOpen(0)}
       />
     </div>
   );

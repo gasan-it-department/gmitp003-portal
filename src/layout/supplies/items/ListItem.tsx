@@ -8,6 +8,7 @@ import Modal from "@/components/custom/Modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DispenseItem from "../DispenseItem";
+import ConfirmDelete from "@/layout/ConfirmDelete";
 //utils
 import { searchedChar } from "@/utils/element";
 
@@ -51,7 +52,7 @@ const ListItem = ({
         lineId,
         listId,
         containerId,
-        auth.token as string
+        auth.token as string,
       ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -252,64 +253,14 @@ const ListItem = ({
             </div>
           </div>
 
-          {/* Item Details (optional, helps user confirm) */}
-          <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">Item:</span>
-              <span className="font-medium text-slate-900">
-                {item.supply.item}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">Reference:</span>
-              <span className="font-mono text-sm text-slate-700">
-                {item.supply.refNumber || "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">Current Stock:</span>
-              <span
-                className={`font-semibold ${
-                  item.stock < 10 ? "text-red-600" : "text-green-600"
-                }`}
-              >
-                {item.stock} units
-              </span>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              className="flex-1 border-slate-300 hover:bg-slate-50"
-              onClick={() => {
-                if (handleRemove.isPending) return;
-                setOnOpen(0);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="flex-1 bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                if (handleRemove.isPending) return;
-                // Add your remove item function here
-                handleRemove.mutateAsync();
-                console.log("Removing item:", item);
-                setOnOpen(0);
-              }}
-            >
-              Remove Item
-            </Button>
-          </div>
-
-          {/* Warning Note */}
-          <div className="text-xs text-slate-500 text-center pt-2">
-            Note: This will permanently delete all records associated with this
-            item.
-          </div>
+          <ConfirmDelete
+            onFunction={() => {
+              handleRemove.mutateAsync();
+            }}
+            setOnOpen={setOnOpen}
+            confirmation="confirm"
+            isLoading={handleRemove.isPending}
+          />
         </div>
       </Modal>
 

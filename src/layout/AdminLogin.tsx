@@ -213,7 +213,7 @@ const AdminLogin = () => {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2">
-                    <span>Continue to Dashboard</span>
+                    <span>Sign in</span>
                     <ArrowRight className="w-4 h-4" />
                   </div>
                 )}

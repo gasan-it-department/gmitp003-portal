@@ -7,8 +7,7 @@ import {
   ContextMenuTrigger,
   ContextMenuContent,
 } from "@/components/ui/context-menu";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 //
-import { Building2, Users, Calendar, Hash, MoreVertical } from "lucide-react";
+import { Building2, Users, Calendar, Hash } from "lucide-react";
 
 //Interface and Props
 import type { Department } from "@/interface/data";
@@ -112,7 +111,9 @@ const UnitItem = ({ item, no }: Props) => {
                             className={`px-3 py-1.5 rounded-full border ${getMemberCountColor(0)}`}
                           >
                             <div className="flex items-center gap-2">
-                              <span className="font-bold">0</span>
+                              <span className="font-bold">
+                                {item._count.users || 0}
+                              </span>
                               <span className="text-xs">members</span>
                             </div>
                           </div>
@@ -129,28 +130,6 @@ const UnitItem = ({ item, no }: Props) => {
                 </div>
 
                 {/* Actions */}
-                <div className="col-span-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-gray-300"
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-gray-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Context menu would open here
-                      }}
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
               </div>
             </div>
 

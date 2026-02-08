@@ -9,6 +9,7 @@ import {
   Calendar,
   Folder,
   ShieldAlert,
+  Database,
 } from "lucide-react";
 
 import { removeList } from "@/db/statements/container";
@@ -22,13 +23,13 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-
 //stmt
 import { getListData } from "@/db/statement";
 
 //props and interface
 import { type SupplyBatchProps } from "@/interface/data";
 import { formatDate } from "@/utils/date";
+import axios from "@/db/axios";
 interface Props {
   listId: string | undefined;
   token: string | undefined;
@@ -65,6 +66,56 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
     onMutate: () => {
       setOnOpen(1);
     },
+  });
+
+  const handlebackupdata = async () => {
+    if (!lineId || !userId) {
+      throw new Error("INVALID REQUIRED ID");
+    }
+    try {
+      const response = await axios.post(
+        "/line/inventory/back-up",
+        {
+          lineId: lineId, // Add required parameters
+          userId: userId, // Add required parameters
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          responseType: "blob", // Important for file download
+        },
+      );
+
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers["content-disposition"];
+      let filename = "inventory-backup.json";
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch && filenameMatch.length === 2) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const backupMutation = useMutation({
+    mutationFn: handlebackupdata,
   });
 
   if (isFetching) {
@@ -149,6 +200,35 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
                   ID: {listId?.slice(-8)}
                 </Badge>
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-sm">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Database className="h-5 w-5 text-blue-600" />
+            </div>
+            <CardTitle className="text-lg font-semibold">Data</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <Folder className="h-6 w-6 text-gray-600" />
+            </div>
+            <div className="flex-1 flex items-center">
+              <Button
+                disabled={backupMutation.isPending}
+                size="sm"
+                onClick={() => {
+                  backupMutation.mutateAsync();
+                }}
+              >
+                Download Back-Up Data
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -253,7 +333,7 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
         children={
           <ConfirmDelete
             isLoading={handleRemoveList.isPending}
-            confirmation={"confirmn"}
+            confirmation={"confirm"}
             setOnOpen={setOnOpen}
             onFunction={() => {
               handleRemoveList.mutateAsync();

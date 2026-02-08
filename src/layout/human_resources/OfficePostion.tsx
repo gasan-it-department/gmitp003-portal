@@ -12,6 +12,14 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Table,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableHeader,
+} from "@/components/ui/table";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -93,7 +101,7 @@ const OfficePostion = ({ id, token, userId }: Props) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col ">
+    <div className="w-full h-full flex flex-col bg-white">
       {/* Header Section */}
       <div className="border-b">
         <div className="px-6 py-2">
@@ -126,52 +134,6 @@ const OfficePostion = ({ id, token, userId }: Props) => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              {/* <DropdownMenu
-                open={activeDropdown === "sort"}
-                onOpenChange={(open) => setActiveDropdown(open ? "sort" : null)}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <ArrowUpDown className="h-4 w-4" />
-                    Sort
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem>Salary Grade</DropdownMenuItem>
-                  <DropdownMenuItem>Position Title</DropdownMenuItem>
-                  <DropdownMenuItem>Item Number</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2">
-                    <Filter className="h-4 w-4" />
-                    More Filters
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu> */}
-
-              {/* <DropdownMenu
-                open={activeDropdown === "export"}
-                onOpenChange={(open) =>
-                  setActiveDropdown(open ? "export" : null)
-                }
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <Printer className="h-4 w-4" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem className="gap-2">
-                    <Sheet className="h-4 w-4" />
-                    Export to Excel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu> */}
             </div>
           </div>
 
@@ -196,78 +158,140 @@ const OfficePostion = ({ id, token, userId }: Props) => {
       </div>
 
       {/* Content Section */}
-      <div className="flex-1 overflow-hidden ">
+      <div className="flex-1 overflow-hidden">
         <div className="h-full overflow-auto">
           {isLoading ? (
-            // Loading skeleton
-            <div className="px-6 py-4 space-y-3">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-8 w-24" />
-                </div>
-              ))}
+            // Loading skeleton using table structure
+            <div className="px-6">
+              <Table>
+                <TableHeader className="sticky top-0 bg-gray-50">
+                  <TableRow>
+                    <TableHead className="w-[50px]">No.</TableHead>
+                    <TableHead className="w-[100px]">Item No.</TableHead>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Designation</TableHead>
+                    <TableHead className="w-[80px] text-center">
+                      Slots
+                    </TableHead>
+                    <TableHead className="w-[80px] text-center">Open</TableHead>
+                    <TableHead>Salary Grade</TableHead>
+                    <TableHead className="w-[100px] text-center">
+                      Status
+                    </TableHead>
+                    <TableHead className="w-[120px] text-center">
+                      Applications
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-4 w-8" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-40" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-6 w-12 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-6 w-12 mx-auto" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-6 w-16 mx-auto" />
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Skeleton className="h-6 w-20 mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : allPositions.length > 0 ? (
-            <div className="min-w-full">
-              {/* Table Header */}
-              <div className="sticky top-0 z-10 bg-white border-b">
-                <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50">
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                    <Hash className="h-4 w-4" />
-                    No.
-                  </div>
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                    Item No.
-                  </div>
-                  <div className="col-span-2 font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                    Title
-                  </div>
-                  <div className="col-span-2 font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                    Designation
-                  </div>
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider text-center">
-                    Slots
-                  </div>
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider text-center">
-                    Open
-                  </div>
-                  <div className="col-span-2 font-semibold text-sm text-gray-700 uppercase tracking-wider">
-                    Salary Grade
-                  </div>
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider text-center">
-                    Status
-                  </div>
-                  <div className="col-span-1 font-semibold text-sm text-gray-700 uppercase tracking-wider text-center">
-                    Applications
-                  </div>
-                </div>
-              </div>
+            <div className="h-full">
+              <Table>
+                <TableHeader className="sticky top-0 bg-gray-50 z-10">
+                  <TableRow>
+                    <TableHead className="w-[50px] font-semibold text-gray-700">
+                      No.
+                    </TableHead>
+                    <TableHead className="w-[100px] font-semibold text-gray-700">
+                      Item No.
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700">
+                      Title
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700">
+                      Designation
+                    </TableHead>
+                    <TableHead className="w-[80px] font-semibold text-gray-700 text-center">
+                      Slots
+                    </TableHead>
+                    <TableHead className="w-[80px] font-semibold text-gray-700 text-center">
+                      Open
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700">
+                      Salary Grade
+                    </TableHead>
+                    <TableHead className="w-[100px] font-semibold text-gray-700 text-center">
+                      Status
+                    </TableHead>
+                    <TableHead className="w-[120px] font-semibold text-gray-700 text-center">
+                      Applications
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allPositions.map((item, i) => (
+                    <PositionItem
+                      key={item.id}
+                      item={item}
+                      no={i + 1}
+                      token={token}
+                      userId={userId}
+                      lineId={lineId as string}
+                    />
+                  ))}
 
-              {/* Table Body */}
-              <div className="divide-y divide-gray-100">
-                {allPositions.map((item, i) => (
-                  <PositionItem key={item.id} item={item} no={i + 1} />
-                ))}
-              </div>
+                  {/* Loading more indicator */}
+                  {isFetchingNextPage && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="py-6">
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
+                          <span className="text-sm text-gray-600">
+                            Loading more positions...
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
 
-              {/* Loading more indicator */}
-              {isFetchingNextPage && (
-                <div className="px-6 py-6 bg-gray-50 border-t">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent"></div>
-                    <span className="text-sm text-gray-600">
-                      Loading more positions...
-                    </span>
+              {/* End of list summary - outside the table */}
+              {!isFetchingNextPage && totalPositions > 0 && (
+                <div className="px-6 py-4 bg-gray-50 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      Showing{" "}
+                      <span className="font-semibold">{totalPositions}</span>{" "}
+                      position{totalPositions !== 1 ? "s" : ""}
+                    </div>
+                    <Badge variant="outline" className="font-normal">
+                      {totalPositions} total • {getOpenPositions()} open
+                    </Badge>
                   </div>
                 </div>
               )}
@@ -307,22 +331,6 @@ const OfficePostion = ({ id, token, userId }: Props) => {
               </div>
             </div>
           )}
-
-          {/* End of list summary */}
-          {!isLoading && totalPositions > 0 && !isFetchingNextPage && (
-            <div className="px-6 py-4 bg-gray-50 border-t">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Showing{" "}
-                  <span className="font-semibold">{totalPositions}</span>{" "}
-                  position{totalPositions !== 1 ? "s" : ""}
-                </div>
-                <Badge variant="outline" className="font-normal">
-                  {totalPositions} total • {getOpenPositions()} open
-                </Badge>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -358,7 +366,7 @@ const OfficePostion = ({ id, token, userId }: Props) => {
         }
         cancelTitle="Close"
         onOpen={onOpen === 2}
-        className="max-w-4xl max-h-[85vh]"
+        className="max-w-4xl max-h-[95vh] overflow-auto"
         setOnOpen={handleModalClose}
         footer={1}
       />

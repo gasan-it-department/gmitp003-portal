@@ -66,6 +66,7 @@ const DispenseItem = ({
     control,
     formState: { isSubmitting },
     setValue,
+    setError,
   } = form;
   const toAccount = watch("toAccount", true);
   const address = watch("address");
@@ -78,6 +79,11 @@ const DispenseItem = ({
   }, [toAccount]);
 
   const onSubmit = async (data: DispenseItemProps) => {
+    const quantity = parseInt(data.quantity, 10);
+
+    if (quantity > item.stock) {
+      return setError("quantity", { message: "Invalid quantity" });
+    }
     try {
       const response = await axios.post(
         "/supply/dispense",
@@ -97,7 +103,7 @@ const DispenseItem = ({
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {

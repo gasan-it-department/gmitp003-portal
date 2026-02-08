@@ -1,15 +1,15 @@
 import { memo, useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+///import { useNavigate } from "react-router";
 import hotkeys from "hotkeys-js";
 import {
   Package,
   Tag,
   AlertTriangle,
-  Eye,
+  // Eye,
   LogOut,
   Info,
   Building,
-  ChevronRight,
+  // ChevronRight,
 } from "lucide-react";
 //
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -44,7 +44,7 @@ const OverviewSupplyItem = ({
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const [isSelected, setIsSelected] = useState(false);
-  const nav = useNavigate();
+  // const nav = useNavigate();
 
   useEffect(() => {
     setIsSelected(onSelect === index);
@@ -273,7 +273,7 @@ const OverviewSupplyItem = ({
               Dispense Item
             </Button>
 
-            <Button
+            {/* <Button
               variant="outline"
               className="flex-1 h-11 gap-2"
               onClick={() => nav(`/supplies/${item.id}`)}
@@ -281,7 +281,7 @@ const OverviewSupplyItem = ({
               <Eye className="w-4 h-4" />
               View Details
               <ChevronRight className="w-4 h-4" />
-            </Button>
+            </Button> */}
           </div>
         </div>
       </Modal>

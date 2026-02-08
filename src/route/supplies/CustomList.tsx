@@ -31,7 +31,7 @@ const CustomList = () => {
         prev.set("tab", value);
         return prev;
       },
-      { replace: true }
+      { replace: true },
     );
   };
 
@@ -189,9 +189,9 @@ const CustomList = () => {
                 </TabsTrigger>
               )}
               {prev >= 2 && (
-                <TabsTrigger value="orders" className="py-3">
+                <TabsTrigger value="transactions" className="py-3">
                   <div className="flex flex-col items-center gap-1">
-                    {getTabIcon("orders")}
+                    {getTabIcon("transactions")}
                     <span className="text-xs mt-1">Transactions</span>
                   </div>
                 </TabsTrigger>

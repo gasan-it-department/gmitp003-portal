@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import NotificationItem from "./item/NotificationItem";
 //
-import { BellOff, Eye } from "lucide-react";
+import { BellOff } from "lucide-react";
 //
 import type { Notification } from "@/interface/data";
 
@@ -39,7 +39,6 @@ const UserNotification = ({ token, userId }: Props) => {
     });
 
   const allNotifications = data?.pages.flatMap((page) => page.list) || [];
-  const unreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
@@ -50,11 +49,6 @@ const UserNotification = ({ token, userId }: Props) => {
     ) {
       fetchNextPage();
     }
-  };
-
-  const handleMarkAllAsRead = () => {
-    // TODO: Implement mark all as read API call
-    console.log("Mark all as read");
   };
 
   return (
@@ -71,17 +65,6 @@ const UserNotification = ({ token, userId }: Props) => {
               </p>
             </div>
           </div> */}
-          {unreadCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMarkAllAsRead}
-              className="text-xs"
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              Mark all read
-            </Button>
-          )}
         </div>
       </div>
 
