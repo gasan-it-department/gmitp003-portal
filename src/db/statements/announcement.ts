@@ -164,3 +164,30 @@ export const removeAnnouncement = async (
   }
   return response.data;
 };
+
+export const publicAnnouncement = async (
+  token: string,
+  id: string,
+  lastCursor: string | null,
+  limit: string,
+) => {
+  const response = await axios.get("/announcement/public", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lastCursor,
+      limit,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+
+  return response.data;
+};

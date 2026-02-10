@@ -1188,3 +1188,18 @@ export interface FillPositionInvitationProps {
   step: number;
   submittedApplicationId?: string;
 }
+
+export interface LineInvitationProps {
+  id: string;
+  email?: string | null;
+  line?: LineProps | null;
+  lineId?: string | null;
+  status: number; // 0 - pending, 1 - concluded
+  application?: SubmittedApplicationProps | null;
+  timestamp: Date;
+  submittedApplicationId?: string | null;
+  unitPosition: UnitPosition;
+  unitPositionId: string;
+  posSlot: PositionSlotProps;
+  positionSlotId: string;
+}

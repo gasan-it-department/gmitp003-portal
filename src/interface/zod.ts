@@ -726,8 +726,6 @@ export const UpdateSalaryGradeSchema = z.object({
 });
 
 export const LineRegisterSchema = z.object({
-  firstname: z.string().min(2, "First name is required"),
-  lastname: z.string().min(2, "Last name required"),
   username: z.string().min(4, "Username is required"),
   password: z.string().min(8, "Must at least have 8 characters"),
   viewPassword: z.boolean(),
@@ -744,19 +742,6 @@ export const LineRegisterSchema = z.object({
         message: "Invalid email format",
       },
     ),
-  personalEmail: z
-    .string()
-    .min(1, "Email is required")
-    .refine(
-      (email) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-      },
-      {
-        message: "Invalid email format",
-      },
-    ),
-  personalPhoneNumber: z.string().optional(),
 });
 
 export const PositionInvitationSchema = z.object({

@@ -87,6 +87,10 @@ export const getEmployees = async (
   }
 };
 
+export const getPublicRegions = async()=>{
+  
+}
+
 export const getRegions = async () => {
   const response = await axios.get("/all-regions");
 

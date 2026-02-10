@@ -19,7 +19,6 @@ import {
   InputGroupButton,
   InputGroupAddon,
 } from "@/components/ui/input-group";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -46,21 +45,17 @@ import { LineRegisterSchema } from "@/interface/zod";
 
 const LineRegistration = () => {
   const [onOpen, setOnOpen] = useState(0);
-  const { lineId, unitPosId, sgId } = useParams();
+  const { lineInvitationId, lineId, unitPosId, sgId } = useParams();
   const nav = useNavigate();
 
   const form = useForm({
     resolver: zodResolver(LineRegisterSchema),
     defaultValues: {
-      firstname: "",
-      lastname: "",
       username: "",
       password: "",
       teleNumber: "",
       viewPassword: false,
       email: "",
-      personalEmail: "",
-      personalPhoneNumber: "",
     },
   });
 
@@ -84,6 +79,7 @@ const LineRegistration = () => {
           lineId,
           unitPosId,
           sgId,
+          lineInvitationId,
           ...data,
         },
         {
@@ -111,6 +107,8 @@ const LineRegistration = () => {
         }, 1500);
       }
     } catch (error) {
+      console.log({ error });
+
       toast.error("TRANSACTION FAILED", {
         description: `${error}`,
       });
@@ -152,115 +150,6 @@ const LineRegistration = () => {
         <div className="bg-white rounded-xl md:rounded-lg border border-gray-200 shadow-sm md:shadow p-4 md:p-6">
           <Form {...form}>
             <div className="space-y-6 md:space-y-8">
-              {/* Basic Information Section */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1.5 bg-gray-100 rounded-md">
-                    <User className="h-4 w-4 text-gray-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 text-base md:text-lg">
-                    Basic Information
-                  </h3>
-                </div>
-
-                <div className="space-y-4">
-                  <FormField
-                    control={control}
-                    name="firstname"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          First name
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter first name"
-                            {...field}
-                            className="h-11 md:h-10 text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="lastname"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          Last name
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter last name"
-                            {...field}
-                            className="h-11 md:h-10 text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="personalEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          Email Address
-                        </FormLabel>
-                        <FormControl>
-                          <InputGroup>
-                            <InputGroupAddon className="bg-gray-50 border-r-0">
-                              <Mail className="h-4 w-4 text-gray-500" />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                              placeholder="hrmofficer.email@municipality.gov"
-                              {...field}
-                              className="pl-10 border-l-0 h-11 md:h-10 text-base"
-                            />
-                          </InputGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="personalPhoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-medium">
-                          Phone Number (optional)
-                        </FormLabel>
-                        <FormControl>
-                          <InputGroup>
-                            <InputGroupAddon className="bg-gray-50 border-r-0">
-                              <Phone className="h-4 w-4 text-gray-500" />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                              placeholder="+63 XXX XXX XXXX"
-                              {...field}
-                              className="pl-10 border-l-0 h-11 md:h-10 text-base"
-                            />
-                          </InputGroup>
-                        </FormControl>
-                        <FormDescription className="text-xs mt-1">
-                          Office telephone number with country code
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
               {/* HRMO Contact Section */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -340,7 +229,7 @@ const LineRegistration = () => {
                     <KeyRound className="h-4 w-4 text-gray-600" />
                   </div>
                   <h3 className="font-semibold text-gray-900 text-base md:text-lg">
-                    Administrator Account
+                    Account
                   </h3>
                 </div>
 
@@ -481,14 +370,6 @@ const LineRegistration = () => {
             <Card className="border">
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">
-                      Administrator:
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {formValues.firstname} {formValues.lastname}
-                    </span>
-                  </div>
                   <Separator />
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700">

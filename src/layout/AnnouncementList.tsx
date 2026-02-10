@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 // API
-import { announcements } from "@/db/statements/announcement";
+import { publicAnnouncement } from "@/db/statements/announcement";
 
 // Types
 import type { Announcement } from "@/interface/data";
@@ -55,7 +55,7 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
     useInfiniteQuery<ListProps>({
       queryKey: ["announcements", lineId],
       queryFn: ({ pageParam }) =>
-        announcements(token, lineId, pageParam as string | null, "5", ""),
+        publicAnnouncement(token, lineId, pageParam as string | null, "5"),
       initialPageParam: null,
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.lastCursor : undefined,
@@ -88,10 +88,8 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       const currentAnnouncementIndex = currentIndex;
 
-      // Check if current announcement is a 3rd item (index is 0-based, so indices 2, 5, 8, etc.)
       const isThirdAnnouncement = (currentAnnouncementIndex + 1) % 3 === 0;
 
-      // Check if we haven't already fetched for this index
       const hasNotFetchedForThisIndex =
         lastFetchedTriggerIndex !== currentAnnouncementIndex;
 
@@ -363,8 +361,8 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
                     index === currentIndex
                       ? "bg-blue-600 scale-125 ring-2 ring-blue-300"
                       : index < currentIndex
-                      ? "bg-gray-400"
-                      : "bg-gray-300 hover:bg-gray-400"
+                        ? "bg-gray-400"
+                        : "bg-gray-300 hover:bg-gray-400"
                   }
                   ${(index + 1) % 3 === 0 ? "ring-1 ring-blue-200" : ""}
                 `}

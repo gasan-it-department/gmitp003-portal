@@ -105,3 +105,16 @@ export const deleteLine = async (token: string, id: string, userId: string) => {
   }
   return response.data;
 };
+
+export const checkLineInvitation = async (lineInvitationId: string) => {
+  const response = await axios.get("/line/invitation", {
+    params: {
+      lineInvitationId: lineInvitationId,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};

@@ -88,6 +88,7 @@ import PurchaseRequest from "./layout/supplies/PurchaseRequest.tsx";
 import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
 import UserDataRegistration from "./route/UserDataRegistration.tsx";
+import LineUserInfoRegister from "./layout/LineUserInfoRegister.tsx";
 
 const queryClient = new QueryClient();
 
@@ -98,7 +99,11 @@ createRoot(document.getElementById("root")!).render(
         <BrowserRouter>
           <Routes>
             <Route
-              path="line/register/:lineId/:unitPosId/:sgId"
+              path="line/register/user/:lineId/:lineInvitationId/:unitPosId/:sgId"
+              element={<LineUserInfoRegister />}
+            />
+            <Route
+              path="line/register/:lineInvitationId/:lineId/:unitPosId/:sgId"
               element={<LineRegistration />}
             />
             <Route
