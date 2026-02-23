@@ -83,6 +83,13 @@ const panels = [
     description: "Manage user roles, permissions, and team workflows",
     stats: "24/7 access",
   },
+  {
+    name: "Archive Recovery",
+    Icon: Archive,
+    description: "Search and retrieve archived documents",
+    stats: "0.3s avg search",
+    path: "archive",
+  },
 ];
 const ESignPannel = () => {
   const nav = useNavigate();

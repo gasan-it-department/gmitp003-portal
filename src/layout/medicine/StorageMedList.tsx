@@ -32,7 +32,6 @@ import {
   Search,
   // OctagonAlert,
   // EllipsisVertical,
-  ListFilterPlus,
   PenLine,
 } from "lucide-react";
 
@@ -116,10 +115,6 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
             </InputGroup>
 
             <div className=" w-auto flex gap-2">
-              <Button onClick={() => nav(`update`)} size="sm" variant="outline">
-                <ListFilterPlus />
-                Filter
-              </Button>
               <Button onClick={() => nav(`update`)} size="sm">
                 <PenLine />
                 Update

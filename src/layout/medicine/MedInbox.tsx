@@ -43,6 +43,9 @@ const MedInbox = ({ lineId, token }: Props) => {
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.lastCursor : undefined,
       initialPageParam: null,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      refetchOnWindowFocus: false,
     });
 
   useEffect(() => {

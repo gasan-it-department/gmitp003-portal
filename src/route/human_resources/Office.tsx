@@ -9,14 +9,7 @@ import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 //
-import {
-  BriefcaseBusiness,
-  Group,
-  Users,
-  Building2,
-  Calendar,
-  Hash,
-} from "lucide-react";
+import { BriefcaseBusiness, Group, Users, Building2, Info } from "lucide-react";
 
 //
 import OfficePersonnel from "@/layout/human_resources/OfficePersonnel";
@@ -24,10 +17,11 @@ import OfficePostion from "@/layout/human_resources/OfficePostion";
 
 //
 import type { Department } from "@/interface/data";
+import OfficeInfo from "@/layout/human_resources/OfficeInfo";
 
 const Office = () => {
   const [params, setParams] = useSearchParams({ tab: "personnel" });
-  const { officeID } = useParams();
+  const { officeID, lineId } = useParams();
   const auth = useAuth();
 
   const currentTabs = params.get("tab") || "personnel";
@@ -36,6 +30,9 @@ const Office = () => {
     queryKey: ["unit", officeID],
     queryFn: () => getUnitInfo(auth.token as string, officeID as string),
     enabled: !!officeID && !!auth.token,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const handleChangeParams = (key: string, value: string) => {
@@ -48,16 +45,6 @@ const Office = () => {
         replace: true,
       },
     );
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
   };
 
   if (isFetching) {
@@ -125,11 +112,11 @@ const Office = () => {
       {/* Header Section - Compact */}
       <div className="px-6 py-4 border-b">
         <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
+          <div className="flex items-center gap-4">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Building2 className="h-6 w-6 text-primary" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 ">
               <h1 className="text-xl font-bold text-gray-900 mb-1">
                 {data.name}
               </h1>
@@ -138,28 +125,6 @@ const Office = () => {
                   {data.description}
                 </p>
               )}
-
-              <div className="flex items-center gap-4 text-xs text-gray-600">
-                <div className="flex items-center gap-1">
-                  <Hash className="h-3 w-3" />
-                  <span>
-                    ID: <strong>{data.id.substring(0, 12)}...</strong>
-                  </span>
-                </div>
-                {data.createdAt && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>
-                      Created: <strong>{formatDate(data.createdAt)}</strong>
-                    </span>
-                  </div>
-                )}
-                <div className="ml-auto">
-                  <Badge variant="outline" className="font-normal text-xs">
-                    Organizational Unit
-                  </Badge>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -203,6 +168,15 @@ const Office = () => {
                   <span className="font-medium text-sm">Teams</span>
                 </div>
               </TabsTrigger>
+              <TabsTrigger
+                value="info"
+                className="h-10 px-4 data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none"
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  <span className="font-medium text-sm">Info</span>
+                </div>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -242,6 +216,18 @@ const Office = () => {
                 Coming Soon
               </Badge>
             </div>
+          </TabsContent>
+
+          <TabsContent
+            value="info"
+            className="h-full flex-1 m-0 p-0 data-[state=active]:flex"
+          >
+            <OfficeInfo
+              unit={data}
+              lineId={lineId as string}
+              userId={auth.userId as string}
+              token={auth.token as string}
+            />
           </TabsContent>
         </Tabs>
       </div>

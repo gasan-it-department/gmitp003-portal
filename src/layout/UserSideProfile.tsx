@@ -29,9 +29,10 @@ const UserSideProfile = () => {
         auth.userId as string,
       ),
     enabled: !!auth.token && !!auth.userId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
-
-  console.log({ data });
 
   const handleLogout = () => {
     localStorage.removeItem("user");

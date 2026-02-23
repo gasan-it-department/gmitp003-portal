@@ -57,7 +57,7 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
           id,
           pageParam as string | null,
           "10",
-          ""
+          "",
         ),
       initialPageParam: null,
       getNextPageParam: (lastPage) =>
@@ -74,12 +74,10 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
 
   const {
     handleSubmit,
-    formState: { isSubmitting, errors },
+    formState: { isSubmitting },
     control,
     reset,
   } = form;
-
-  console.log(errors);
 
   const prescribeMeds = useFieldArray({
     control,
@@ -108,16 +106,20 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
             id: item.id,
             medId: item.medicineId,
             stockId: "",
-            label: item.medicine.name,
-            currentStock: allMedicineStock(
-              item.medicine.MedicineStock
-            ).toString(),
-            stocks: item.medicine.MedicineStock.map((item) => ({
-              id: item.id,
-              expireIn: item.expiration as string | undefined,
-              quantity: item.actualStock.toString(),
-              toRelease: "0",
-            })),
+            label: item.medicine?.name || "Unknown Medicine",
+            currentStock:
+              item.medicine?.MedicineStock.length > 0
+                ? allMedicineStock(item.medicine.MedicineStock).toString()
+                : "0",
+            stocks:
+              item.medicine?.MedicineStock.length > 0
+                ? item.medicine.MedicineStock.map((item) => ({
+                    id: item.id,
+                    expireIn: item.expiration as string | undefined,
+                    quantity: item.actualStock.toString(),
+                    toRelease: "0",
+                  }))
+                : [],
           };
         });
       console.log({ formattedData });
@@ -302,7 +304,11 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
             <Button
               type="button"
               size="lg"
-              disabled={isSubmitting || status === 2}
+              disabled={
+                isSubmitting ||
+                status === 2 ||
+                prescribeMeds.fields.length === 0
+              }
               onClick={() => setOnOpen(1)}
               className="min-w-32 bg-blue-600 hover:bg-blue-700"
             >

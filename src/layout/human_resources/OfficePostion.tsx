@@ -39,8 +39,8 @@ import {
   Briefcase,
   // Filter,
   // Download,
-  Hash,
-  Users,
+  // Hash,
+  // Users,
   //Building2,
 } from "lucide-react";
 
@@ -72,6 +72,9 @@ const OfficePostion = ({ id, token, userId }: Props) => {
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const allPositions = data?.pages.flatMap((page) => page.list) || [];
@@ -104,55 +107,36 @@ const OfficePostion = ({ id, token, userId }: Props) => {
     <div className="w-full h-full flex flex-col bg-white">
       {/* Header Section */}
       <div className="border-b">
-        <div className="px-6 py-2">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center justify-end gap-2">
-              <DropdownMenu
-                open={activeDropdown === "add"}
-                onOpenChange={(open) => setActiveDropdown(open ? "add" : null)}
-              >
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Position
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={() => handleModalOpen(1)}
-                    className="gap-2"
-                  >
-                    <FolderPlus className="h-4 w-4" />
-                    Create New Position
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleModalOpen(2)}
-                    className="gap-2"
-                  >
-                    <Folder className="h-4 w-4" />
-                    Add Existing Position
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-end gap-2 p-2">
+            <DropdownMenu
+              open={activeDropdown === "add"}
+              onOpenChange={(open) => setActiveDropdown(open ? "add" : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Position
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  onClick={() => handleModalOpen(1)}
+                  className="gap-2"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  Create New Position
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleModalOpen(2)}
+                  className="gap-2"
+                >
+                  <Folder className="h-4 w-4" />
+                  Add Existing Position
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          {!isLoading && totalPositions > 0 && (
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4" />
-                <span>
-                  Total Positions: <strong>{totalPositions}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>
-                  Open Positions: <strong>{getOpenPositions()}</strong>
-                </span>
-              </div>
-            </div>
-          )}
         </div>
         <Separator />
       </div>
@@ -238,9 +222,7 @@ const OfficePostion = ({ id, token, userId }: Props) => {
                     <TableHead className="w-[80px] font-semibold text-gray-700 text-center">
                       Slots
                     </TableHead>
-                    <TableHead className="w-[80px] font-semibold text-gray-700 text-center">
-                      Open
-                    </TableHead>
+
                     <TableHead className="font-semibold text-gray-700">
                       Salary Grade
                     </TableHead>
@@ -336,7 +318,7 @@ const OfficePostion = ({ id, token, userId }: Props) => {
 
       {/* Create Position Modal */}
       <Modal
-        title="Create New Position"
+        title={undefined}
         children={
           <AddPosition
             existed={false}
@@ -348,7 +330,7 @@ const OfficePostion = ({ id, token, userId }: Props) => {
         }
         onOpen={onOpen === 1}
         footer={1}
-        className="max-w-3xl max-h-[95vh] overflow-auto"
+        className="min-w-3xl max-h-[95vh] overflow-auto"
         setOnOpen={handleModalClose}
       />
 

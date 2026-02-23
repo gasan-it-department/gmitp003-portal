@@ -210,28 +210,8 @@ const AdminPanel = () => {
                   value={tab.value}
                   className="m-0 p-0 focus-visible:outline-none focus-visible:ring-0"
                 >
-                  {/* Content Header */}
-                  <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white border border-gray-200 rounded-lg">
-                          <tab.icon className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-semibold text-gray-900">
-                            {tab.label}
-                          </h2>
-                          <p className="text-sm text-gray-500">
-                            Manage {tab.label.toLowerCase()} settings and
-                            configurations
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Main Content */}
-                  <div className="p-6">{tab.component}</div>
+                  <div className="p-2">{tab.component}</div>
                 </TabsContent>
               ))}
             </Tabs>

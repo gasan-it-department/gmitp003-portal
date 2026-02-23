@@ -478,3 +478,5 @@ export const switchYearIndex = (yearRange: string): number[] => {
 
   return years; // Return as-is for single year or already correct order
 };
+
+export const roomRegistration = ["Drafted", "Pending", "Approved", "Cancelled"];

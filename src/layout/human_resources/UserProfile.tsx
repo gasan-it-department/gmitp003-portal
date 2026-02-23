@@ -51,9 +51,10 @@ const UserProfile = () => {
         employeeId as string,
         auth.userId as string,
       ),
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
-
-  console.log({ user });
 
   if (isFetching) {
     return (
@@ -138,12 +139,13 @@ const UserProfile = () => {
             accountId={user.accountId as string}
             lineId={lineId as string}
             token={auth.token as string}
+            userName={user.username}
           />
         </div>
 
         {/* Main Content */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="employment">Employment</TabsTrigger>
             <TabsTrigger value="social">Social Welfare</TabsTrigger>
@@ -529,16 +531,15 @@ const UserProfile = () => {
               <CardContent>
                 {user.modules && user.modules.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {user.modules.map((_, index) => (
+                    {user.modules.map((module, index) => (
                       <Card
                         key={index}
                         className="hover:shadow-md transition-shadow"
                       >
-                        <CardContent className="p-4">
-                          {/* <h4 className="font-medium text-gray-900">{module.name}</h4>
-                          {module.description && (
-                            <p className="text-sm text-gray-600 mt-1">{module.description}</p>
-                          )} */}
+                        <CardContent className="p-1">
+                          <h4 className="font-medium text-gray-900">
+                            {module.moduleName}
+                          </h4>
                         </CardContent>
                       </Card>
                     ))}

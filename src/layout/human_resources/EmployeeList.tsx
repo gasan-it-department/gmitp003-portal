@@ -90,6 +90,8 @@ const EmployeeList = ({
   const isLoading =
     isFetching && !isFetchingNextPage && allEmployees.length === 0;
 
+  console.log({ data });
+
   return (
     <div className="relative w-full h-full overflow-auto bg-white">
       {/* Loading Overlay */}

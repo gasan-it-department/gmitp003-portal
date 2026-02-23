@@ -161,7 +161,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 ">
         {filteredTags ? (
           // Search Results View
           <ScrollArea className="h-full p-4">
@@ -187,7 +187,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
                       {items.length}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ml-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ">
                     {items.map((item, i) => (
                       <FormTagsItem
                         handleCheckTags={handleCheckTags}

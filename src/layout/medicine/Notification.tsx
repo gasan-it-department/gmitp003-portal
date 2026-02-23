@@ -24,6 +24,9 @@ const Notification = ({ lineId, token }: Props) => {
     queryKey: ["newInboxCount"],
     queryFn: () => newInboxCount(token, lineId),
     enabled: !!lineId || !!token,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   return (

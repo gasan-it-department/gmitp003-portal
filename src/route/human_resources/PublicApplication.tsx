@@ -50,6 +50,9 @@ const PublicApplication = () => {
     queryFn: () =>
       publicApplicationData(token as string, applicationId as string),
     enabled: !!applicationId && !!token,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   // Show OTP verification if token is false/undefined

@@ -59,12 +59,14 @@ import Dashboard from "./layout/human_resources/Dashboard.tsx";
 import LineRegistration from "./route/LineRegistration.tsx";
 import PositionInvitation from "./route/PositionInvitation.tsx";
 //E-signature
+import Document from "./route/human_resources/Document.tsx";
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
 import Dissemination from "./route/e-sign/Dissemination.tsx";
 import DisseminationIndex from "./route/e-sign/DisseminationIndex.tsx";
 import NewDisseminationRoom from "./route/e-sign/NewDisseminationRoom.tsx";
 import DocSelection from "./layout/e-sign/DocSelection.tsx";
+import Archive from "./layout/e-sign/Archive.tsx";
 //Medicine
 import MedicineIndex from "./route/medicine/Index.tsx";
 import StorageList from "./route/medicine/StorageList.tsx";
@@ -89,6 +91,8 @@ import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
 import UserDataRegistration from "./route/UserDataRegistration.tsx";
 import LineUserInfoRegister from "./layout/LineUserInfoRegister.tsx";
+import PositionDetail from "./route/human_resources/PositionDetail.tsx";
+import ReuqestDetail from "./layout/human_resources/document/ReuqestDetail.tsx";
 
 const queryClient = new QueryClient();
 
@@ -268,15 +272,25 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="units" element={<Department />} />
                 <Route path="invite" element={<Invite />} />
                 <Route path="application/post" element={<PostPosition />} />
+                <Route path="document" element={<Document />} />
+                <Route
+                  path="document/request/:requestId"
+                  element={<ReuqestDetail />}
+                />
                 <Route
                   path="application/post/:positionPostId"
                   element={<PostJobForm />}
                 />
                 <Route path="units/:officeID" element={<Office />} />
+                <Route
+                  path="units/:officeID/position/:positionId"
+                  element={<PositionDetail />}
+                />
                 <Route path="job-post/:jobPostId" element={<JobPostData />} />
               </Route>
               <Route path="/:lineId/documents" element={<EsignIndex />}>
                 <Route index={true} element={<EsignHomePannel />} />
+                <Route path="archive" element={<Archive />} />
                 <Route path="dissemination" element={<DisseminationIndex />}>
                   <Route index={true} element={<Dissemination />} />
                   <Route

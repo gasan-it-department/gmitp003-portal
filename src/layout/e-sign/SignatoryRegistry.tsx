@@ -2,6 +2,7 @@ import { useState } from "react";
 import zod from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
+import { QueryClient } from "@tanstack/react-query";
 import axios from "@/db/axios";
 //
 import {
@@ -22,6 +23,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 //icons
 import { PlusCircle, Trash2, Users, Upload, File, Send } from "lucide-react";
+
+//utils
+import { dataURLtoBlob } from "@/utils/file";
 //
 import { SignatoryFormSchema } from "@/interface/zod";
 import type { User } from "@/interface/data";
@@ -31,9 +35,10 @@ interface Props {
   lineId: string;
   token: string;
   userId: string;
+  queryClient: QueryClient;
 }
 
-const SignatoryRegistry = ({ lineId, token, userId }: Props) => {
+const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const [fileName, setFileName] = useState<string>("");
 
@@ -81,8 +86,6 @@ const SignatoryRegistry = ({ lineId, token, userId }: Props) => {
   const signatureFile = watch("signature");
 
   const onSubmit = async (data: SignatoryFormProps) => {
-    console.log({ lineId, userId, data });
-
     try {
       const formData = new FormData();
 
@@ -142,12 +145,12 @@ const SignatoryRegistry = ({ lineId, token, userId }: Props) => {
       if (response.status !== 200) {
         throw new Error(response.data.message || "Request failed");
       }
-      console.log(response.data.data);
-
+      await queryClient.invalidateQueries({
+        queryKey: ["signatory-registry", userId],
+      });
       toast.success("Signatory registry submitted successfully!");
       setOnOpen(0);
     } catch (error) {
-      console.error("Submission error:", error);
       toast.error(
         error instanceof Error
           ? error.message
@@ -155,21 +158,6 @@ const SignatoryRegistry = ({ lineId, token, userId }: Props) => {
       );
     }
   };
-
-  function dataURLtoBlob(dataURL: string): Blob {
-    const arr = dataURL.split(",");
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : "image/png";
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-
-    return new Blob([u8arr], { type: mime });
-  }
 
   return (
     <div className="w-full space-y-6">

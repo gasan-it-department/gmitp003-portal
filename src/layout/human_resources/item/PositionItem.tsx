@@ -1,4 +1,9 @@
 import { memo, useState } from "react";
+import { useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+//
+import { removePosition } from "@/db/statements/position";
 //
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,6 +13,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Modal from "@/components/custom/Modal";
+import ConfirmDelete from "@/layout/ConfirmDelete";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -23,10 +30,10 @@ import {
   User,
   Users,
   DollarSign,
-  Mail,
   UserPlus,
   UserCog,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
 //import { getSlotSalaryGradeRange } from "@/utils/helper";
 
@@ -43,10 +50,14 @@ interface Props {
 
 const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const nav = useNavigate();
+  const queryClient = useQueryClient();
   const slotCount = item.slot.length;
   // const salaryGradeRange =
   //   item.slot.length > 0 ? getSlotSalaryGradeRange(item.slot) : "N/A";
-  const isOpenPosition = slotCount > 0;
+  const isOpenPosition = item.slot.filter(
+    (slot) => slot.occupied === true,
+  ).length;
 
   const getSlotStatusColor = (count: number) => {
     if (count === 0) return "bg-gray-100 text-gray-700 border-gray-200";
@@ -64,7 +75,7 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
   const getPositionType = () => {
     if (item.plantilla) return "Plantilla";
     if (item.fixToUnit) return "Fixed to Unit";
-    return "Regular";
+    return "";
   };
 
   const getPositionTypeColor = (type: string) => {
@@ -77,6 +88,21 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
+
+  const removeUnitPositionMutation = useMutation({
+    mutationFn: () => removePosition(token, item.id, lineId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["postions", item.departmentId],
+        refetchType: "active",
+      });
+    },
+    onError: (err) => {
+      toast.error("Failed to remove position. Please try again.", {
+        description: err.message,
+      });
+    },
+  });
 
   return (
     <TooltipProvider>
@@ -158,7 +184,9 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                     >
                       <div className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        <span className="font-bold">{slotCount}</span>
+                        <span className="font-bold">
+                          {isOpenPosition}/{slotCount}
+                        </span>
                       </div>
                     </div>
                   </TooltipTrigger>
@@ -166,27 +194,7 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                     <p>{getSlotStatusText(slotCount)} available</p>
                   </TooltipContent>
                 </Tooltip>
-                <span className="text-xs text-gray-500 mt-1">Slots</span>
               </div>
-            </TableCell>
-
-            {/* Open Status */}
-            <TableCell className="py-3 text-center">
-              {isOpenPosition ? (
-                <Badge
-                  variant="outline"
-                  className="bg-green-50 text-green-700 border-green-200 font-normal"
-                >
-                  Open
-                </Badge>
-              ) : (
-                <Badge
-                  variant="outline"
-                  className="bg-gray-100 text-gray-600 border-gray-200 font-normal"
-                >
-                  Closed
-                </Badge>
-              )}
             </TableCell>
 
             {/* Salary Grade Range */}
@@ -255,14 +263,16 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                     <h3 className="font-semibold text-gray-900 text-sm">
                       {item.position.name}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${getPositionTypeColor(getPositionType())}`}
-                      >
-                        {getPositionType()}
-                      </Badge>
-                    </div>
+                    {getPositionType() && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${getPositionTypeColor(getPositionType())}`}
+                        >
+                          {getPositionType()}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -284,7 +294,7 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                 <Button
                   variant="outline"
                   className="w-full justify-start gap-2 h-9 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
-                  disabled={!isOpenPosition}
+                  disabled={isOpenPosition === 0}
                   onClick={() => setOnOpen(1)}
                 >
                   <UserPlus className="h-4 w-4" />
@@ -293,20 +303,23 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                 </Button>
 
                 <Button
-                  variant="outline"
-                  className="w-full justify-start gap-2 h-9 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                >
-                  <Mail className="h-4 w-4" />
-                  <span>Invite Candidate</span>
-                  <ArrowRight className="h-3 w-3 ml-auto" />
-                </Button>
-
-                <Button
+                  disabled
+                  onClick={() => nav(`position/${item.id}`)}
                   variant="outline"
                   className="w-full justify-start gap-2 h-9 hover:bg-gray-100 hover:text-gray-800 hover:border-gray-300"
                 >
                   <UserCog className="h-4 w-4" />
                   <span>View Details</span>
+                  <ArrowRight className="h-3 w-3 ml-auto" />
+                </Button>
+
+                <Button
+                  onClick={() => setOnOpen(2)}
+                  variant="destructive"
+                  className="w-full justify-start gap-2 h-9 "
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Remove</span>
                   <ArrowRight className="h-3 w-3 ml-auto" />
                 </Button>
               </div>
@@ -325,6 +338,24 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
               }
               onOpen={onOpen === 1}
               className={" max-h-[95vh] overflow-auto"}
+              setOnOpen={() => setOnOpen(0)}
+              footer={1}
+            />
+
+            <Modal
+              title={"Remove Unit Position"}
+              children={
+                <ConfirmDelete
+                  confirmation={"confirm"}
+                  setOnOpen={setOnOpen}
+                  onFunction={() => {
+                    removeUnitPositionMutation.mutateAsync();
+                  }}
+                  isLoading={removeUnitPositionMutation.isPending}
+                />
+              }
+              onOpen={onOpen === 2}
+              className={""}
               setOnOpen={() => setOnOpen(0)}
               footer={1}
             />

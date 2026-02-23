@@ -13,17 +13,32 @@ interface Props {
 const Dispensary = ({ id, token, userId }: Props) => {
   const [status, setStatus] = useState(0);
   return (
-    <div className=" w-full h-full lg:flex">
-      <div className=" w-1/2 h-full p-2 border border-y-0 border-l-0 border-neutral-400">
-        <DispensaryPrescription id={id} token={token} setStatus={setStatus} />
+    <div className="w-full h-full flex flex-col lg:flex-row bg-gray-50">
+      {/* Prescription Section */}
+      <div className="w-full lg:w-1/2 h-full lg:h-full p-3 lg:p-4">
+        <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="h-full overflow-auto">
+            <DispensaryPrescription
+              id={id}
+              token={token}
+              setStatus={setStatus}
+            />
+          </div>
+        </div>
       </div>
-      <div className=" w-1/2 h-full p-2">
-        <DispensaryMedicine
-          id={id}
-          token={token}
-          userId={userId}
-          status={status}
-        />
+
+      {/* Medicine Section */}
+      <div className="w-full lg:w-1/2 h-full lg:h-full p-3 lg:p-4 lg:pl-0">
+        <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="h-full overflow-auto">
+            <DispensaryMedicine
+              id={id}
+              token={token}
+              userId={userId}
+              status={status}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

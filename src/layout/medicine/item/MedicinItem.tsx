@@ -3,6 +3,9 @@ import { memo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 //
 import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+//statements
+import { removeMedicine } from "@/db/statements/medicine";
 
 //
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -18,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import SelectUnit from "../SelectUnit";
+import ConfirmDelete from "@/layout/ConfirmDelete";
+import { toast } from "sonner";
 //icons
 import {
   Package,
@@ -26,6 +31,7 @@ import {
   FileText,
   AlertTriangle,
   Warehouse,
+  Trash2,
 } from "lucide-react";
 //
 import type {
@@ -59,6 +65,21 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
     formState: { isSubmitting },
     control,
   } = form;
+
+  const removeMedicineMutation = useMutation({
+    mutationFn: () =>
+      removeMedicine(auth.token as string, item.id, auth.userId as string),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["medicine-list", lineId],
+      });
+      setOnOpen(0);
+    },
+    onError: () => {
+      toast.error("Failed to remove medicine. Please try again.");
+    },
+  });
+  const queryClient = useQueryClient();
 
   return (
     <>
@@ -139,7 +160,7 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md"
+        className="max-w-md max-h-[90vh] overflow-y-auto"
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       >
@@ -231,6 +252,24 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
                 </div>
               </div>
             </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start h-12 px-4 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
+              onClick={() => setOnOpen(3)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded">
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium">Remove</p>
+                  <p className="text-xs text-gray-500">
+                    Permanently delete this medicine from the system
+                  </p>
+                </div>
+              </div>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -253,7 +292,7 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
           </div>
         }
         onOpen={onOpen === 2}
-        className="max-w-lg"
+        className="max-w-lg max-h-[95vh] overflow-y-auto"
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         loading={isSubmitting}
@@ -325,6 +364,111 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
               </div>
             </div>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title={
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <Trash2 className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Remove Medicine
+              </h2>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone
+              </p>
+            </div>
+          </div>
+        }
+        onOpen={onOpen === 3}
+        className="max-w-md max-h-[90vh] overflow-y-auto"
+        loading={removeMedicineMutation.isPending}
+        setOnOpen={() => {
+          if (removeMedicineMutation.isPending) return;
+          setOnOpen(0);
+        }}
+        footer={true}
+        onFunction={() => {
+          removeMedicineMutation.mutateAsync();
+        }}
+        yesTitle="Yes, Remove"
+        cancelTitle="Cancel"
+      >
+        <div className="space-y-4">
+          {/* Warning Alert */}
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-red-800 mb-1">
+                  Are you absolutely sure?
+                </p>
+                <p className="text-sm text-red-700">
+                  This action will permanently remove{" "}
+                  <span className="font-semibold">{item.name}</span> from the
+                  system.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Medicine Details Card */}
+          <Card className="border-gray-200">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Medicine:
+                  </span>
+                  <span className="text-sm text-gray-900">{item.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Serial:
+                  </span>
+                  <code className="text-sm bg-gray-100 px-2 py-0.5 rounded">
+                    {item.serialNumber}
+                  </code>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Consequences */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              This will:
+            </p>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                <span>Remove all records associated with this medicine</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                <span>Delete from inventory and transaction history</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
+                <span>This action is permanent and cannot be reversed</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Loading State */}
+          {removeMedicineMutation.isPending && (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
+                Removing medicine...
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </>

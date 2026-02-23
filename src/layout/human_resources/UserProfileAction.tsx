@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { suspendAccount } from "@/db/statement";
 import { sendResetLink } from "@/db/statements/account";
+import { removeUser } from "@/db/statements/user";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import {
@@ -11,15 +13,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ConfirmDelete from "../ConfirmDelete";
+
 import { toast } from "sonner";
 import {
   CirclePause,
   EllipsisVertical,
   Trash,
-  UserX,
   ShieldAlert,
-  Archive,
-  Key,
+  //Archive,
+  // Key,
   AlertTriangle,
   //Ban,
   Info,
@@ -46,6 +49,7 @@ const UserProfileAction = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
+  const nav = useNavigate();
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: () => suspendAccount(token, userId, lineId, accountId),
@@ -76,6 +80,20 @@ const UserProfileAction = ({
   const handleSuspendAccount = () => {
     mutateAsync();
   };
+
+  const removeUserAccount = useMutation({
+    mutationFn: () => removeUser(token, accountId, userId, lineId),
+    onSuccess: () => {
+      nav(-1);
+    },
+    onError: (err) => {
+      console.log(err);
+
+      toast.error("TRANSACTION FAILED", {
+        description: `${err.message}`,
+      });
+    },
+  });
 
   // Close dropdown when modal opens
   useEffect(() => {
@@ -127,19 +145,6 @@ const UserProfileAction = ({
             </div>
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            className="cursor-pointer py-2.5 focus:bg-red-50 focus:text-red-600"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <UserX className="mr-2 h-4 w-4 text-gray-500" />
-            <div className="flex flex-col items-start">
-              <span>Deactivate Account</span>
-              <span className="text-xs text-gray-500 mt-0.5">
-                Permanently disable account
-              </span>
-            </div>
-          </DropdownMenuItem>
-
           <DropdownMenuSeparator />
 
           {/* Data Management Section */}
@@ -149,7 +154,10 @@ const UserProfileAction = ({
 
           <DropdownMenuItem
             className="cursor-pointer py-2.5 focus:bg-red-50 focus:text-red-600"
-            onClick={() => setDropdownOpen(false)}
+            onClick={() => {
+              setOnOpen(3);
+              setDropdownOpen(false);
+            }}
           >
             <Trash className="mr-2 h-4 w-4 text-gray-500" />
             <div className="flex flex-col items-start">
@@ -159,7 +167,7 @@ const UserProfileAction = ({
               </span>
             </div>
           </DropdownMenuItem>
-
+          {/* 
           <DropdownMenuItem
             className="cursor-pointer py-2.5 focus:bg-amber-50 focus:text-amber-600"
             onClick={() => setDropdownOpen(false)}
@@ -171,7 +179,7 @@ const UserProfileAction = ({
                 Move to archive storage
               </span>
             </div>
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
 
           <DropdownMenuSeparator />
 
@@ -196,45 +204,18 @@ const UserProfileAction = ({
             </div>
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            className="cursor-pointer py-2.5 focus:bg-blue-50 focus:text-blue-600"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <Key className="mr-2 h-4 w-4 text-gray-500" />
-            <div className="flex flex-col items-start">
-              <span>Reset 2FA</span>
-              <span className="text-xs text-gray-500 mt-0.5">
-                Reset two-factor authentication
-              </span>
-            </div>
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
-
-          {/* View Options */}
-          <DropdownMenuItem
-            className="cursor-pointer py-2.5"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <div className="flex flex-col items-start w-full">
-              <span>View Activity Log</span>
-              <span className="text-xs text-gray-500 mt-0.5">
-                See all user actions
-              </span>
-            </div>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem
-            className="cursor-pointer py-2.5"
-            onClick={() => setDropdownOpen(false)}
-          >
-            <div className="flex flex-col items-start w-full">
-              <span>View Permissions</span>
-              <span className="text-xs text-gray-500 mt-0.5">
-                Check access levels
-              </span>
-            </div>
-          </DropdownMenuItem>
+          {/* <DropdownMenuItem
+              className="cursor-pointer py-2.5 focus:bg-blue-50 focus:text-blue-600"
+              onClick={() => setDropdownOpen(false)}
+            >
+              <Key className="mr-2 h-4 w-4 text-gray-500" />
+              <div className="flex flex-col items-start">
+                <span>Reset 2FA</span>
+                <span className="text-xs text-gray-500 mt-0.5">
+                  Reset two-factor authentication
+                </span>
+              </div>
+            </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -341,6 +322,21 @@ const UserProfileAction = ({
             </div>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        title={undefined}
+        onOpen={onOpen === 3}
+        className={""}
+        footer={1}
+        setOnOpen={() => setOnOpen(0)}
+      >
+        <ConfirmDelete
+          confirmation={userName}
+          setOnOpen={setOnOpen}
+          onFunction={() => removeUserAccount.mutateAsync()}
+          isLoading={removeUserAccount.isPending}
+        />
       </Modal>
     </div>
   );

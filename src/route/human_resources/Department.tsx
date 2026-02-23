@@ -85,6 +85,9 @@ const Department = () => {
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   // Infinite scroll trigger effect
@@ -257,9 +260,6 @@ const Department = () => {
                     <Users className="h-4 w-4" />
                     Personnel / Members
                   </div>
-                  <div className="col-span-2 font-semibold text-sm text-gray-700 uppercase tracking-wider text-center">
-                    Actions
-                  </div>
                 </div>
               </div>
 
@@ -421,7 +421,7 @@ const Department = () => {
           </Card>
         }
         onOpen={onOpen === 1}
-        className="max-w-lg"
+        className="max-w-lg max-h-[95vh] overflow-auto"
         setOnOpen={() => {
           setOnOpen(0);
           reset();

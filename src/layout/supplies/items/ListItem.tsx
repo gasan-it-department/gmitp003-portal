@@ -236,23 +236,6 @@ const ListItem = ({
         }}
       >
         <div className="space-y-6">
-          {/* Warning Icon and Message */}
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="p-3 bg-red-100 rounded-full">
-              <CircleX className="w-8 h-8 text-red-600" />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Confirm Removal
-              </h3>
-              <p className="text-sm text-slate-600">
-                Are you sure you want to remove this item from inventory? This
-                action cannot be undone.
-              </p>
-            </div>
-          </div>
-
           <ConfirmDelete
             onFunction={() => {
               handleRemove.mutateAsync();

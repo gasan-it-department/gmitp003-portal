@@ -57,6 +57,9 @@ const ApplicationData = ({ applicationId }: Props) => {
     queryFn: () =>
       getApplicationData(auth.token as string, applicationId as string),
     enabled: !!applicationId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const progressButton = [

@@ -1173,6 +1173,17 @@ export interface UnitPosition {
   jobPosts: JobPostProps[];
 }
 
+export interface UnitPositionHistory {
+  id: string;
+  unitPost: UnitPosition;
+  unitPositionId: string;
+  slot: PositionSlotProps;
+  positionSlotId: string;
+  user: User;
+  timestamp: string;
+  userId: string;
+}
+
 export interface FillPositionInvitationProps {
   id: string;
   lineId: string;
@@ -1202,4 +1213,276 @@ export interface LineInvitationProps {
   unitPositionId: string;
   posSlot: PositionSlotProps;
   positionSlotId: string;
+}
+
+// Base timestamp interface
+interface Timestamp {
+  timestamp: string;
+}
+
+// SignatureCoor Interface
+export interface SignatureCoorProps extends Timestamp {
+  id: string;
+  xAxis: number;
+  yAxis: number;
+  width: number;
+  height: number;
+  signatureRequestId?: string | null;
+  documentPageId?: string | null;
+  signatoryArrangementId?: string | null;
+  SignatureRequest?: SignatureRequest | null;
+  documentPage?: DocumentPage | null;
+  signatoryArrangement?: SignatoryArrangement | null;
+}
+
+// SignatureFile Interface
+export interface SignatureFileProps extends Timestamp {
+  id: string;
+  url: string;
+  fileName: string;
+  fileSize: string;
+  fileType: string;
+  signatureRequestId: string;
+  SignatureRequest: SignatureRequest;
+}
+
+// SignatureRecord Interface
+export interface SignatureRecord extends Timestamp {
+  id: string;
+  signatureRequestId: string;
+  lineId: string;
+  signature: string;
+  userId: string;
+  request: SignatureRequest;
+}
+
+// SignatureRequest Interface
+export interface SignatureRequest extends Timestamp {
+  id: string;
+  subject: string;
+  desc?: string | null;
+  size: string;
+  fromUserId?: string | null;
+  toUserId?: string | null;
+  status: number;
+  target: SignatureCoorProps[];
+  file: SignatureFileProps[];
+  SignatureRecord: SignatureRecord[];
+  fromUser?: User | null;
+  toUser?: User | null;
+}
+
+// RoomRegistration Interfaces
+export interface RoomRegistrationSignature extends Timestamp {
+  id: string;
+  file_name?: string | null;
+  file_size?: string | null;
+  file_type?: string | null;
+  file_public_id?: string | null;
+  file_url?: string | null;
+  roomRegistrationId?: string | null;
+  roomRegistration?: RoomRegistration | null;
+}
+
+export interface RoomRegistrationReceiver extends Timestamp {
+  id: string;
+  roomRegistrationId: string;
+  nickname?: string | null;
+  userId: string;
+  status: number; // 0: decline, 1: accept
+  roomRegistration: RoomRegistration;
+  user: User;
+}
+
+export interface RoomRegistrationConversation extends Timestamp {
+  id: string;
+  roomRegistrationId: string;
+  seen: boolean;
+  mesasge: string; // Note: Typo in schema, should be 'message'
+  fromUserId: string;
+  toUserId: string;
+  roomRegistration: RoomRegistration;
+  from: User;
+  to: User;
+}
+
+export interface RoomRegistration extends Timestamp {
+  id: string;
+  address: string;
+  lineId: string;
+  userId: string;
+  status: number; // 0: pending, 1: approved, 2: rejected
+  dateApproved?: Date | null;
+  dateRejected?: Date | null;
+  lastApprovedDate?: Date | null;
+
+  // Relations
+  line: LineProps;
+  user: User;
+  receivers: RoomRegistrationReceiver[];
+  roomRegistrationSignatures?: RoomRegistrationSignature | null;
+  roomRegistrationConversations: RoomRegistrationConversation[];
+}
+
+// Receiving Room Interfaces
+export interface RoomReceiver extends Timestamp {
+  id: string;
+  userId?: string | null;
+  nickname?: string | null;
+  receivingRoomId?: string | null;
+  type: number; // 0: secondary, 1: primary
+  user?: User | null;
+  receivingRoom?: ReceivingRoom | null;
+}
+
+export interface SignatoryArrangement extends Timestamp {
+  id: string;
+  signatoryId: string;
+  index: number;
+  status: number; // 0: waiting, 1: signed
+  signedAt?: Date | null;
+  signatureQueueRoomId?: string | null;
+
+  // Relations
+  signatory: Signatory;
+  sign: SignatureCoorProps[];
+  signatureQueueRoom?: SignatureQueueRoom | null;
+}
+
+export interface Signatory extends Timestamp {
+  id: string;
+  userId: string;
+  receivingRoomId?: string | null;
+
+  // Relations
+  user: User;
+  receivingRoom?: ReceivingRoom | null;
+  signatoryArrangements: SignatoryArrangement[];
+}
+
+export interface ReceivedMarkFile extends Timestamp {
+  id: string;
+  title?: string | null;
+  status: number; // 0: inactive, 1: active
+  file_uri: string;
+  file_public_id?: string | null;
+  file_name?: string | null;
+  file_size?: string | null;
+  departmentId: string;
+
+  // Relations
+  unit: Department;
+  receivingRooms?: ReceivingRoom | null;
+}
+
+export interface ReceivingRoom extends Timestamp {
+  id: string;
+  code: string;
+  address?: string | null;
+  receivedMarkFileId?: string | null;
+  signatureQueueRoomId?: string | null;
+  lineId: string;
+
+  // Relations
+  marker?: ReceivedMarkFile | null;
+  line: LineProps;
+  targetRooms: TargetRoom[];
+  receiver: RoomReceiver[];
+  signatory: Signatory[];
+}
+
+// Document Interfaces
+export interface DocumentPage extends Timestamp {
+  id: string;
+  page: number;
+  title?: string | null;
+  content: string;
+  documentId?: string | null;
+
+  // Relations
+  signCoor: SignatureCoorProps[];
+  document?: Document | null;
+}
+
+export interface Document extends Timestamp {
+  id: string;
+  type: number;
+  size: number;
+  orientation: number; // 0: Landscape, 1: Portrait
+  status: number; // 0: setting up, 1: ready
+  title?: string | null;
+  userId: string;
+  signatureQueueRoomId?: string | null;
+
+  // Relations
+  pages: DocumentPage[];
+  user: User;
+  signatureQueueRoom?: SignatureQueueRoom | null;
+}
+
+// User Key Pair Interface
+export interface UserKeyPair extends Timestamp {
+  id: string;
+  userId: string;
+  publicKey: string;
+  privateKey: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  user: User;
+}
+
+// Signature Interface
+export interface Signature extends Timestamp {
+  id: string;
+  title: string;
+  url: string;
+  defalt: boolean;
+  forRenew?: Date | null;
+  userId: string;
+
+  // Relations
+  user: User;
+}
+
+// Signature Queue Room Interfaces
+interface SignatureQueueRoomApprover extends Timestamp {
+  id: string;
+  userId: string;
+  timestamp: string; // Note: This is string type in schema
+  signatureQueueRoomId?: string | null;
+
+  // Relations
+  SignatureQueueRoom?: SignatureQueueRoom | null;
+  user: User;
+}
+
+interface TargetRoom extends Timestamp {
+  id: string;
+  signatureQueueRoomId?: string | null;
+  receivingRoomId?: string | null;
+  status: number; // 0: in-receiving, 1: received, 2: completed, 3: concluded, 4: cancelled
+  receivedAt?: Date | null;
+
+  // Relations
+  queueRoom?: SignatureQueueRoom | null;
+  roomReceiver?: ReceivingRoom | null;
+}
+
+interface SignatureQueueRoom extends Timestamp {
+  id: string;
+  title?: string | null;
+  userId: string;
+  status: number; // 0: setting up, 1: ongoing, 2: concluded
+  step: number;
+  departmentId?: string | null;
+
+  // Relations
+  documents: Document[];
+  signatotyArrangement: SignatoryArrangement[];
+  unit?: Department | null;
+  user: User;
+  endorser: SignatureQueueRoomApprover[];
+  targetRooms: TargetRoom[];
 }

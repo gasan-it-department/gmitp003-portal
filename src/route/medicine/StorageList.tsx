@@ -44,7 +44,6 @@ import {
   Menu,
   Search,
   FileCog,
-  HandHelping,
 } from "lucide-react";
 
 //interfaces and Props
@@ -157,17 +156,6 @@ const StorageList = () => {
         <div className={` ${medSideBar.onOpen ? "w-3/4" : "w-full"} h-full`}>
           <div className=" w-full h-[10%] p-2 flex justify-between items-center border border-x-0 gap-2 bg-white">
             <div className=" w-auto flex gap-2">
-              <Tooltip delayDuration={1000}>
-                <TooltipTrigger>
-                  <Button size="sm" onClick={() => nav(`precribe-medicine`)}>
-                    <HandHelping />
-                    {/* <KbdGroup>
-                      <Kbd>Ctrl</Kbd>+<Kbd>D</Kbd>
-                    </KbdGroup> */}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Dispense</TooltipContent>
-              </Tooltip>
               <Tooltip delayDuration={1000}>
                 <TooltipTrigger>
                   <Button

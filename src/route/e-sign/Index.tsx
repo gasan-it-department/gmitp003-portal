@@ -1,7 +1,7 @@
 //
 import { Outlet } from "react-router";
 
-//
+//interface
 
 const Index = () => {
   return (

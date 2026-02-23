@@ -60,7 +60,7 @@ const DispensaryProgress = ({ token, id }: Props) => {
             .map((item) => (
               <Item
                 key={item.id}
-                className=" w-full bg-white hover:border-neutral-500 border"
+                className=" w-full bg-white hover:border-neutral-500 border mt-2 cursor-pointer"
                 variant="outline"
               >
                 <ItemHeader>

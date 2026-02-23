@@ -5,14 +5,6 @@ export const LoginSchema = z.object({
   password: z.string().min(4, "Password must be at least 8 characters."),
 });
 
-export const EmployeeFilterSchema = z.object({
-  sgFrom: z.string().optional(),
-  sgTo: z.string().optional(),
-  dateOrigAppoint: z.date().optional(),
-  dateLastPromotion: z.date().optional(),
-  level: z.string(),
-});
-
 export const NewEmployeeSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
@@ -762,4 +754,13 @@ export const FillPositionSchema = z.object({
   username: z.string().min(4, "Username is required"),
   password: z.string().min(8, "Must at least have 8 characters"),
   viewPassword: z.boolean(),
+});
+
+export const EmployeeFilterSchema = z.object({
+  sgFrom: z.string().optional(),
+  sgTo: z.string().optional(),
+  dateOrigAppoint: z.date().optional(),
+  dateLastPromotion: z.date().optional(),
+  level: z.string().optional(),
+  tags: z.array(ApplicantTagsSchema),
 });

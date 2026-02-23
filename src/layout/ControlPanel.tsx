@@ -47,6 +47,9 @@ const ControlPanelItem = ({
   const { lineId } = useParams();
 
   const handleClick = () => {
+    if (path === "human-resources") {
+      return nav(`/${lineId}/human-resources/dashboard`);
+    }
     nav(`/${lineId}/${path}`);
   };
 

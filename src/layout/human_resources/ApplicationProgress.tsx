@@ -92,6 +92,9 @@ const ApplicationProgress = ({
     queryKey: ["application", applicationId],
     queryFn: () => getApplicationData(token as string, applicationId as string),
     enabled: !!applicationId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const form = useForm<ConcludeApplicationProps>({

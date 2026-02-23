@@ -37,7 +37,12 @@ const DispenseRecordData = () => {
     queryFn: () =>
       supplyDispenseTransactionInfo(token as string, transactionId as string),
     enabled: !!transactionId && !!token,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
+
+  console.log({ data });
 
   if (isLoading) {
     return (
@@ -96,14 +101,14 @@ const DispenseRecordData = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {data.supply && (
+              {data.supplyItem && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">
                       Item Name
                     </p>
                     <p className="text-lg font-semibold">
-                      {data.supply?.supply.item || "N/A"}
+                      {data.supplyItem?.item || "N/A"}
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -111,7 +116,7 @@ const DispenseRecordData = () => {
                       Reference Code
                     </p>
                     <p className="text-lg font-mono">
-                      {data.supply.supply.code || "N/A"}
+                      {data.supplyItem?.code || "N/A"}
                     </p>
                   </div>
                 </div>

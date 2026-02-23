@@ -87,3 +87,111 @@ export const checkDocumentRoom = async (token: string, userId: string) => {
   }
   return response.data;
 };
+
+export const roomDocumentRequest = async (
+  token: string,
+  id: string | undefined,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+  status: string,
+) => {
+  const response = await axios.get("/document/room-request", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lastCursor,
+      limit,
+      query,
+      status,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};
+
+export const upadateRequestStatus = async (
+  token: string,
+  id: string,
+  lineId: string,
+  userId: string,
+  status: number,
+) => {
+  const response = await axios.patch(
+    "/document/update/status",
+    {
+      id,
+      lineId,
+      userId,
+      status,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};
+
+export const deleteDocumentRoomRequest = async (
+  token: string,
+  id: string,
+  userId: string,
+  lineId: string,
+) => {
+  const response = await axios.delete("/document/request/delete", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      userId,
+      lineId,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+
+  return response.data;
+};
+
+export const documentRoomRequestDetails = async (token: string, id: string) => {
+  const response = await axios.get("/document/details", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+
+  return response.data;
+};

@@ -194,7 +194,7 @@ const AnnouncementData = () => {
     onSuccess: (error) => {
       console.log(error);
 
-      nav(`${lineId}/human-resources/announcement`, { replace: true });
+      nav(-1);
     },
     onError: () => {
       toast.error("TRANSACTION FAILED", {
