@@ -1,5 +1,7 @@
 import {} from "react";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useParams } from "react-router";
+import { useAuth } from "@/provider/ProtectedRoute";
+import { useRoom } from "@/provider/DocumentRoomProvider";
 //
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import DisseminationInbox from "@/layout/e-sign/DisseminationInbox";
@@ -18,6 +20,9 @@ import { Badge } from "@/components/ui/badge";
 
 const Dissemination = () => {
   const [params, setParams] = useSearchParams({ tab: "inbox" });
+
+  const { userId, token } = useAuth();
+  const { room } = useRoom();
 
   const currentTab = params.get("tab") || "inbox";
 
@@ -77,7 +82,12 @@ const Dissemination = () => {
               <DisseminationInbox />
             </TabsContent>
             <TabsContent value="outbox" className="h-full m-0">
-              <DisseminationOutbox />
+              <DisseminationOutbox
+                userId={userId as string}
+                roomdId={room?.id as string}
+                token={token as string}
+                lineId={room?.lineId as string}
+              />
             </TabsContent>
           </div>
         </Tabs>

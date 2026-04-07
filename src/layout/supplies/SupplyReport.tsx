@@ -19,7 +19,7 @@ const SupplyReport = () => {
               <ScrollText />
               List
             </TabsTrigger>
-            <TabsTrigger value="time-base" disabled={true}>
+            <TabsTrigger value="time-base">
               <CalendarDays />
               Time-Based
             </TabsTrigger>

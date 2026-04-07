@@ -479,4 +479,37 @@ export const switchYearIndex = (yearRange: string): number[] => {
   return years; // Return as-is for single year or already correct order
 };
 
-export const roomRegistration = ["Drafted", "Pending", "Approved", "Cancelled"];
+export const roomRegistration = ["Pending", "Approved", "Rejected"];
+
+export const archiveDocType = [
+  "other",
+  "Resolution",
+  "Ordinance",
+  "Memoramdum",
+  "Office-Order",
+  "Executive-Order",
+  "Business Permit",
+  "Mayor's Clearance",
+  "Tricycle Franchise",
+  "Official Receipts",
+  "Community Tax Certificate (Cedula)",
+  "Real Property Tax Clearance",
+  "Birth Certificate",
+  "Death Certificate",
+  "Marriage Certificate",
+  "Marriage License, Correction of Clerical Error (RA 9048)",
+  "Tax Declaration (Real Property)",
+  "Certified True Copies of Assessment Records",
+  "Building Permit",
+  "Occupancy Permit",
+  "Fencing Permits",
+  "Plumbing Permits",
+  "Electrical Permits",
+  "Locational Clearance",
+  "Zoning Certificate",
+  "Medical/Health Certificate",
+  "Sanitary Permit",
+  "Personal Data Sheet (PDS)",
+  "Application for Leave Form",
+  "Statement of Assets (SALN)",
+];

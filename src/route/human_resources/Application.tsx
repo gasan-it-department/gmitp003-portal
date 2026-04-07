@@ -1,5 +1,9 @@
-import { useEffect, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useEffect, useState, type SetStateAction } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useDebounce } from "use-debounce";
@@ -8,6 +12,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 //db and statement
 import { lineApplications } from "@/db/statement";
+import { deleteSelctedApplication } from "@/db/statements/application";
 //layout/components
 import {
   Table,
@@ -41,6 +46,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import Modal from "@/components/custom/Modal";
+import ConfirmDelete from "@/layout/ConfirmDelete";
 import PositionSelect from "@/layout/human_resources/PositionSelect";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import FormTags from "@/layout/FormTags";
@@ -61,6 +67,7 @@ import {
   Users,
   FileText,
   Briefcase,
+  Trash2,
 } from "lucide-react";
 
 //
@@ -80,8 +87,10 @@ const Application = () => {
   const [selected, setSelected] = useState<string[]>([]);
   const [onMultiSelect, setOnMultiSelect] = useState(false);
   const [query] = useDebounce(text, 1000);
+
   const auth = useAuth();
   const nav = useNavigate();
+  const queryClient = useQueryClient();
 
   const { ref, inView } = useInView();
 
@@ -118,15 +127,7 @@ const Application = () => {
     hasNextPage,
     isError,
   } = useInfiniteQuery<ListProps>({
-    queryKey: [
-      "applications",
-      lineId,
-      query,
-      allTags,
-      dateFrom,
-      dateTo,
-      position,
-    ],
+    queryKey: ["applications", lineId],
     queryFn: ({ pageParam }) =>
       lineApplications(
         auth.token as string,
@@ -137,7 +138,7 @@ const Application = () => {
         allTags.map((item) => item.tag),
         dateFrom,
         dateTo,
-        position
+        position,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -198,6 +199,26 @@ const Application = () => {
       setError("root", { message: "Failed to submit" });
     }
   };
+
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: () =>
+      deleteSelctedApplication(
+        auth.token as string,
+        selected,
+        auth.userId as string,
+        lineId as string,
+      ),
+    onSuccess: () => {
+      setSelected([]);
+      setOnOpen(0);
+      queryClient.invalidateQueries({
+        queryKey: ["applications", lineId],
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting selected applications:", error);
+    },
+  });
 
   useEffect(() => {
     refetch();
@@ -297,6 +318,16 @@ const Application = () => {
                   >
                     <FolderPlus className="w-4 h-4 mr-2" />
                     New Posting
+                  </Button>
+                  <Button
+                    disabled={selected.length === 0}
+                    className="w-full justify-start"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setOnOpen(3)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete selected
                   </Button>
                 </div>
               </PopoverContent>
@@ -417,6 +448,9 @@ const Application = () => {
                           onMultiSelect={onMultiSelect}
                           handleCheckSelected={handleCheckSelected}
                           handleAddSelected={handleAddSelected}
+                          token={auth.token as string}
+                          userId={auth.userId as string}
+                          lineId={lineId as string}
                         />
                       ))}
 
@@ -651,6 +685,26 @@ const Application = () => {
         onOpen={onOpen === 2}
         className="max-w-2xl max-h-11/12 overflow-auto"
         setOnOpen={() => setOnOpen(0)}
+      />
+
+      <Modal
+        title={`Delete ${selected.length} selected application${selected.length > 1 ? "s" : ""}?`}
+        children={
+          <ConfirmDelete
+            confirmation={"confirm"}
+            setOnOpen={setOnOpen}
+            onFunction={() => {
+              mutateAsync();
+            }}
+            isLoading={isPending}
+          />
+        }
+        onOpen={onOpen === 3}
+        className={""}
+        setOnOpen={() => {
+          setOnOpen(0);
+        }}
+        footer={1}
       />
     </div>
   );

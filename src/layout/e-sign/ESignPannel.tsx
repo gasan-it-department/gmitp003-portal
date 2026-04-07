@@ -52,6 +52,7 @@ const panels = [
     Icon: Settings,
     description: "Configure and manage signature profiles and permissions",
     stats: "42 templates",
+    path: "manage-signature",
   },
   {
     name: "Document Verification",
@@ -98,35 +99,6 @@ const ESignPannel = () => {
     <div className="w-full min-h-screen bg-white p-4 sm:p-6 lg:p-8 overflow-auto">
       {/* Header */}
       <div className="mb-6 sm:mb-8 lg:mb-10">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-900 to-blue-800 rounded-lg shadow-sm flex-shrink-0">
-              <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight leading-tight">
-                Municipal Document Management System (DMS)
-              </h1>
-              <p className="text-gray-600 mt-1 sm:mt-2 text-sm leading-relaxed">
-                A secure, centralized platform for structured storage, automated
-                workflow management, and compliant archival of all finalized
-                municipal documents. Features configurable approval routing and
-                WORM-compliant archival to ensure document integrity and legal
-                retention compliance across all departments.
-              </p>
-            </div>
-          </div>
-          <div className="text-left sm:text-right">
-            <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50 mb-1 sm:mb-2 text-xs inline-flex items-center">
-              <div className="h-2 w-2 rounded-full bg-green-500 mr-2"></div>
-              System Operational
-            </Badge>
-            <p className="text-xs text-gray-500">v1.0.0 • Updated today</p>
-          </div>
-        </div>
-
-        <Separator className="my-4 sm:my-6" />
-
         {/* Stats Overview */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-6 sm:mb-8 lg:mb-10">
           <div className="bg-gray-50 p-3 sm:p-4 lg:p-5 rounded-lg border border-gray-200 col-span-2 sm:col-span-1">

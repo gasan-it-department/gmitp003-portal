@@ -17,6 +17,13 @@ import {
 import { Input } from "@/components/ui/input";
 import UserSelection from "../UserSelection";
 import Modal from "@/components/custom/Modal";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -40,27 +47,25 @@ interface Props {
 
 const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
-  const [fileName, setFileName] = useState<string>("");
 
   const form = useForm<SignatoryFormProps>({
     resolver: zodResolver(SignatoryFormSchema),
     defaultValues: {
-      receivers: [],
+      authorizedUser: [],
       address: "",
-      signature: undefined,
     },
   });
   const {
     control,
-    watch,
     formState: { isSubmitting, errors },
     handleSubmit,
+    setValue,
+    setError,
   } = form;
-  console.log({ errors });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "receivers",
+    name: "authorizedUser",
   });
 
   const handleSelectUser = (user: User) => {
@@ -72,84 +77,38 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
       firstname: user.firstName || "",
       userId: user.id,
       username: user.username,
+      type: "1",
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-      form.setValue("signature", file as File);
-    }
-  };
-
-  const signatureFile = watch("signature");
-
   const onSubmit = async (data: SignatoryFormProps) => {
     try {
-      const formData = new FormData();
-
-      formData.append("lineId", lineId);
-      formData.append("address", data.address);
-      formData.append("userId", userId);
-      formData.append(
-        "receivers",
-        JSON.stringify(data.receivers.map((r) => r.userId)),
-      );
-
-      if (data.receivers && data.receivers.length > 0) {
-        formData.append("receivers", JSON.stringify(data.receivers));
-      }
-
-      const signature = data.signature;
-
-      if (signature === undefined || signature === null) {
-        throw new Error("Signature is required");
-      }
-
-      if (
-        typeof signature === "object" &&
-        signature !== null &&
-        "name" in signature &&
-        "size" in signature &&
-        "type" in signature
-      ) {
-        formData.append("signature", signature as File);
-      } else if (typeof signature === "string") {
-        if (signature.startsWith("data:")) {
-          try {
-            const blob = dataURLtoBlob(signature);
-            formData.append("signature", blob, "signature.png");
-          } catch (blobError) {
-            console.error("Error converting data URL to blob:", blobError);
-            throw new Error("Invalid signature format");
-          }
-        } else {
-          formData.append("signature", signature);
-        }
-      } else {
-        throw new Error("Invalid signature format");
-      }
-      console.log("FormData contents:");
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
-      const response = await axios.post("/document/room/register", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
+      const response = await axios.post(
+        "/document/room/register",
+        { userId, lineId, ...data },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         },
-      });
+      );
 
       if (response.status !== 200) {
         throw new Error(response.data.message || "Request failed");
+      }
+      if (response.status === 200 && response.data.status === 1) {
+        const index = data.authorizedUser.findIndex((item) =>
+          response.data.existedUserId.includes(item.userId),
+        );
+        setError(`authorizedUser.${index}`, { message: "Already exist" });
+        return;
       }
       await queryClient.invalidateQueries({
         queryKey: ["signatory-registry", userId],
       });
       toast.success("Signatory registry submitted successfully!");
-      setOnOpen(0);
+      //setOnOpen(0);
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -166,11 +125,10 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Signatory Configuration
+              Room Configuration
             </CardTitle>
             <FormDescription>
-              Configure the room address, assign receiver, and upload signature
-              for approval workflow
+              Configure the room address a assign authorized users.
             </FormDescription>
           </CardHeader>
 
@@ -196,125 +154,6 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
                 </FormItem>
               )}
             />
-
-            <Separator />
-
-            {/* Signature File Upload */}
-            <div className="space-y-4">
-              <div>
-                <FormLabel className="text-base">Signature File</FormLabel>
-                <FormDescription className="mb-3">
-                  Upload your digital signature file that will be applied to
-                  documents
-                </FormDescription>
-
-                <div className="space-y-2 text-sm text-muted-foreground pl-1">
-                  <div className="flex items-start gap-2">
-                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/70 flex-shrink-0" />
-                    <span>
-                      <strong>Transparent background</strong> - Use PNG with
-                      transparent background for clean overlay
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/70 flex-shrink-0" />
-                    <span>
-                      <strong>High resolution</strong> - Minimum 300 DPI for
-                      print-quality signatures
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/70 flex-shrink-0" />
-                    <span>
-                      <strong>Clean edges</strong> - Avoid anti-aliasing or
-                      blurry edges for professional appearance
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/70 flex-shrink-0" />
-                    <span>
-                      <strong>File size</strong> - Maximum 5MB to ensure quick
-                      processing
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <FormField
-                control={control}
-                name="signature"
-                render={({ field: { onChange, value, ...field } }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="space-y-4">
-                        <div
-                          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                            signatureFile
-                              ? "border-primary bg-primary/5"
-                              : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                          }`}
-                          onClick={() =>
-                            document.getElementById("signature-upload")?.click()
-                          }
-                        >
-                          <Input
-                            id="signature-upload"
-                            type="file"
-                            className="hidden"
-                            accept=".png,.svg"
-                            onChange={handleFileChange}
-                            {...field}
-                          />
-
-                          {signatureFile ? (
-                            <div className="flex flex-col items-center">
-                              <File className="h-12 w-12 text-primary mb-4" />
-                              <p className="font-medium text-lg">{fileName}</p>
-                              <p className="text-sm text-muted-foreground mt-2">
-                                Click to change file
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center">
-                              <Upload className="h-12 w-12 text-gray-400 mb-4" />
-                              <p className="font-medium text-lg">
-                                Drop your signature file here, or click to
-                                browse
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-2">
-                                Supports only PNG
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        {signatureFile && (
-                          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                            <div className="flex items-center gap-2">
-                              <File className="h-4 w-4 text-gray-600" />
-                              <span className="text-sm">{fileName}</span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                form.setValue("signature", undefined as any);
-                                setFileName("");
-                              }}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <Separator />
 
@@ -359,14 +198,40 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(index)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className=" flex gap-2">
+                        <Select
+                          defaultValue={field.type}
+                          onValueChange={(e) =>
+                            setValue(`authorizedUser.${index}.type`, e)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["Receiver", "Signee", "Operator"].map(
+                              (item, i) => (
+                                <SelectItem value={i.toString()}>
+                                  {item}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {errors.authorizedUser && (
+                        <FormMessage>
+                          {errors.authorizedUser[index]?.message}
+                        </FormMessage>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -400,7 +265,7 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
             <div className="p-1">
               <FormField
                 control={control}
-                name="receivers"
+                name="authorizedUser"
                 render={() => (
                   <FormItem>
                     <FormLabel className="sr-only">Signatories</FormLabel>
@@ -411,8 +276,8 @@ const SignatoryRegistry = ({ lineId, token, userId, queryClient }: Props) => {
                         onSelect={handleSelectUser}
                       />
                     </FormControl>
-                    {errors.receivers && (
-                      <FormMessage>{errors.receivers.message}</FormMessage>
+                    {errors.authorizedUser && (
+                      <FormMessage>{errors.authorizedUser.message}</FormMessage>
                     )}
                   </FormItem>
                 )}

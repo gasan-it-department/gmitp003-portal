@@ -54,7 +54,7 @@ const DispenseItem = ({
       desc: "",
       unitId: "",
       userId: "",
-      quantity: "0",
+      quantity: "1",
       toAccount: true,
       address: "user",
     },

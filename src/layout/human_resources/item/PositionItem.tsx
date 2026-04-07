@@ -1,9 +1,9 @@
 import { memo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
+import UpdateAccountStatus from "../UpdateAccountStatus";
 //
-import { removePosition } from "@/db/statements/position";
+import { removePosition, vacantPosition } from "@/db/statements/position";
 //
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +34,7 @@ import {
   UserCog,
   ArrowRight,
   Trash2,
+  Minus,
 } from "lucide-react";
 //import { getSlotSalaryGradeRange } from "@/utils/helper";
 
@@ -50,6 +51,8 @@ interface Props {
 
 const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const [status, setStatus] = useState("");
+
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const slotCount = item.slot.length;
@@ -99,6 +102,21 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
     },
     onError: (err) => {
       toast.error("Failed to remove position. Please try again.", {
+        description: err.message,
+      });
+    },
+  });
+
+  const vacantPositionMutation = useMutation({
+    mutationFn: () => vacantPosition(item.id, token, lineId, userId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["postions", item.departmentId],
+        refetchType: "active",
+      });
+    },
+    onError: (err) => {
+      toast.error("Failed to vacant position. Please try again.", {
         description: err.message,
       });
     },
@@ -303,6 +321,16 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
                 </Button>
 
                 <Button
+                  variant="outline"
+                  className="w-full justify-start gap-2 h-9 hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                  disabled={isOpenPosition === 0}
+                  onClick={() => setOnOpen(1)}
+                >
+                  <Minus className="h-4 w-4" />
+                  <span>Vancant Position</span>
+                  <ArrowRight className="h-3 w-3 ml-auto" />
+                </Button>
+                <Button
                   disabled
                   onClick={() => nav(`position/${item.id}`)}
                   variant="outline"
@@ -358,6 +386,21 @@ const PositionItem = ({ item, no, token, lineId, userId }: Props) => {
               className={""}
               setOnOpen={() => setOnOpen(0)}
               footer={1}
+            />
+
+            <Modal
+              title={"Vacant Position"}
+              onFunction={() => {
+                vacantPositionMutation.mutateAsync();
+              }}
+              children={
+                <div>
+                  <UpdateAccountStatus onChange={setStatus} value={status} />
+                </div>
+              }
+              onOpen={onOpen === 3}
+              className={" "}
+              setOnOpen={() => setOnOpen(0)}
             />
           </div>
         </PopoverContent>

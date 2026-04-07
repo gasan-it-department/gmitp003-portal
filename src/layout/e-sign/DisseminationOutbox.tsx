@@ -3,6 +3,7 @@ import zod from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
+import axios from "@/db/axios";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,14 @@ type NewDisseminationRoomFormProps = zod.infer<
   typeof NewDisseminationRoomSchema
 >;
 
-const DisseminationOutbox = () => {
+interface Props {
+  roomdId: string;
+  userId: string;
+  token: string;
+  lineId: string;
+}
+
+const DisseminationOutbox = ({ roomdId, userId, token, lineId }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
 
   const nav = useNavigate();
@@ -40,8 +48,32 @@ const DisseminationOutbox = () => {
 
   const onSubmit = async (data: NewDisseminationRoomFormProps) => {
     try {
-      nav(`set-up/${data.roomName}`);
-    } catch (error) {}
+      const response = await axios.post(
+        "document/route",
+        {
+          roomName: data.roomName,
+          roomId: roomdId,
+          userId,
+          lineId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+          },
+        },
+      );
+
+      if (response.status !== 200) {
+        throw new Error("Failed to create dissemination room");
+      }
+      nav(`set-up/${response.data.id}`);
+    } catch (error) {
+      console.error("Error creating dissemination room:", error);
+    }
   };
   return (
     <div className=" w-full h-full">
@@ -62,7 +94,7 @@ const DisseminationOutbox = () => {
                   <FormItem>
                     <FormLabel>Subject</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input placeholder="Enter room subject" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

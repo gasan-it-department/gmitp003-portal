@@ -6,9 +6,8 @@ import {
 } from "@tanstack/react-query";
 import axios from "@/db/axios";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router";
-import hotkeys from "hotkeys-js";
 
 //components and layout
 import {
@@ -26,7 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, CopyCheck, Save, Package, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  Save,
+  Package,
+  RefreshCw,
+  ChevronRight,
+} from "lucide-react";
 
 //db and statement
 import { getorderData, getOrderItems } from "@/db/statement";
@@ -49,7 +54,6 @@ interface Props {
 const OrderCompletion = () => {
   const { orderId, listId, lineId, containerId } = useParams();
   const [selected, setSelected] = useState<OrderCompletionSelected[]>([]);
-  const [onMultilSelect, setOnMultiSelect] = useState(false);
 
   const auth = useAuth();
   const queryClient = useQueryClient();
@@ -81,7 +85,7 @@ const OrderCompletion = () => {
         "",
         pageParam as string | null,
         "20",
-        orderId as string
+        orderId as string,
       ),
     queryKey: ["order-items", orderId],
     enabled: !!orderId && !!auth.token,
@@ -89,23 +93,6 @@ const OrderCompletion = () => {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
   });
-
-  // Setup hotkey
-  useEffect(() => {
-    hotkeys("ctrl+s", (event) => {
-      event.preventDefault();
-      setOnMultiSelect((prev) => {
-        if (!prev) {
-          setSelected([]);
-        }
-        return !prev;
-      });
-    });
-
-    return () => {
-      hotkeys.unbind("ctrl+s");
-    };
-  }, []);
 
   const allItems = data?.pages.flatMap((page) => page.list) || [];
   const selectedCount = selected.length;
@@ -127,7 +114,7 @@ const OrderCompletion = () => {
           "X-Requested-With": "XMLHttpRequest",
           "Cache-Control": "no-cache, no-store, must-revalidate",
         },
-      }
+      },
     );
 
     if (response.status !== 200) {
@@ -152,56 +139,62 @@ const OrderCompletion = () => {
     },
   });
 
+  console.log({ data });
+
   // Loading state
   if (isLoadingOrder || isLoadingItems) {
     return (
-      <Card className="h-full border-0 shadow-none">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-32" />
+      <div className="h-full space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Skeleton className="h-6 sm:h-8 w-40 sm:w-64" />
+                <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+              </div>
+              <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
             </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-10 w-10 rounded-md" />
-              <Skeleton className="h-10 w-10 rounded-md" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border">
-            <div className="p-4 border-b">
-              <div className="flex gap-4">
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardContent className="p-0">
+            <div className="p-2 sm:p-4 border-b">
+              <div className="flex flex-wrap gap-2 sm:gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-6 w-24" />
+                  <Skeleton key={i} className="h-5 sm:h-6 w-16 sm:w-24" />
                 ))}
               </div>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-10 sm:h-12 w-full" />
               ))}
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   // Error state
   if (orderError || itemsError) {
     return (
-      <Card className="h-full border-destructive/20 bg-destructive/5">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="text-lg font-semibold text-destructive mb-2">
+      <Card className="h-full border-destructive/20 bg-destructive/5 m-2 sm:m-3">
+        <CardContent className="flex flex-col items-center justify-center py-6 sm:py-12 px-3 sm:px-6">
+          <AlertCircle className="h-8 w-8 sm:h-12 sm:w-12 text-destructive mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-destructive mb-1.5 sm:mb-2 text-center">
             Failed to load order
           </h3>
-          <p className="text-sm text-muted-foreground text-center mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-3 sm:mb-4">
             {orderError?.message || itemsError?.message || "An error occurred"}
           </p>
-          <Button onClick={() => refetch()} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 sm:gap-2"
+          >
+            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
             Retry
           </Button>
         </CardContent>
@@ -212,13 +205,13 @@ const OrderCompletion = () => {
   // No data state
   if (!data || !orderData) {
     return (
-      <Card className="h-full border-0">
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <Package className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+      <Card className="h-full m-2 sm:m-3">
+        <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 px-3 sm:px-6">
+          <Package className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50 mb-3 sm:mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-muted-foreground mb-2 text-center">
             No order data found
           </h3>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center">
             The order you're looking for doesn't exist or has been removed.
           </p>
         </CardContent>
@@ -227,70 +220,58 @@ const OrderCompletion = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
       {/* Header */}
-      <Card className="border-b rounded-b-none shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight">
-                  Order Completion
-                </h1>
+      <Card className="border shadow-sm">
+        <CardContent className="p-4 sm:p-5 md:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+            <div className="space-y-2 min-w-0 flex-1">
+              <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
+                    Order Completion
+                  </h1>
+                </div>
                 {orderData.order?.status && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs sm:text-sm w-fit">
                     {supplyOrderStatus[orderData.order.status]}
                   </Badge>
                 )}
               </div>
-              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <div>
-                  <span className="font-medium">Ref:</span>{" "}
-                  <code className="bg-muted px-2 py-1 rounded text-xs">
+
+              <div className="flex flex-wrap gap-y-2 gap-x-3 sm:gap-x-4 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-medium hidden xs:inline">Ref:</span>
+                  <code className="bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs truncate max-w-[120px] sm:max-w-[200px]">
                     {orderData.order?.refNumber || "N/A"}
                   </code>
                 </div>
                 {orderData.order.timestamp && (
-                  <div>
-                    <span className="font-medium">Date:</span>{" "}
-                    {new Date(orderData.order.timestamp).toLocaleDateString()}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="font-medium hidden xs:inline">Date:</span>
+                    <span className="whitespace-nowrap">
+                      {new Date(orderData.order.timestamp).toLocaleDateString()}
+                    </span>
                   </div>
                 )}
-                <div>
-                  <span className="font-medium">Items:</span> {totalItems}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-medium">Items:</span>
+                  <span>{totalItems}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {onMultilSelect && selectedCount > 0 && (
-                <Badge variant="secondary" className="mr-2">
-                  {selectedCount} selected
-                </Badge>
-              )}
-              <Button
-                size="sm"
-                variant={onMultilSelect ? "default" : "outline"}
-                onClick={() => setOnMultiSelect(!onMultilSelect)}
-                className="gap-2"
-              >
-                <CopyCheck className="h-4 w-4" />
-                {onMultilSelect ? "Cancel Selection" : "Select Multiple"}
-                <kbd className="ml-2 text-xs bg-background px-1.5 py-0.5 rounded border">
-                  Ctrl+S
-                </kbd>
-              </Button>
+            <div className="flex items-center gap-2 mt-2 lg:mt-0">
               <Button
                 size="sm"
                 onClick={() => setOnOpen(1)}
-                disabled={
-                  (onMultilSelect && selectedCount === 0) ||
-                  orderData.order.status === 2
-                }
-                className="gap-2"
+                disabled={orderData.order.status === 2 || isPending}
+                className="gap-1.5 sm:gap-2 whitespace-nowrap"
               >
-                <Save className="h-4 w-4" />
-                Save Order
+                <Save className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Save Order</span>
+                <span className="xs:hidden">Save</span>
               </Button>
             </div>
           </div>
@@ -298,97 +279,111 @@ const OrderCompletion = () => {
       </Card>
 
       {/* Table Container */}
-      <Card className="flex-1 rounded-t-none border-t-0 overflow-hidden">
+      <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
-          <div className="h-full overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
-                <TableRow>
-                  {onMultilSelect && (
-                    <TableHead className="w-12 p-3">
-                      <span className="sr-only">Select</span>
-                    </TableHead>
-                  )}
-                  <TableHead className="w-12 p-3">#</TableHead>
-                  <TableHead className="p-3 min-w-48">Item</TableHead>
-                  <TableHead className="p-3 min-w-32">Order Ref.</TableHead>
-                  <TableHead className="p-3 min-w-48">Description</TableHead>
-                  <TableHead className="p-3 min-w-32 text-right">
-                    Ordered Qty
-                  </TableHead>
-                  <TableHead className="p-3 min-w-32 text-right">
-                    Received Qty
-                  </TableHead>
-                  <TableHead className="p-3 min-w-32">Condition</TableHead>
-                  {/* <TableHead className="p-3 min-w-40">Brand/Product</TableHead> */}
-                  <TableHead className="p-3 min-w-32 text-right">
-                    Price
-                  </TableHead>
-                  <TableHead className="p-3 min-w-48">Remark</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allItems.length > 0 ? (
-                  allItems.map((item, i) => (
-                    <OrderCompletionItem
-                      listId={listId}
-                      auth={auth}
-                      key={item.id}
-                      item={item}
-                      index={i}
-                      selected={selected}
-                      setSelected={setSelected}
-                      onMultiSelect={onMultilSelect}
-                      lineId={lineId}
-                      orderId={orderId}
-                      disabled={orderData.order.status === 2}
-                    />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={onMultilSelect ? 12 : 11}
-                      className="h-32"
-                    >
-                      <div className="flex flex-col items-center justify-center text-center py-8">
-                        <Package className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                        <p className="text-muted-foreground font-medium">
-                          No items found in this order
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          This order doesn't contain any items yet.
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+          <div className="relative w-full h-full">
+            {/* Mobile scroll indicator */}
+            <div className="absolute bottom-2 right-2 z-20 sm:hidden">
+              <div className="bg-primary/10 backdrop-blur-sm rounded-full px-2 py-1 text-[10px] text-primary flex items-center gap-1">
+                <ChevronRight className="h-3 w-3" />
+                <span>Swipe to scroll</span>
+              </div>
+            </div>
 
-                {/* Loading more rows */}
-                {isFetchingNextPage && (
+            {/* Horizontal scroll container */}
+            <div className="w-full h-full overflow-x-auto overflow-y-auto">
+              <Table className="min-w-[1000px] lg:min-w-full">
+                <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
                   <TableRow>
-                    <TableCell
-                      colSpan={onMultilSelect ? 12 : 11}
-                      className="p-4"
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span className="text-sm text-muted-foreground">
-                          Loading more items...
-                        </span>
-                      </div>
-                    </TableCell>
+                    <TableHead className="w-10 sm:w-12 p-2 sm:p-3 text-xs sm:text-sm">
+                      #
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[120px] sm:min-w-[150px] text-xs sm:text-sm">
+                      Item
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm">
+                      Order Ref.
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[200px] sm:min-w-[250px] text-xs sm:text-sm">
+                      Description
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[100px] sm:min-w-[120px] text-right text-xs sm:text-sm">
+                      Ordered Qty
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[100px] sm:min-w-[120px] text-right text-xs sm:text-sm">
+                      Received Qty
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm">
+                      Condition
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[100px] sm:min-w-[120px] text-right text-xs sm:text-sm">
+                      Price
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[150px] sm:min-w-[200px] text-xs sm:text-sm">
+                      Remark
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 min-w-[150px] sm:min-w-[200px] text-xs sm:text-sm">
+                      Date Completed
+                    </TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {allItems.length > 0 ? (
+                    allItems.map((item, i) => (
+                      <OrderCompletionItem
+                        listId={listId}
+                        auth={auth}
+                        key={item.id}
+                        item={item}
+                        index={i}
+                        selected={selected}
+                        setSelected={setSelected}
+                        lineId={lineId}
+                        orderId={orderId}
+                        disabled={orderData.order.status === 2}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="h-48 sm:h-64">
+                        <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
+                          <Package className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
+                          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+                            No items found in this order
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                            This order doesn't contain any items yet.
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {/* Loading more rows */}
+                  {isFetchingNextPage && (
+                    <TableRow>
+                      <TableCell colSpan={9} className="p-3 sm:p-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                          <span className="text-xs sm:text-sm text-muted-foreground">
+                            Loading more items...
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {/* Load more trigger */}
             {hasNextPage && !isFetchingNextPage && (
-              <div className="p-4 text-center border-t">
+              <div className="p-3 sm:p-4 text-center border-t">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => fetchNextPage()}
+                  className="text-xs sm:text-sm"
                 >
                   Load More Items
                 </Button>
@@ -400,21 +395,26 @@ const OrderCompletion = () => {
 
       {/* Footer Stats */}
       {allItems.length > 0 && (
-        <Card className="rounded-t-none border-t-0">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-sm">
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs sm:text-sm">
               <div className="text-muted-foreground">
-                Showing {allItems.length} item{allItems.length !== 1 ? "s" : ""}
+                <span>
+                  Showing {allItems.length} item
+                  {allItems.length !== 1 ? "s" : ""}
+                </span>
                 {selectedCount > 0 && (
-                  <span className="ml-3 text-foreground">
+                  <span className="ml-2 sm:ml-3 text-foreground font-medium">
                     • {selectedCount} selected
                   </span>
                 )}
               </div>
               {isFetching && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <RefreshCw className="h-3 w-3 animate-spin" />
-                  <span className="text-muted-foreground">Updating...</span>
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    Updating...
+                  </span>
                 </div>
               )}
             </div>
@@ -426,47 +426,14 @@ const OrderCompletion = () => {
       <Modal
         title="Complete Order"
         children={
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-3 sm:space-y-4 px-1">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Are you sure you want to mark this order as fulfilled?
             </p>
-
-            {selectedCount > 0 && (
-              <div className="bg-muted/30 p-3 rounded-lg">
-                <p className="text-sm font-medium mb-2">
-                  The following {selectedCount} item
-                  {selectedCount !== 1 ? "s" : ""} will be processed:
-                </p>
-                <ul className="space-y-1 max-h-40 overflow-y-auto">
-                  {selected.map((item) => (
-                    <li
-                      key={item.id}
-                      className="text-sm flex items-center justify-between"
-                    >
-                      <span className="truncate">
-                        {item.brandName || item.refNumber}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        Qty: {item.quantity}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {selectedCount === 0 && onMultilSelect && (
-              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
-                <p className="text-sm text-amber-800">
-                  <AlertCircle className="h-4 w-4 inline mr-1" />
-                  No items selected. All items will be processed.
-                </p>
-              </div>
-            )}
           </div>
         }
         onOpen={onOpen === 1}
-        className="min-w-md"
+        className="w-[95%] sm:w-[90%] md:w-[60%] lg:w-[50%] max-w-md mx-auto"
         setOnOpen={() => {
           if (isPending) return;
           setOnOpen(0);

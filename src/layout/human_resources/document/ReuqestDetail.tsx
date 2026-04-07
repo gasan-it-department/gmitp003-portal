@@ -159,7 +159,7 @@ const RequestDetail = () => {
             {getStatusBadge(data.status)}
 
             {/* Action Buttons - Only show for pending requests */}
-            {data.status === 2 && (
+            {data.status === 0 && (
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setOnOpen(1)}

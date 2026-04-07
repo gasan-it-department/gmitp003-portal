@@ -59,6 +59,7 @@ import Dashboard from "./layout/human_resources/Dashboard.tsx";
 import LineRegistration from "./route/LineRegistration.tsx";
 import PositionInvitation from "./route/PositionInvitation.tsx";
 //E-signature
+import EsignHome from "./route/e-sign/Main.tsx";
 import Document from "./route/human_resources/Document.tsx";
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
@@ -66,7 +67,11 @@ import Dissemination from "./route/e-sign/Dissemination.tsx";
 import DisseminationIndex from "./route/e-sign/DisseminationIndex.tsx";
 import NewDisseminationRoom from "./route/e-sign/NewDisseminationRoom.tsx";
 import DocSelection from "./layout/e-sign/DocSelection.tsx";
-import Archive from "./layout/e-sign/Archive.tsx";
+import Archive from "./route/e-sign/Archive.tsx";
+import AcrhiveNewDocs from "./route/e-sign/AcrhiveNewDocs.tsx";
+import RoomDetails from "./layout/human_resources/document/RoomDetails.tsx";
+import ManageSignature from "./route/e-sign/ManageSignature.tsx";
+import ArchiveDetail from "./route/e-sign/ArchiveDetail.tsx";
 //Medicine
 import MedicineIndex from "./route/medicine/Index.tsx";
 import StorageList from "./route/medicine/StorageList.tsx";
@@ -93,6 +98,7 @@ import UserDataRegistration from "./route/UserDataRegistration.tsx";
 import LineUserInfoRegister from "./layout/LineUserInfoRegister.tsx";
 import PositionDetail from "./route/human_resources/PositionDetail.tsx";
 import ReuqestDetail from "./layout/human_resources/document/ReuqestDetail.tsx";
+import DocumentRoomProvider from "./provider/DocumentRoomProvider.tsx";
 
 const queryClient = new QueryClient();
 
@@ -278,6 +284,10 @@ createRoot(document.getElementById("root")!).render(
                   element={<ReuqestDetail />}
                 />
                 <Route
+                  path="document/rooms/:roomId"
+                  element={<RoomDetails />}
+                />
+                <Route
                   path="application/post/:positionPostId"
                   element={<PostJobForm />}
                 />
@@ -288,9 +298,20 @@ createRoot(document.getElementById("root")!).render(
                 />
                 <Route path="job-post/:jobPostId" element={<JobPostData />} />
               </Route>
-              <Route path="/:lineId/documents" element={<EsignIndex />}>
+              <Route
+                path="/:lineId/documents"
+                element={
+                  <DocumentRoomProvider>
+                    <EsignIndex />
+                  </DocumentRoomProvider>
+                }
+              >
                 <Route index={true} element={<EsignHomePannel />} />
                 <Route path="archive" element={<Archive />} />
+                <Route path="archive/:archiveId" element={<ArchiveDetail />} />
+                <Route path="manage-signature" element={<ManageSignature />} />
+                <Route path="archive/new" element={<AcrhiveNewDocs />} />
+                <Route path="" element={<EsignHome />} />
                 <Route path="dissemination" element={<DisseminationIndex />}>
                   <Route index={true} element={<Dissemination />} />
                   <Route

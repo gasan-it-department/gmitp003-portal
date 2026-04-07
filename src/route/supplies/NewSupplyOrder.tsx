@@ -34,7 +34,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import OrderProgress from "@/layout/supplies/OrderProgress";
 import AddSupplyOrder from "@/layout/supplies/AddSupplyOrder";
-
+import ConfirmDelete from "@/layout/ConfirmDelete";
 // Icons
 import {
   BadgeCheck,
@@ -302,9 +302,9 @@ const NewSupplyOrder = () => {
       <Card className="border shadow-sm">
         <CardContent className="p-4 sm:p-5 md:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3">
+            <div className="space-y-2 min-w-0 flex-1">
+              <div className="flex flex-col xs:flex-row xs:items-start gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
                     {orderData.order.title || "Untitled Order"}
@@ -312,28 +312,28 @@ const NewSupplyOrder = () => {
                 </div>
                 <Badge
                   style={{ backgroundColor: statusColor }}
-                  className="text-white border-0 text-xs sm:text-sm self-start xs:self-center"
+                  className="text-white border-0 text-xs sm:text-sm w-fit whitespace-nowrap"
                 >
                   {statusText}
                 </Badge>
               </div>
 
-              <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+              <div className="flex flex-wrap gap-y-2 gap-x-3 sm:gap-x-4 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <code className="bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs truncate max-w-[120px] sm:max-w-none">
+                  <code className="bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs truncate max-w-[120px] sm:max-w-[200px]">
                     {orderData.order.refNumber || "N/A"}
                   </code>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span>
+                  <span className="whitespace-nowrap">
                     {totalItems} item{totalItems !== 1 ? "s" : ""}
                   </span>
                 </div>
                 {orderData.order.timestamp && (
                   <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span>Created:</span>
+                    <span className="hidden xs:inline">Created:</span>
                     <span className="font-medium whitespace-nowrap">
                       {new Date(orderData.order.timestamp).toLocaleDateString()}
                     </span>
@@ -343,7 +343,7 @@ const NewSupplyOrder = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 mt-3 sm:mt-0">
+            <div className="flex items-center gap-2 mt-2 lg:mt-0">
               {isEditable && (
                 <Button
                   disabled={orderData.order.status === 2}
@@ -351,13 +351,13 @@ const NewSupplyOrder = () => {
                     if (orderData.order.status === 2) return;
                     setOnOpen(1);
                   }}
-                  className="gap-1.5 sm:gap-2"
+                  className="gap-1.5 sm:gap-2 whitespace-nowrap"
                   size="sm"
                 >
                   <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden xs:inline">Add Items</span>
-                  <span className="xs:hidden">Add</span>
-                  <kbd className="hidden sm:inline ml-2 text-xs bg-background px-1.5 py-0.5 rounded border">
+                  <span className="hidden sm:inline">Add Items</span>
+                  <span className="sm:hidden">Add</span>
+                  <kbd className="hidden lg:inline ml-2 text-xs px-1.5 py-0.5 rounded border">
                     Ctrl+A
                   </kbd>
                 </Button>
@@ -368,14 +368,14 @@ const NewSupplyOrder = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 sm:h-10 sm:w-10"
+                    className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
                   >
                     <EllipsisVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-48 sm:w-56"
+                  className="w-56 sm:w-64"
                   onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
@@ -442,92 +442,102 @@ const NewSupplyOrder = () => {
         </CardContent>
       </Card>
 
-      {/* Items Table Card - FIXED HORIZONTAL SCROLL */}
+      {/* Items Table Card - IMPROVED RESPONSIVE TABLE */}
       <Card className="flex-1 overflow-hidden">
         <CardContent className="p-0 h-full">
-          {/* Remove the inner div with overflow-auto and use direct table container */}
-          <div className="w-full h-full overflow-x-auto">
-            <Table className="min-w-[600px] sm:min-w-full">
-              <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
-                <TableRow>
-                  <TableHead className="w-10 sm:w-12 p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
-                    #
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[120px] sm:min-w-48 text-xs sm:text-sm">
-                    Item
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[160px] sm:min-w-64 text-xs sm:text-sm">
-                    Description
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-32 text-right text-xs sm:text-sm">
-                    Quantity
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-32 text-xs sm:text-sm">
-                    Status
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allItems.length > 0 ? (
-                  allItems.map((item, i) => (
-                    <OrderITem
-                      key={item.id}
-                      status={orderData.order.status}
-                      index={i}
-                      item={item}
-                      handleRefetch={async () => {
-                        refetch();
-                      }}
-                    />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-48 sm:h-64">
-                      <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
-                        <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
-                        <p className="text-sm sm:text-base text-muted-foreground font-medium">
-                          No items in this order yet
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          {isEditable
-                            ? "Add items to get started"
-                            : "This order doesn't contain any items"}
-                        </p>
-                        {isEditable && (
-                          <Button
-                            onClick={() => setOnOpen(1)}
-                            variant="outline"
-                            size="sm"
-                            className="mt-3 sm:mt-4"
-                          >
-                            <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                            Add Items
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+          <div className="relative w-full h-full">
+            {/* Mobile scroll indicator */}
+            <div className="absolute bottom-2 right-2 z-20 sm:hidden">
+              <div className="bg-primary/10 backdrop-blur-sm rounded-full px-2 py-1 text-[10px] text-primary flex items-center gap-1">
+                <ChevronRight className="h-3 w-3" />
+                <span>Swipe to scroll</span>
+              </div>
+            </div>
 
-                {isFetchingNextPage && (
+            {/* Horizontal scroll container */}
+            <div className="w-full h-full overflow-x-auto overflow-y-auto">
+              <Table className="min-w-[800px] md:min-w-full">
+                <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
                   <TableRow>
-                    <TableCell colSpan={6} className="p-3 sm:p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                        <span className="text-xs sm:text-sm text-muted-foreground">
-                          Loading more items...
-                        </span>
-                      </div>
-                    </TableCell>
+                    <TableHead className="w-10 sm:w-12 p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
+                      #
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[120px] sm:min-w-[150px] md:min-w-[200px] text-xs sm:text-sm">
+                      Item
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[200px] sm:min-w-[250px] md:min-w-[300px] text-xs sm:text-sm">
+                      Description
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-[120px] text-right text-xs sm:text-sm">
+                      Quantity
+                    </TableHead>
+                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm">
+                      Status
+                    </TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {allItems.length > 0 ? (
+                    allItems.map((item, i) => (
+                      <OrderITem
+                        key={item.id}
+                        status={orderData.order.status}
+                        index={i}
+                        item={item}
+                        handleRefetch={async () => {
+                          refetch();
+                        }}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-48 sm:h-64">
+                        <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
+                          <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
+                          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+                            No items in this order yet
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                            {isEditable
+                              ? "Add items to get started"
+                              : "This order doesn't contain any items"}
+                          </p>
+                          {isEditable && (
+                            <Button
+                              onClick={() => setOnOpen(1)}
+                              variant="outline"
+                              size="sm"
+                              className="mt-3 sm:mt-4"
+                            >
+                              <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                              Add Items
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {isFetchingNextPage && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="p-3 sm:p-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                          <span className="text-xs sm:text-sm text-muted-foreground">
+                            Loading more items...
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
             {/* Footer Stats */}
             {allItems.length > 0 && (
-              <div className="border-t p-3 sm:p-4">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
+              <div className="border-t p-3 sm:p-4 bg-background">
+                <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs sm:text-sm">
                   <span className="text-muted-foreground">
                     Showing {allItems.length} item
                     {allItems.length !== 1 ? "s" : ""}
@@ -547,50 +557,38 @@ const NewSupplyOrder = () => {
         </CardContent>
       </Card>
 
-      {/* Modals */}
+      {/* Modals - IMPROVED MOBILE RESPONSIVENESS */}
       <Modal
         title={
           <div className="flex items-center gap-2 sm:gap-3">
-            <ListPlus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-sm sm:text-base">Add Items to Order</span>
+            <ListPlus className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="text-sm sm:text-base truncate">
+              Add Items to Order
+            </span>
           </div>
         }
         children={<AddSupplyOrder />}
         onOpen={onOpen === 1}
-        className="min-w-[95%] sm:min-w-[80%] h-[95vh] mx-2 sm:mx-auto overflow-auto"
+        className=" min-w-5xl  overflow-auto"
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       />
 
       <Modal
-        title={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
-            <span className="text-sm sm:text-base">Delete Order</span>
-          </div>
-        }
+        title={undefined}
         children={
-          <div className="space-y-3 sm:space-y-4">
-            <p className="text-xs sm:text-sm font-medium">
-              Are you sure you want to delete this order?
-            </p>
-            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 sm:p-4">
-              <p className="text-xs sm:text-sm text-destructive font-medium">
-                ⚠️ Warning: This action cannot be undone
-              </p>
-              <ul className="text-xs sm:text-sm text-muted-foreground mt-2 space-y-1 list-disc pl-4 sm:pl-5">
-                <li>All items in this order will be permanently deleted</li>
-                <li>Order history will be removed</li>
-                <li>This action cannot be reversed</li>
-              </ul>
-            </div>
-          </div>
+          <ConfirmDelete
+            confirmation={"confirm"}
+            setOnOpen={setOnOpen}
+            onFunction={() => deleteOrderMutation.mutateAsync()}
+            isLoading={deleteOrderMutation.isPending}
+          />
         }
         loading={deleteOrderMutation.isPending}
         onOpen={onOpen === 2}
-        className="max-w-md mx-3 sm:mx-auto"
+        className="w-[95%] sm:w-[90%] md:w-[60%] lg:w-[50%] max-w-md mx-auto"
         setOnOpen={() => setOnOpen(0)}
-        footer={true}
+        footer={1}
         onFunction={() => deleteOrderMutation.mutateAsync()}
         yesTitle="Delete Order"
       />
@@ -598,12 +596,14 @@ const NewSupplyOrder = () => {
       <Modal
         title={
           <div className="flex items-center gap-2 sm:gap-3">
-            <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            <span className="text-sm sm:text-base">Submit for Review</span>
+            <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+            <span className="text-sm sm:text-base truncate">
+              Submit for Review
+            </span>
           </div>
         }
         children={
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto px-1">
             <p className="text-xs sm:text-sm">
               Are you ready to submit this purchase request for review?
             </p>
@@ -634,7 +634,7 @@ const NewSupplyOrder = () => {
         }
         loading={handleSaveOrder.isPending}
         onOpen={onOpen === 3}
-        className="max-w-md mx-3 sm:mx-auto"
+        className="w-[95%] sm:w-[90%] md:w-[60%] lg:w-[50%] max-w-md mx-auto"
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         onFunction={() => handleSaveOrder.mutateAsync()}
@@ -644,17 +644,19 @@ const NewSupplyOrder = () => {
       <Modal
         title={
           <div className="flex items-center gap-2 sm:gap-3">
-            <Info className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-sm sm:text-base">Order Progress</span>
+            <Info className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+            <span className="text-sm sm:text-base truncate">
+              Order Progress
+            </span>
           </div>
         }
         children={
-          <div className="w-full">
+          <div className="w-full max-h-[70vh] overflow-y-auto px-1">
             <OrderProgress status={orderData.order.status} />
           </div>
         }
         onOpen={onOpen === 5}
-        className="min-w-[95%] sm:min-w-[60%] max-h-[80vh] overflow-auto mx-2 sm:mx-auto"
+        className="w-[95%] sm:w-[90%] md:w-[70%] lg:w-[60%] max-w-2xl mx-auto max-h-[90vh] overflow-auto"
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       />

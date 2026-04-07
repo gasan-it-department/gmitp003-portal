@@ -696,21 +696,17 @@ export const PrintTimebaseReport = z.object({
 
 export const SignatoryFormSchema = z.object({
   address: z.string().min(1, "Address is required"),
-  receivers: z
+  authorizedUser: z
     .array(
       z.object({
         userId: z.string(),
         firstname: z.string(),
         lastname: z.string(),
         username: z.string(),
+        type: z.string(),
       }),
     )
     .min(1, "Select at least one receiver"),
-  signature: z
-    .union([z.instanceof(File).optional(), z.string().optional()])
-    .refine((value) => value !== undefined && value !== null && value !== "", {
-      message: "Signature is required",
-    }),
 });
 
 export const UpdateSalaryGradeSchema = z.object({
@@ -763,4 +759,21 @@ export const EmployeeFilterSchema = z.object({
   dateLastPromotion: z.date().optional(),
   level: z.string().optional(),
   tags: z.array(ApplicantTagsSchema),
+});
+
+export const ArchiveNewDocsSchema = z.object({
+  abstract: z
+    .string()
+    .min(1, "Abstract is required")
+    .max(1500, "Limit reached"),
+  title: z.string().min(4, "Title must be at least 4 characters."),
+  file: z.file(),
+  docType: z.string(),
+  retentionDate: z.string().optional(),
+  detentionDate: z.string().optional(),
+  safeDate: z.string().optional(),
+});
+
+export const VacantPositionSchema = z.object({
+  status: z.string().optional(),
 });

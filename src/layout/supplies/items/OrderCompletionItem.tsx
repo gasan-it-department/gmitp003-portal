@@ -46,6 +46,7 @@ import {
   Calendar,
   MessageSquare,
   Boxes,
+  ChevronRight,
 } from "lucide-react";
 import Suppliers from "../Suppliers";
 
@@ -69,7 +70,6 @@ type FormData = z.infer<typeof formSchema>;
 interface Props {
   item: SupplyOrder;
   index: number;
-  onMultiSelect: boolean;
   selected: any[];
   setSelected: React.Dispatch<React.SetStateAction<OrderCompletionSelected[]>>;
   auth: ProtectedRouteProps;
@@ -82,9 +82,6 @@ interface Props {
 const OrderCompletionItem = ({
   index,
   item,
-  onMultiSelect,
-  selected,
-  setSelected,
   auth,
   listId,
   lineId,
@@ -177,10 +174,6 @@ const OrderCompletionItem = ({
     }
   };
 
-  const handleCheck = (id: string) => {
-    return selected.some((i) => i.id === id);
-  };
-
   const getConditionBadge = (condition: string) => {
     const variants = {
       new: "bg-green-100 text-green-800 border-green-200",
@@ -217,80 +210,58 @@ const OrderCompletionItem = ({
         className="group hover:bg-accent/50 transition-colors cursor-pointer border-b"
         onClick={() => {
           if (disabled) return;
-          if (onMultiSelect) {
-            const exists = selected.find((i) => i.id === item.id);
-            if (exists) {
-              setSelected(selected.filter((i) => i.id !== item.id));
-            } else {
-              setSelected([
-                ...selected,
-                {
-                  id: item.id,
-                  refNumber: item.refNumber,
-                  quantity: item.quantity,
-                  condition: item.condition,
-                  status: item.status,
-                },
-              ]);
-            }
-            return;
-          }
           setOnOpen(true);
         }}
       >
-        {onMultiSelect && (
-          <TableCell className="w-10 sm:w-12 px-2 sm:px-3">
-            <Checkbox
-              checked={handleCheck(item.id)}
-              className="group-hover:opacity-100 opacity-0 transition-opacity h-4 w-4 sm:h-5 sm:w-5"
-            />
-          </TableCell>
-        )}
-        <TableCell className="px-2 sm:px-3 font-medium text-xs sm:text-sm">
+        <TableCell className="p-2 sm:p-3 font-medium text-xs sm:text-sm">
           {index + 1}
         </TableCell>
-        <TableCell className="px-2 sm:px-3">
+        <TableCell className="p-2 sm:p-3">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-            <div className="min-w-0">
+            <div className="min-w-0 max-w-[120px] xs:max-w-[150px] sm:max-w-none">
               <p className="text-xs sm:text-sm font-medium truncate">
                 {item.supply.item}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                 {item.supply.description || "No description"}
               </p>
             </div>
           </div>
         </TableCell>
-        <TableCell className="px-2 sm:px-3">
-          <code className="text-xs bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-mono truncate block max-w-[80px] sm:max-w-none">
+        <TableCell className="p-2 sm:p-3">
+          <code className="text-[10px] sm:text-xs bg-muted px-1 sm:px-2 py-0.5 sm:py-1 rounded font-mono truncate block max-w-[60px] xs:max-w-[80px] sm:max-w-none">
             {item.refNumber}
           </code>
         </TableCell>
-        <TableCell className="px-2 sm:px-3 max-w-[100px] sm:max-w-xs">
+        <TableCell className="p-2 sm:p-3 max-w-[80px] xs:max-w-[100px] sm:max-w-xs">
           <p className="text-xs sm:text-sm truncate">{item.desc}</p>
         </TableCell>
-        <TableCell className="px-2 sm:px-3 text-right">
+        <TableCell className="p-2 sm:p-3 text-right">
           <div className="flex flex-col items-end">
             <span className="text-xs sm:text-sm font-medium">
               {item.quantity}
             </span>
-            <span className="text-xs text-muted-foreground">ordered</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              ordered
+            </span>
           </div>
         </TableCell>
-        <TableCell className="px-2 sm:px-3 text-right">
+        <TableCell className="p-2 sm:p-3 text-right">
           <div className="flex flex-col items-end">
             <span className="text-xs sm:text-sm font-medium">
               {item.receivedQuantity}
             </span>
-            <span className="text-xs text-muted-foreground">received</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              received
+            </span>
           </div>
         </TableCell>
-        <TableCell className="px-2 sm:px-3">
+        <TableCell className="p-2 sm:p-3">
           {item.condition ? (
             <Badge
               variant="outline"
-              className={`text-xs capitalize ${getConditionBadge(
+              className={`text-[10px] sm:text-xs capitalize px-1.5 sm:px-2 py-0 sm:py-0.5 ${getConditionBadge(
                 item.condition,
               )}`}
             >
@@ -298,19 +269,20 @@ const OrderCompletionItem = ({
               <span className="xs:hidden">{item.condition.charAt(0)}</span>
             </Badge>
           ) : (
-            <span className="text-xs text-muted-foreground">N/A</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              N/A
+            </span>
           )}
         </TableCell>
-
-        <TableCell className="px-2 sm:px-3 text-right">
+        <TableCell className="p-2 sm:p-3 text-right">
           <div className="flex items-center justify-end gap-1">
             {item.price > 0 ? (
-              <DollarSign className="h-3 w-3 text-green-600" />
+              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-600 flex-shrink-0" />
             ) : (
-              <AlertCircle className="h-3 w-3 text-amber-600" />
+              <AlertCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-600 flex-shrink-0" />
             )}
             <span
-              className={`text-xs sm:text-sm font-medium ${
+              className={`text-[10px] sm:text-xs font-medium whitespace-nowrap ${
                 item.price > 0 ? "text-green-700" : "text-amber-700"
               }`}
             >
@@ -318,11 +290,19 @@ const OrderCompletionItem = ({
             </span>
           </div>
         </TableCell>
-        <TableCell className="px-2 sm:px-3">
-          <Badge variant={resolveInfo.variant} className="text-xs">
+        <TableCell className="p-2 sm:p-3">
+          <Badge
+            variant={resolveInfo.variant}
+            className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5"
+          >
             <span className="hidden xs:inline">{resolveInfo.label}</span>
             <span className="xs:hidden">{resolveInfo.label.charAt(0)}</span>
           </Badge>
+        </TableCell>
+        <TableCell className="">
+          {item.supplieRecieveHistories?.timestamp
+            .toISOString()
+            .split("T")[0] || "N/A"}
         </TableCell>
       </TableRow>
 
@@ -330,8 +310,8 @@ const OrderCompletionItem = ({
         title={
           <div className="flex items-start sm:items-center gap-2 sm:gap-3">
             <PackageOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 mt-0.5 sm:mt-0" />
-            <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-semibold truncate">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm sm:text-base font-semibold truncate pr-4">
                 {item.supply.item}
               </h3>
               <p className="text-xs text-muted-foreground truncate">
@@ -341,32 +321,40 @@ const OrderCompletionItem = ({
           </div>
         }
         onOpen={onOpen}
-        className="min-w-[95%] sm:min-w-3xl max-h-[95vh] overflow-auto mx-2 sm:mx-auto"
+        className="w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl max-h-[90vh] overflow-auto mx-auto"
         setOnOpen={() => setOnOpen(false)}
         footer={true}
         onFunction={form.handleSubmit(onSubmit)}
         yesTitle="Update Item"
       >
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-6 px-1 sm:px-0">
+          {/* Mobile scroll indicator for long forms */}
+          <div className="sm:hidden flex items-center justify-end">
+            <div className="bg-primary/10 rounded-full px-2 py-1 text-[10px] text-primary flex items-center gap-1">
+              <ChevronRight className="h-3 w-3" />
+              <span>Scroll for more</span>
+            </div>
+          </div>
+
           {/* Item Summary */}
           <div className="bg-muted/30 p-3 sm:p-4 rounded-lg space-y-2 sm:space-y-3">
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
-              <div>
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+              <div className="min-w-0">
                 <span className="text-muted-foreground">Ordered Quantity:</span>
                 <p className="font-medium">{item.quantity} units</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="text-muted-foreground">Current Status:</span>
                 <Badge
                   variant="outline"
-                  className="ml-2 capitalize text-xs sm:text-sm"
+                  className="ml-2 capitalize text-[10px] sm:text-xs"
                 >
                   {item.status || "Pending"}
                 </Badge>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-1 xs:col-span-2">
                 <span className="text-muted-foreground">Description:</span>
-                <p className="font-medium truncate">
+                <p className="font-medium break-words">
                   {item.desc || "No description provided"}
                 </p>
               </div>
@@ -378,7 +366,7 @@ const OrderCompletionItem = ({
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-4 sm:space-y-6"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Left Column */}
                 <div className="space-y-3 sm:space-y-4">
                   <FormField
@@ -387,7 +375,7 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                           Quality
                         </FormLabel>
                         <FormControl>
@@ -407,7 +395,7 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                           Received Quantity
                         </FormLabel>
                         <FormControl>
@@ -417,7 +405,7 @@ const OrderCompletionItem = ({
                             max={item.quantity}
                             placeholder="Enter received quantity"
                             {...field}
-                            className="text-xs sm:text-sm"
+                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -431,7 +419,7 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                           Per Quantity
                         </FormLabel>
                         <FormControl>
@@ -441,13 +429,13 @@ const OrderCompletionItem = ({
                             max={item.quantity}
                             placeholder="Enter received per quantity"
                             {...field}
-                            className="text-xs sm:text-sm"
+                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
-                        <FormDescription className="text-xs">
+                        <FormDescription className="text-[10px] sm:text-xs">
                           Actual Stock to be record:{" "}
-                          {parseInt(perQuantity, 10) *
-                            parseInt(quanlity, 10)}{" "}
+                          {parseInt(perQuantity, 10) * parseInt(quanlity, 10) ||
+                            0}
                         </FormDescription>
                         <FormMessage className="text-xs" />
                       </FormItem>
@@ -467,7 +455,7 @@ const OrderCompletionItem = ({
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="text-xs sm:text-sm">
+                            <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                               <SelectValue placeholder="Select condition" />
                             </SelectTrigger>
                           </FormControl>
@@ -515,14 +503,14 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                           Expiration Date (Optional)
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="date"
                             {...field}
-                            className="text-xs sm:text-sm"
+                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -546,7 +534,7 @@ const OrderCompletionItem = ({
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="text-xs sm:text-sm">
+                            <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                               <SelectValue placeholder="Select resolution" />
                             </SelectTrigger>
                           </FormControl>
@@ -582,19 +570,19 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                           Unit Price
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs sm:text-sm">
+                            <span className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs sm:text-sm">
                               $
                             </span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-8 text-xs sm:text-sm"
+                              className="pl-6 sm:pl-8 text-xs sm:text-sm h-8 sm:h-10"
                               placeholder="0.00"
                               {...field}
                             />
@@ -640,11 +628,11 @@ const OrderCompletionItem = ({
                           className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 sm:mt-0"
                         />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
+                      <div className="space-y-1 leading-none flex-1">
                         <FormLabel className="font-normal cursor-pointer text-xs sm:text-sm">
                           Use object name as brand
                         </FormLabel>
-                        <FormDescription className="text-xs">
+                        <FormDescription className="text-[10px] sm:text-xs">
                           When checked, the system will use the default brand
                           for this item type
                         </FormDescription>
@@ -666,10 +654,10 @@ const OrderCompletionItem = ({
                           <Input
                             placeholder="Enter specific brand or product name"
                             {...field}
-                            className="text-xs sm:text-sm"
+                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
-                        <FormDescription className="text-xs">
+                        <FormDescription className="text-[10px] sm:text-xs">
                           Override the default brand for this specific item
                         </FormDescription>
                         <FormMessage className="text-xs" />
@@ -686,17 +674,17 @@ const OrderCompletionItem = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                      <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                       Additional Comments
                     </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Add notes, observations, or special instructions..."
-                        className="min-h-[80px] sm:min-h-[100px] resize-none text-xs sm:text-sm"
+                        className="min-h-[60px] sm:min-h-[80px] resize-none text-xs sm:text-sm"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription className="text-xs sm:text-sm">
+                    <FormDescription className="text-[10px] sm:text-xs">
                       Optional: Any additional information about this item
                     </FormDescription>
                     <FormMessage className="text-xs" />

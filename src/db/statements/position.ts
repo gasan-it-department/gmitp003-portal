@@ -177,3 +177,31 @@ export const removePosition = async (
   }
   return response.data;
 };
+
+export const vacantPosition = async (
+  id: string,
+  token: string,
+  lineId: string,
+  userId: string,
+  status: string,
+) => {
+  const response = await axios.get("/position/vacant", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lineId,
+      userId,
+      status,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data);
+  }
+  return response.data;
+};

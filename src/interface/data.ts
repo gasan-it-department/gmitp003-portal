@@ -51,6 +51,8 @@ import {
   LineRegisterSchema,
   PositionInvitationSchema,
   FillPositionSchema,
+  ArchiveNewDocsSchema,
+  VacantPositionSchema,
 } from "./zod";
 import z from "zod";
 export type LoginProps = z.infer<typeof LoginSchema>;
@@ -116,6 +118,8 @@ export type UpdateSalaryGradeProps = z.infer<typeof UpdateSalaryGradeSchema>;
 export type LineRegisterProps = z.infer<typeof LineRegisterSchema>;
 export type PositionInvitationProps = z.infer<typeof PositionInvitationSchema>;
 export type FillPositionProps = z.infer<typeof FillPositionSchema>;
+export type ArchiveNewDocsProps = z.infer<typeof ArchiveNewDocsSchema>;
+export type VacantPositionProps = z.infer<typeof VacantPositionSchema>;
 // Department Interface
 export interface Department {
   id: string;
@@ -490,6 +494,27 @@ export interface ContainerAllowedUserProps {
   timestamp: string;
 }
 
+export interface SupplieRecieveHistory {
+  id: string;
+  suppliesId: string | null;
+  timestamp: Date;
+  quality: string | null;
+  quantity: number;
+  perQuantity: number;
+  pricePerItem: number;
+  condition: string | null;
+  supplier: SupplierProps | null;
+  supply: SuppliesProps | null;
+  supplyOrder: SupplyOrder | null;
+  supplyOrderRecievedId: string | null;
+  supplyOrderId: string | null;
+  supplierId: string | null;
+  list: SupplyBatchProps | null;
+  supplyBatchId: string | null;
+  inventoryBox: InventoryBoxProps | null;
+  inventoryBoxId: string | null;
+}
+
 export interface SupplyOrder {
   id: string;
   SupplyBatchOrder?: SupplyBatchOrder | null;
@@ -509,6 +534,7 @@ export interface SupplyOrder {
   price: number;
   comment?: string;
   user: User;
+  supplieRecieveHistories: SupplieRecieveHistory | undefined;
 }
 
 export interface SupplyPriceTrack {
@@ -1377,6 +1403,7 @@ export interface ReceivedMarkFile extends Timestamp {
 
 export interface ReceivingRoom extends Timestamp {
   id: string;
+  status: number;
   code: string;
   address?: string | null;
   receivedMarkFileId?: string | null;
@@ -1387,7 +1414,7 @@ export interface ReceivingRoom extends Timestamp {
   marker?: ReceivedMarkFile | null;
   line: LineProps;
   targetRooms: TargetRoom[];
-  receiver: RoomReceiver[];
+  authorizedUser: RoomAuthorizedUserProps[];
   signatory: Signatory[];
 }
 
@@ -1470,7 +1497,7 @@ interface TargetRoom extends Timestamp {
   roomReceiver?: ReceivingRoom | null;
 }
 
-interface SignatureQueueRoom extends Timestamp {
+export interface SignatureQueueRoom extends Timestamp {
   id: string;
   title?: string | null;
   userId: string;
@@ -1485,4 +1512,38 @@ interface SignatureQueueRoom extends Timestamp {
   user: User;
   endorser: SignatureQueueRoomApprover[];
   targetRooms: TargetRoom[];
+}
+
+export interface RoomAuthorizedUserProps {
+  id: string;
+  type: number; // 0- receiver, 1- signatory, 2 - operator
+  user?: User | null;
+  userId?: string | null;
+  status: number; // 0- inactive, 1- active
+  timestamp: Date;
+  receivingRoom?: ReceivingRoom | null;
+  receivingRoomId?: string | null;
+  signature: Signature[];
+}
+
+export interface DocumentAbstractProps {
+  id: string;
+  title: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface ArchiveDocument {
+  id: string;
+  status: number;
+  document?: Document | null;
+  documentId?: string | null;
+  line?: LineProps | null;
+  lineId?: string | null;
+  timestamp: Date;
+  receivingRoom?: ReceivingRoom | null;
+  receivingRoomId?: string | null;
+  abstract?: DocumentAbstractProps | null;
+  documentAbstractId?: string | null;
+  docType: number;
 }
