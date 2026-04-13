@@ -1,4 +1,4 @@
-import { Send, FileText } from "lucide-react";
+//import { Send, FileText } from "lucide-react";
 import { Outlet } from "react-router";
 
 const DisseminationIndex = () => {

@@ -46,7 +46,7 @@ interface ListProps {
   lastCursor: string | null;
 }
 
-const SearchArchive = ({ full, roomId, token, lineId }: Props) => {
+const SearchArchive = ({ roomId, token, lineId }: Props) => {
   const [onDeepSearch, setOnDeepSearch] = useState(false);
   const [query, setQuery] = useState("");
   const nav = useNavigate();

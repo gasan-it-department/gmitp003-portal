@@ -21,7 +21,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import SelectUnit from "../SelectUnit";
-import ConfirmDelete from "@/layout/ConfirmDelete";
 import { toast } from "sonner";
 //icons
 import {

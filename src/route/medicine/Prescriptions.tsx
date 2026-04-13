@@ -26,10 +26,10 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import SWWItem from "@/layout/item/SWWItem";
 import { Spinner } from "@/components/ui/spinner";
 import PrescriptionItem from "@/layout/medicine/item/PrescriptionItem";
-import { Badge } from "@/components/ui/badge";
+//import { Badge } from "@/components/ui/badge";
 
 //
-import { Search, CalendarDays, FileText, Filter } from "lucide-react";
+import { Search, FileText, Filter } from "lucide-react";
 
 //
 import type { Prescription } from "@/interface/data";
@@ -90,30 +90,6 @@ const Prescriptions = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="px-4 py-3 sm:px-6 bg-white border-b">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex p-2 bg-blue-50 rounded-lg">
-              <FileText className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Prescriptions
-              </h2>
-              <p className="text-sm text-gray-500">
-                Manage and view prescription records
-              </p>
-            </div>
-          </div>
-          {totalCount > 0 && !isLoading && (
-            <Badge variant="outline" className="self-start sm:self-auto">
-              {totalCount} record{totalCount !== 1 ? "s" : ""}
-            </Badge>
-          )}
-        </div>
-      </div>
-
       {/* Search and Filters */}
       <div className="p-4 bg-white border-b">
         <div className="flex flex-col md:flex-row gap-3">
@@ -126,21 +102,6 @@ const Prescriptions = () => {
               <InputGroupInput
                 placeholder="Search by reference, last name, or first name..."
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="pl-2"
-              />
-            </InputGroup>
-          </div>
-
-          {/* Date Filter */}
-          <div className="w-full md:w-auto">
-            <InputGroup className="w-full">
-              <InputGroupAddon className="pl-3">
-                <CalendarDays className="h-4 w-4 text-gray-500" />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="date"
-                placeholder="Filter by date"
                 onChange={(e) => setText(e.target.value)}
                 className="pl-2"
               />

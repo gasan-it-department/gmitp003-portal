@@ -121,6 +121,7 @@ const StorageMedUpdate = () => {
           price: parseInt(data.thresHold, 10),
           perUnit: parseInt(data.perUnit, 10),
           expiration: data.expiration,
+          manufacturingDate: data.manufacturingDate,
         },
         {
           headers: {
@@ -352,6 +353,31 @@ const StorageMedUpdate = () => {
                               You'll receive notifications when stock falls
                               below this level
                             </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={control}
+                        name="manufacturingDate"
+                        render={({ field: { onChange, value, onBlur } }) => (
+                          <FormItem>
+                            <FormLabel>Manufacturing Date</FormLabel>
+                            <FormControl>
+                              <InputGroup className="bg-white">
+                                <InputGroupAddon>
+                                  <CalendarClock className="h-4 w-4" />
+                                </InputGroupAddon>
+                                <InputGroupInput
+                                  onChange={onChange}
+                                  onBlur={onBlur}
+                                  value={value}
+                                  type="date"
+                                  min={new Date().toISOString().split("T")[0]}
+                                />
+                              </InputGroup>
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

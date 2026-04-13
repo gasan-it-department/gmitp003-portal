@@ -51,3 +51,22 @@ export const removeMedicine = async (
 
   return response.data;
 };
+
+export const medicineOverview = async (token: string, lineId: string) => {
+  const response = await axios.get("/medicine/overview", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
+    params: {
+      lineId,
+    },
+  });
+
+  if (response.status !== 200) throw new Error(response.data);
+
+  return response.data;
+};

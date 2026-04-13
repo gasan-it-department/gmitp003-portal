@@ -106,6 +106,9 @@ const Timebased = ({ id, auth, lineId }: Props) => {
     queryKey: ["timebase", id],
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.lastCursor,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const handleDownloadExcelFile = async () => {

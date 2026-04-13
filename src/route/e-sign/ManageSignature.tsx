@@ -1,10 +1,10 @@
 import {} from "react";
-import { useAuth } from "@/provider/ProtectedRoute";
+//import { useAuth } from "@/provider/ProtectedRoute";
 
-import { Button } from "@/components/ui/button";
+//import { Button } from "@/components/ui/button";
 
 const ManageSignature = () => {
-  const auth = useAuth();
+  // const auth = useAuth();
 
   return <div className="flex-1"></div>;
 };

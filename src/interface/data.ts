@@ -1547,3 +1547,9 @@ export interface ArchiveDocument {
   documentAbstractId?: string | null;
   docType: number;
 }
+
+export interface MedicineOverviewProps {
+  medicines: { total: number; lowStock: number };
+  storage: number;
+  nearExpiration: number;
+}

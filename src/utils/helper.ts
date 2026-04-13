@@ -392,6 +392,12 @@ export const unitOfMeasure = [
   { value: "tube", label: "Tube" },
   { value: "cap", label: "Cap" },
   { value: "nebule", label: "Nebule" },
+  { value: "gallon", label: "Gallon" },
+  { value: "pack", label: "Pack" },
+  { value: "canister", label: "Canister" },
+  { value: "liter", label: "liter" },
+  { value: "unit", label: "Unit" },
+  { value: "roll", label: "Roll" },
 ];
 
 export const getSlotSalaryGradeRange = (slots: PositionSlotProps[]) => {

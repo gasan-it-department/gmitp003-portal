@@ -18,7 +18,7 @@ interface Props {
   value: string;
 }
 
-const UpdateAccountStatus = ({ defaultValue, value }: Props) => {
+const UpdateAccountStatus = ({}: Props) => {
   return (
     <Select>
       <SelectLabel>Select Access</SelectLabel>

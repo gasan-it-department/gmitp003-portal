@@ -1,5 +1,5 @@
 import axios from "@/db/axios";
-import { useState, type SetStateAction } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams, useNavigate } from "react-router";

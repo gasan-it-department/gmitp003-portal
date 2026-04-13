@@ -8,6 +8,7 @@ import {
   Blocks,
   Component,
   Building2,
+  Link,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
 
@@ -80,13 +81,13 @@ export const menuList = [
         children: [],
         accord: true,
       },
-      // {
-      //   title: "Invite Users",
-      //   path: "invite",
-      //   Icon: Link,
-      //   children: [],
-      //   accord: true,
-      // },
+      {
+        title: "Invite Users",
+        path: "invite",
+        Icon: Link,
+        children: [],
+        accord: true,
+      },
     ],
     accord: true,
   },

@@ -19,16 +19,16 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 //
-import type { MedicineStock, PrescribeMedProps } from "@/interface/data";
+import type { Medicine, PrescribeMedProps } from "@/interface/data";
 import { PrecribeMedSchema } from "@/interface/zod";
 interface Props {
-  item: MedicineStock;
+  item: Medicine;
   no: number;
   handleAddPresMed: (
     medId: string,
     comment: string,
     quantity: string,
-    medName: string
+    medName: string,
   ) => void;
   query: string;
 }
@@ -47,12 +47,7 @@ const PrescribeMedItem = ({ item, no, handleAddPresMed, query }: Props) => {
 
   const onSubmit = (data: PrescribeMedProps) => {
     try {
-      handleAddPresMed(
-        item.medicine.id,
-        data.comment || "",
-        data.quantity,
-        item.medicine.name
-      );
+      handleAddPresMed(item.id, data.comment || "", data.quantity, item.name);
       resetField("comment");
       resetField("quantity");
 
@@ -69,12 +64,12 @@ const PrescribeMedItem = ({ item, no, handleAddPresMed, query }: Props) => {
         className=" hover:bg-neutral-200 cursor-pointer"
         onClick={() => setOnOpen(1)}
       >
-        <TableCell>{no + 1}</TableCell>
-        <TableCell>{searchedChar(query, item.medicine.name)}</TableCell>
-        <TableCell>{searchedChar(query, item.medicine.serialNumber)}</TableCell>
+        <TableCell>{no}</TableCell>
+        <TableCell>{searchedChar(query, item.name)}</TableCell>
+        <TableCell>{searchedChar(query, item.serialNumber)}</TableCell>
       </TableRow>
       <Modal
-        title={item.medicine.name}
+        title={item.name}
         onOpen={onOpen === 1}
         className={""}
         setOnOpen={() => setOnOpen(0)}

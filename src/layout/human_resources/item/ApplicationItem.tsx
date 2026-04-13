@@ -1,5 +1,5 @@
-import { memo, useState, type SetStateAction } from "react";
-import { data, useNavigate } from "react-router";
+import { memo, useState } from "react";
+import { useNavigate } from "react-router";
 import { deleleteApplication } from "@/db/statements/application";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 //
@@ -20,7 +20,6 @@ import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
 //
 import type { SubmittedApplicationProps } from "@/interface/data";
-import { set } from "zod";
 
 interface Props {
   item: SubmittedApplicationProps;
@@ -47,7 +46,7 @@ const ApplicationItem = ({
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const [onOpen, setOnOpen] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+  const [_, setIsOpen] = useState(false);
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: () => deleleteApplication(item.id, token, userId, lineId),

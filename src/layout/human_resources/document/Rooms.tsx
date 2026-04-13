@@ -31,7 +31,7 @@ interface ListProps {
   hasMore: boolean;
 }
 
-const Rooms = ({ lineId, userId, token }: Props) => {
+const Rooms = ({ lineId, token }: Props) => {
   const { ref } = useInView({
     threshold: 0.5,
     onChange: (inView) => {

@@ -1,5 +1,5 @@
 import {} from "react";
-import { useSearchParams, useParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
 //

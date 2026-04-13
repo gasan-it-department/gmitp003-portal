@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { Search, Package, AlertCircle, Loader2 } from "lucide-react";
 
 //props/interface/schema
-import type { MedicineStock } from "@/interface/data";
+import type { Medicine } from "@/interface/data";
 import PrescribeMedItem from "./item/PrescribeMedItem";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -45,7 +45,7 @@ interface Props {
 }
 
 interface ListProps {
-  list: MedicineStock[];
+  list: Medicine[];
   lastCursor: string | null;
   hasMore: boolean;
 }

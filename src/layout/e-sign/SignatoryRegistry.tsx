@@ -29,10 +29,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 //icons
-import { PlusCircle, Trash2, Users, Upload, File, Send } from "lucide-react";
+import { PlusCircle, Trash2, Users, Send } from "lucide-react";
 
 //utils
-import { dataURLtoBlob } from "@/utils/file";
+// import { dataURLtoBlob } from "@/utils/file";
 //
 import { SignatoryFormSchema } from "@/interface/zod";
 import type { User } from "@/interface/data";

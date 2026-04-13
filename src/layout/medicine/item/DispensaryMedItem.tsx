@@ -192,8 +192,12 @@ const DispensaryMedItem = ({ no, item, control, status }: Props) => {
 
           <div>
             {item.stocks.map((stockItem, n) => {
+              const currentStock = stockItem.quantity
+                ? parseInt(stockItem.quantity, 10)
+                : 0;
               const isExpired =
                 stockItem.expireIn && new Date(stockItem.expireIn) < new Date();
+
               return (
                 <div
                   key={stockItem.id}
@@ -237,9 +241,7 @@ const DispensaryMedItem = ({ no, item, control, status }: Props) => {
                         control={control}
                         name={`prescribeMed.${no}.stocks.${n}.toRelease`}
                         disabled={
-                          stockItem.quantity === "0" ||
-                          isCompleted ||
-                          isDisabled
+                          currentStock === 0 || isCompleted || isDisabled
                         }
                         render={({ field }) => (
                           <FormItem>

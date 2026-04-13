@@ -470,6 +470,7 @@ export const AddStorageMedSchema = z.object({
   quantity: z.string(),
   thresHold: z.string(),
   perUnit: z.string(),
+  manufacturingDate: z.string(),
   expiration: z.string(),
   addressRoom: z.string().optional(),
   addressCol: z.string().optional(),

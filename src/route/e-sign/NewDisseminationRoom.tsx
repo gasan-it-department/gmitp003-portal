@@ -16,7 +16,7 @@ const NewDisseminationRoom = () => {
   const auth = useAuth();
   const { roomId } = useParams();
 
-  const { data, isFetching, error } = useQuery<SignatureQueueRoom>({
+  const { data, error } = useQuery<SignatureQueueRoom>({
     queryKey: ["document", "rooms"],
     queryFn: () => documentRoute(auth.token as string, roomId as string),
     enabled: !!auth.token && !!roomId,
@@ -25,7 +25,7 @@ const NewDisseminationRoom = () => {
 
   if (!data) return <div>data not found</div>;
 
-  const [step, setStep] = useState(data.step === 0 ? 0 : data.step);
+  const [step] = useState(data.step === 0 ? 0 : data.step);
   const nav = useNavigate();
 
   const screen = [<SignatorySelect />];

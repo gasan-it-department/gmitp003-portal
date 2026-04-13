@@ -53,7 +53,7 @@ const ArchiveNewDocs = () => {
   const {
     control,
     handleSubmit,
-    formState: { isSubmitting, isSubmitted, errors },
+    formState: { isSubmitting, errors },
     reset,
     getValues,
     setError,

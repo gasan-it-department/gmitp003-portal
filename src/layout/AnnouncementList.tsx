@@ -8,6 +8,8 @@ import moment from "moment";
 
 // Components
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 // Icons
 import {
@@ -16,6 +18,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Megaphone,
+  Play,
+  Pause,
 } from "lucide-react";
 
 // API
@@ -42,8 +47,7 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
     number | null
   >(null);
   const [autoplayEnabled, setAutoplayEnabled] = useState(true);
-  const autoplayRef = useRef<NodeJS.Timeout | null>(null);
-
+  const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { ref, inView } = useInView({
     threshold: 0.8,
     triggerOnce: true,
@@ -70,11 +74,11 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
         setCurrentIndex((prev) => {
           const nextIndex = prev + 1;
           if (nextIndex >= allAnnouncements.length) {
-            return 0; // Loop back to start
+            return 0;
           }
           return nextIndex;
         });
-      }, 5000); // Change announcement every 5 seconds
+      }, 5000);
 
       return () => {
         if (autoplayRef.current) {
@@ -87,9 +91,7 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       const currentAnnouncementIndex = currentIndex;
-
       const isThirdAnnouncement = (currentAnnouncementIndex + 1) % 3 === 0;
-
       const hasNotFetchedForThisIndex =
         lastFetchedTriggerIndex !== currentAnnouncementIndex;
 
@@ -113,12 +115,11 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
 
   const handlePrevious = () => {
     setCurrentIndex((prev) => Math.max(0, prev - 1));
-    // Reset autoplay timer
     if (autoplayRef.current) {
       clearInterval(autoplayRef.current);
     }
     setAutoplayEnabled(false);
-    setTimeout(() => setAutoplayEnabled(true), 10000); // Resume autoplay after 10s
+    setTimeout(() => setAutoplayEnabled(true), 10000);
   };
 
   const handleNext = () => {
@@ -130,14 +131,11 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
       clearInterval(autoplayRef.current);
     }
     setAutoplayEnabled(false);
-    setTimeout(() => setAutoplayEnabled(true), 10000); // Resume autoplay after 10s
+    setTimeout(() => setAutoplayEnabled(true), 10000);
   };
 
   const isNearEnd = currentIndex >= allAnnouncements.length - 1;
-
-  const shouldAttachRef = (index: number) => {
-    return (index + 1) % 3 === 0;
-  };
+  const shouldAttachRef = (index: number) => (index + 1) % 3 === 0;
 
   const viewAnnouncementData = useMutation({
     mutationFn: (id: string) => viewAnnouncement(token, id, userId),
@@ -149,235 +147,252 @@ const AnnouncementList = ({ lineId, token, userId }: Props) => {
     },
   });
 
-  return (
-    <div className="relative w-full max-w-4xl mx-auto">
-      {/* Header with controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Announcements</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Showing {currentIndex + 1} of {allAnnouncements.length}{" "}
-            announcements
-            {hasNextPage && " • More available"}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          {/* Autoplay toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Autoplay:</span>
-            <button
-              onClick={() => setAutoplayEnabled(!autoplayEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoplayEnabled ? "bg-blue-600" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoplayEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Loading indicators */}
-          <div className="flex items-center gap-2">
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                <span className="text-sm text-gray-500">Loading...</span>
-              </div>
-            ) : isFetchingNextPage ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                <span className="text-sm text-blue-500">Fetching more...</span>
-              </div>
-            ) : null}
+  if (isLoading && allAnnouncements.length === 0) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">Loading announcements...</p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Carousel Container */}
-      <div className="relative">
-        <div className="relative">
+  if (allAnnouncements.length === 0 && !isLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-4">
+        <Card className="border shadow-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+              <Megaphone className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">
+              No Announcements
+            </h3>
+            <p className="text-sm text-gray-500">
+              There are no announcements to display at this time.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full max-w-4xl mx-auto px-4 py-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+            <Megaphone className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">
+              Announcements
+            </h2>
+            <p className="text-xs text-gray-500">
+              {currentIndex + 1} of {allAnnouncements.length}
+              {hasNextPage && " • More available"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Autoplay Toggle */}
           <button
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 
-              p-3 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border hover:bg-white 
-              disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
+            onClick={() => setAutoplayEnabled(!autoplayEnabled)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+              autoplayEnabled
+                ? "bg-blue-50 text-blue-700"
+                : "bg-gray-100 text-gray-500"
+            }`}
           >
-            <ChevronLeft className="h-6 w-6" />
+            {autoplayEnabled ? (
+              <Play className="h-3 w-3" />
+            ) : (
+              <Pause className="h-3 w-3" />
+            )}
+            {autoplayEnabled ? "Autoplay On" : "Autoplay Off"}
           </button>
 
-          <div className="overflow-hidden">
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-              {allAnnouncements.map((announcement, index) => (
-                <div
-                  key={announcement.id}
-                  className="w-full flex-shrink-0 px-4"
+          {/* Loading indicator */}
+          {isFetchingNextPage && (
+            <div className="flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+              <span className="text-xs text-blue-500">Loading more...</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Carousel */}
+      <div className="relative">
+        {/* Navigation Buttons */}
+        <button
+          onClick={handlePrevious}
+          disabled={currentIndex === 0}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20
+            p-2 rounded-full bg-white shadow-md border hover:bg-gray-50 
+            disabled:opacity-30 disabled:cursor-not-allowed transition-all
+            hidden md:block"
+        >
+          <ChevronLeft className="h-5 w-5 text-gray-600" />
+        </button>
+
+        <button
+          onClick={handleNext}
+          disabled={currentIndex >= allAnnouncements.length - 1}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-20
+            p-2 rounded-full bg-white shadow-md border hover:bg-gray-50 
+            disabled:opacity-30 disabled:cursor-not-allowed transition-all
+            hidden md:block"
+        >
+          <ChevronRight className="h-5 w-5 text-gray-600" />
+        </button>
+
+        {/* Carousel Container */}
+        <div className="overflow-hidden rounded-xl">
+          <div
+            className="flex transition-transform duration-500 ease-out"
+            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          >
+            {allAnnouncements.map((announcement, index) => (
+              <div key={announcement.id} className="w-full flex-shrink-0 px-1">
+                <Card
+                  className={`border shadow-sm overflow-hidden ${
+                    shouldAttachRef(index)
+                      ? "border-blue-200"
+                      : "border-gray-200"
+                  }`}
                 >
-                  <div className="p-1">
-                    <div
-                      className={`
-                        relative rounded-2xl border bg-white p-6 md:p-8 shadow-xl 
-                        min-h-[350px] md:min-h-[200px] flex flex-col
-                        ${
-                          isNearEnd && isFetchingNextPage
-                            ? "border-blue-200"
-                            : "border-gray-200"
-                        }
-                      `}
-                    >
-                      {/* 3rd Announcement Indicator */}
-                      {shouldAttachRef(index) && (
-                        <div className="absolute top-4 left-4">
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-                            3rd Announcement
-                            {hasNextPage && (
-                              <Loader2 className="ml-2 h-3 w-3 animate-spin" />
-                            )}
-                          </span>
-                        </div>
-                      )}
+                  {/* 3rd Announcement Badge */}
+                  {shouldAttachRef(index) && (
+                    <div className="absolute top-3 left-3 z-10">
+                      <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">
+                        Featured
+                        {hasNextPage && index === currentIndex && (
+                          <Loader2 className="ml-1.5 h-3 w-3 animate-spin" />
+                        )}
+                      </Badge>
+                    </div>
+                  )}
 
-                      {/* Header */}
-                      <div className="mt-10 mb-6">
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                          {announcement.title}
-                        </h3>
+                  <CardContent className="p-5">
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-gray-900 mb-3 pr-16">
+                      {announcement.title}
+                    </h3>
 
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            <span className="font-medium">
-                              {announcement.author?.username ||
-                                "Unknown Author"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>{formatDate(announcement.createdAt)}</span>
-                          </div>
-                        </div>
+                    {/* Meta info */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-4">
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />
+                        <span>
+                          {announcement.author?.username || "Unknown"}
+                        </span>
                       </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{formatDate(announcement.createdAt)}</span>
+                      </div>
+                    </div>
 
-                      {/* Content */}
-                      <div className="flex-grow mb-6 overflow-y-auto">
-                        <div className="prose prose-gray max-w-none">
-                          <p className="text-gray-700 leading-relaxed">
-                            {announcement.content}
+                    {/* Content */}
+                    <p className="text-sm text-gray-600 leading-relaxed line-clamp-3 mb-4">
+                      {announcement.content}
+                    </p>
+
+                    {/* View Button */}
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          viewAnnouncementData.mutateAsync(announcement.id)
+                        }
+                        className="gap-1.5 text-xs h-8 px-3"
+                      >
+                        Read More
+                      </Button>
+                    </div>
+                  </CardContent>
+
+                  {/* Attach ref for infinite scroll */}
+                  {shouldAttachRef(index) && (
+                    <div
+                      ref={index === currentIndex ? ref : undefined}
+                      className="h-0"
+                    />
+                  )}
+
+                  {/* Loading overlay for fetching next page */}
+                  {isNearEnd &&
+                    isFetchingNextPage &&
+                    index === allAnnouncements.length - 1 && (
+                      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center">
+                        <div className="text-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-blue-500 mx-auto mb-2" />
+                          <p className="text-xs text-gray-500">
+                            Loading more...
                           </p>
                         </div>
                       </div>
-
-                      {/* Attach ref to every 3rd announcement for triggering fetch */}
-                      {shouldAttachRef(index) && (
-                        <div
-                          ref={index === currentIndex ? ref : undefined}
-                          className="absolute bottom-2 w-full h-2"
-                        />
-                      )}
-
-                      {/* Loading overlay when fetching */}
-                      {isNearEnd &&
-                        isFetchingNextPage &&
-                        index === allAnnouncements.length - 1 && (
-                          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center rounded-2xl">
-                            <div className="text-center">
-                              <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto mb-3" />
-                              <p className="text-sm text-gray-600">
-                                Loading more announcements...
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      <div className=" w-full flex justify-end">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            viewAnnouncementData.mutateAsync(announcement.id);
-                          }}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Loading skeleton for initial load */}
-              {isLoading && (
-                <div className="w-full flex-shrink-0 px-4">
-                  <div className="p-1">
-                    <div className="rounded-2xl border bg-white p-8 shadow-lg min-h-[400px]">
-                      <div className="animate-pulse">
-                        <div className="h-6 bg-gray-200 rounded w-1/4 mb-8"></div>
-                        <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-                        <div className="space-y-3">
-                          <div className="h-4 bg-gray-100 rounded"></div>
-                          <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-                          <div className="h-4 bg-gray-100 rounded w-4/6"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+                    )}
+                </Card>
+              </div>
+            ))}
           </div>
-
-          {/* Custom Next Button */}
-          <button
-            onClick={handleNext}
-            disabled={currentIndex >= allAnnouncements.length - 1}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20
-              p-3 rounded-full bg-white/90 backdrop-blur-sm shadow-lg border hover:bg-white 
-              disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-110"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
         </div>
 
-        {/* Progress indicator */}
-        <div className="mt-8 flex flex-col items-center">
-          <div className="flex items-center gap-2 mb-4">
-            {allAnnouncements.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setCurrentIndex(index);
-                  setAutoplayEnabled(false);
-                  setTimeout(() => setAutoplayEnabled(true), 10000);
-                }}
-                className={`
-                  h-3 w-3 rounded-full transition-all relative
-                  ${
-                    index === currentIndex
-                      ? "bg-blue-600 scale-125 ring-2 ring-blue-300"
-                      : index < currentIndex
-                        ? "bg-gray-400"
-                        : "bg-gray-300 hover:bg-gray-400"
-                  }
-                  ${(index + 1) % 3 === 0 ? "ring-1 ring-blue-200" : ""}
-                `}
-                aria-label={`Go to announcement ${index + 1}`}
-              ></button>
-            ))}
-            {hasNextPage && (
-              <div className="flex items-center gap-2 ml-2">
-                <div className="h-3 w-3 rounded-full bg-blue-200 animate-pulse"></div>
-                <span className="text-xs text-blue-600">
-                  More loading on 3rd view
-                </span>
-              </div>
-            )}
-          </div>
+        {/* Progress Indicators */}
+        <div className="flex items-center justify-center gap-2 mt-5">
+          {allAnnouncements.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                setCurrentIndex(index);
+                setAutoplayEnabled(false);
+                setTimeout(() => setAutoplayEnabled(true), 10000);
+              }}
+              className={`h-2 rounded-full transition-all ${
+                index === currentIndex
+                  ? "w-6 bg-blue-600"
+                  : "w-2 bg-gray-300 hover:bg-gray-400"
+              }`}
+              aria-label={`Go to announcement ${index + 1}`}
+            />
+          ))}
+          {hasNextPage && (
+            <div className="flex items-center gap-1 ml-2">
+              <div className="h-2 w-2 rounded-full bg-blue-300 animate-pulse" />
+              <span className="text-xs text-gray-400">Loading on scroll</span>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="flex items-center justify-between gap-3 mt-4 md:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+            className="flex-1"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNext}
+            disabled={currentIndex >= allAnnouncements.length - 1}
+            className="flex-1"
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         </div>
       </div>
     </div>

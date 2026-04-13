@@ -10,7 +10,7 @@ import {
   FormMessage,
   FormItem,
   FormLabel,
-  //FormDescription,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,12 +38,14 @@ import { storageList } from "@/db/statement";
 
 //
 import {
-  FilePlus2,
   Logs,
   ChevronRight,
   Menu,
   Search,
   FileCog,
+  Package,
+  AlertCircle,
+  Plus,
 } from "lucide-react";
 
 //interfaces and Props
@@ -53,6 +55,8 @@ import type {
 } from "@/interface/data";
 import { NewStorageLocationSchema } from "@/interface/zod";
 import StorageItem from "@/layout/medicine/item/StorageItem";
+
+import MedicineDashboard from "@/layout/medicine/MedicineDashboard";
 interface ListProps {
   list: MedicineStorage[];
   lastCursor: string | null;
@@ -91,8 +95,9 @@ const StorageList = () => {
     handleSubmit,
     formState: { isSubmitting },
     control,
-    resetField,
+    reset,
   } = form;
+
   const onSubmit = async (data: NewStorageLocationProps) => {
     if (!lineId) return toast.error("Line ID is missing.");
     if (!auth.token) return toast.error("Unauthorized access.");
@@ -126,9 +131,7 @@ const StorageList = () => {
         refetchType: "active",
       });
       toast.success("Storage location added successfully.");
-      resetField("departmentId");
-      resetField("desc");
-      resetField("name");
+      reset();
       setOnOpen(0);
     } catch (error) {
       toast.error("Failed to add new storage location.", {
@@ -150,186 +153,281 @@ const StorageList = () => {
     setOnOpen(2);
   });
 
+  const allStorages = data?.pages.flatMap((item) => item.list) || [];
+
   return (
-    <div className=" w-full h-full flex">
+    <div className="w-full h-full flex bg-gradient-to-br from-gray-50 to-gray-100">
       <TooltipProvider>
-        <div className={` ${medSideBar.onOpen ? "w-3/4" : "w-full"} h-full`}>
-          <div className=" w-full h-[10%] p-2 flex justify-between items-center border border-x-0 gap-2 bg-white">
-            <div className=" w-auto flex gap-2">
-              <Tooltip delayDuration={1000}>
-                <TooltipTrigger>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setOnOpen(2)}
-                  >
-                    <Search />
-                    <p className=" font-medium text-neutral-600 text-xs">
-                      Search Medicine{" "}
-                      <KbdGroup>
+        {/* Main Content Area */}
+        <div
+          className={`${medSideBar.onOpen ? "w-3/4" : "w-full"} h-full flex flex-col`}
+        >
+          {/* Header Toolbar */}
+          <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+            <div className="px-4 py-3 flex items-center justify-end gap-4">
+              <div className="flex items-center gap-2">
+                <Tooltip delayDuration={1000}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOnOpen(2)}
+                      className="gap-2"
+                    >
+                      <Search className="h-4 w-4" />
+                      <span className="hidden sm:inline text-xs">Search</span>
+                      <KbdGroup className="hidden md:flex">
                         <Kbd>Ctrl</Kbd>+<Kbd>K</Kbd>
                       </KbdGroup>
-                    </p>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Search Medicine</TooltipContent>
-              </Tooltip>
-            </div>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Search Medicine (Ctrl+K)</TooltipContent>
+                </Tooltip>
 
-            <div className=" w-auto flex gap-2">
-              <Tooltip delayDuration={1000}>
-                <TooltipTrigger>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => nav(`logs`)}
-                  >
-                    <Logs />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Activity Logs</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={1000}>
-                <TooltipTrigger>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => nav(`config`)}
-                  >
-                    <FileCog />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Setting</TooltipContent>
-              </Tooltip>
-              <Button size="sm" onClick={() => setOnOpen(1)}>
-                <FilePlus2 />
-                Add Storage Location
-              </Button>
+                <Tooltip delayDuration={1000}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => nav(`logs`)}
+                      className="gap-2"
+                    >
+                      <Logs className="h-4 w-4" />
+                      <span className="hidden sm:inline text-xs">Logs</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Activity Logs</TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={1000}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => nav(`config`)}
+                      className="gap-2"
+                    >
+                      <FileCog className="h-4 w-4" />
+                      <span className="hidden sm:inline text-xs">Settings</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Storage Settings</TooltipContent>
+                </Tooltip>
+
+                <Button
+                  size="sm"
+                  onClick={() => setOnOpen(1)}
+                  className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add Storage</span>
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="w-full grid grid-cols-4 p-2 gap-2">
+
+          {/* Storage Grid */}
+          <div className="h-auto overflow-auto p-4">
             {isFetching ? (
-              <div className=" col-span-4 w-full row-span-2 flex justify-center items-center gap-2">
-                <Spinner />
-                <p className="">Loading...</p>
+              <div className="flex flex-col items-center justify-center h-64 gap-3">
+                <Spinner className="h-8 w-8" />
+                <p className="text-sm text-gray-500">
+                  Loading storage locations...
+                </p>
               </div>
-            ) : data ? (
-              data.pages.flatMap((item) => item.list).length > 0 ? (
-                data.pages
-                  .flatMap((item) => item.list)
-                  .map((item) => <StorageItem key={item.id} item={item} />)
-              ) : (
-                <div className=" col-span-4 h-20 ">
-                  <p>No Storage found!</p>
-                </div>
-              )
+            ) : allStorages.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {allStorages.map((item) => (
+                  <StorageItem key={item.id} item={item} />
+                ))}
+              </div>
             ) : (
-              <div className=" col-span-4 h-20 ">
-                <p>Something went wrong</p>
+              <div className="flex flex-col items-center justify-center h-auto text-center">
+                <div className="w-16 h-16 mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Package className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                  No Storage Locations
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Create your first storage location to start managing medicines
+                </p>
+                <Button
+                  onClick={() => setOnOpen(1)}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Storage Location
+                </Button>
               </div>
             )}
           </div>
+          <MedicineDashboard
+            token={auth.token as string}
+            lineId={lineId as string}
+          />
         </div>
 
+        {/* Sidebar */}
         <div
-          className={` ${
-            medSideBar.onOpen ? "w-1/4" : "w-auto"
-          }  h-full border border-t-0 border-l-neutral-400 bg-white`}
+          className={`${
+            medSideBar.onOpen ? "w-80" : "w-auto"
+          } h-full border border-b-0 bg-white shadow-lg transition-all duration-300`}
         >
-          <div className=" w-full h-[10%] p-2 flex justify-end items-center border border-x-0">
+          <div className="border-b px-3 py-2 flex justify-end">
             <Button
               size="sm"
               onClick={() => medSideBar.setOnOpen()}
-              variant="outline"
-              className=""
+              variant="ghost"
+              className="h-8 w-8 p-0"
             >
-              {medSideBar.onOpen ? <ChevronRight /> : <Menu />}
+              {medSideBar.onOpen ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <Menu className="h-4 w-4" />
+              )}
             </Button>
           </div>
-          <div className=" w-full h-[90%]">
+          <div className="h-[calc(100%-45px)] overflow-auto p-2">
             {medSideBar.onOpen && (
               <Notification lineId={lineId} token={auth.token} />
             )}
           </div>
         </div>
+
+        {/* Search Modal */}
         <Modal
-          title={""}
+          title="Search Medicine"
           children={undefined}
           onOpen={onOpen === 2}
-          className={" min-w-2xl"}
+          className="max-w-2xl"
           setOnOpen={() => setOnOpen(0)}
           cancelTitle="Close"
         />
+
+        {/* Add Storage Location Modal */}
         <Modal
-          title={"Add Storage Location"}
+          title="Add Storage Location"
           onOpen={onOpen === 1}
-          className={""}
+          className="max-w-md overflow-auto"
           setOnOpen={() => {
             if (isFetching || isSubmitting) return;
-            resetField("departmentId");
-            resetField("desc");
-            resetField("name");
+            reset();
             setOnOpen(0);
           }}
           footer={true}
-          yesTitle="Confirm"
+          yesTitle="Create Storage"
           onFunction={handleSubmit(onSubmit)}
+          loading={isSubmitting}
         >
-          <div>
+          <div className="space-y-5 p-1">
+            <div className="flex items-center gap-3 pb-3 border-b">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  New Storage Location
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Create a new storage area for medicines
+                </p>
+              </div>
+            </div>
+
             <Form {...form}>
-              <FormField
-                control={control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Label</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter the storage label"
-                        disabled={isSubmitting}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="desc"
-                control={control}
-                render={({ field }) => (
-                  <FormItem className=" mt-4">
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        className=" max-h-20"
-                        disabled={isSubmitting}
-                        placeholder="Enter storage additional information"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name="departmentId"
-                render={({ field }) => (
-                  <FormItem className=" mt-4 w-full p-2 border border-neutral-300 rounded">
-                    <FormLabel>Unit/Office/Department</FormLabel>
-                    <FormControl>
-                      <SelectUnit
-                        onChange={field.onChange}
-                        lineId={lineId as string}
-                        auth={auth}
-                        currentValue={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-4">
+                <FormField
+                  control={control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">
+                        Storage Name *
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Main Pharmacy, Emergency Stock, Ward A"
+                          disabled={isSubmitting}
+                          className="h-9 text-sm"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        A clear, descriptive name for this storage location
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  name="desc"
+                  control={control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">
+                        Description
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="min-h-[80px] resize-y text-sm"
+                          disabled={isSubmitting}
+                          placeholder="Describe the storage location, its purpose, and any special notes..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Optional: Additional information about this storage area
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name="departmentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold text-gray-700">
+                        Assigned Unit/Department
+                      </FormLabel>
+                      <FormControl>
+                        <div className="border rounded-md p-2 bg-gray-50">
+                          <SelectUnit
+                            onChange={field.onChange}
+                            lineId={lineId as string}
+                            auth={auth}
+                            currentValue={field.value}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Select the department responsible for this storage
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Info Alert */}
+                <div className="rounded-md bg-blue-50 p-3 border border-blue-100">
+                  <div className="flex gap-2">
+                    <AlertCircle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-blue-900 mb-0.5">
+                        About Storage Locations
+                      </p>
+                      <p className="text-xs text-blue-700">
+                        Storage locations help organize medicines by area. Each
+                        location can track inventory levels and manage stock.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Form>
           </div>
         </Modal>

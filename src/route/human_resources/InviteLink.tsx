@@ -34,13 +34,23 @@ import { AddUserSchema } from "@/interface/zod";
 //statements
 import { getInvitationLink } from "@/db/statement";
 //utils
+import { fileSizeConverter } from "@/utils/helper";
 import { invitationErrorMessage } from "@/utils/helper";
 import { formatDate } from "@/utils/date";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ApplicantTagsSelect from "@/layout/human_resources/ApplicantTagsSelect";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import PublicMunicipalSelect from "@/layout/PublicMunicipalSelect";
+import PublicBarangaySelect from "@/layout/PublicBarangaySelect";
+import PublicProvinceSelect from "@/layout/PublicProvinceSelect";
+import PublicRegionSelect from "@/layout/PublicRegionSelect";
 
 const InviteLink = () => {
   const [onOpen, setOnOpen] = useState(0);
+  const [uploadingFiles, setUploadingFiles] = useState<{
+    [key: string]: boolean;
+  }>({});
   const { invitationId } = useParams<{ invitationId: string }>();
   const uniqueId = useId();
   const workExpId = useId();
@@ -54,6 +64,9 @@ const InviteLink = () => {
     queryKey: ["invitationLink", invitationId],
     queryFn: () => getInvitationLink(invitationId!, "your_token_here"),
     enabled: !!invitationId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const form = useForm<AddUserProps>({
@@ -95,14 +108,29 @@ const InviteLink = () => {
     control,
     formState: { isSubmitting },
     resetField,
+    watch,
+    setValue,
   } = form;
 
-  const handlOnSubmit = async (data: AddUserProps) => {
+  const handleOnSubmit = async (data: AddUserProps) => {
     console.log(data);
     toast.success("Submitted Successfully", {
       position: "top-center",
     });
   };
+
+  const permanentRegionId = watch("permanentAddress.regionCode");
+  const permanentProvinceId = watch("permanentAddress.province");
+  const permanentMunicipalityCityId = watch(
+    "permanentAddress.cityMunicipality",
+  );
+  const citizenship = watch("citizenship.citizenship");
+
+  const residentialRegionId = watch("residentialAddress.regionCode");
+  const residentialProvinceId = watch("residentialAddress.province");
+  const residentialMunicipalityCityId = watch(
+    "residentialAddress.cityMunicipality",
+  );
 
   const {
     fields: childrenFields,
@@ -139,6 +167,111 @@ const InviteLink = () => {
     control,
     name: "civiService",
   });
+
+  const assets = useFieldArray({
+    control,
+    name: "assets",
+  });
+
+  const handleRemoveFile = (index: number) => {
+    assets.remove(index);
+  };
+
+  const handleDownloadFile = (file: any) => {
+    const url = URL.createObjectURL(file.file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url); // Clean up
+  };
+
+  const handlePreviewFile = (file: any) => {
+    const url = URL.createObjectURL(file.file);
+
+    if (file.file.type.includes("image")) {
+      window.open(url, "_blank");
+    } else if (file.file.type === "application/pdf") {
+      window.open(url, "_blank");
+    } else {
+      handleDownloadFile(file);
+    }
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File "${file.name}" exceeds 10MB limit`);
+        continue;
+      }
+
+      const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`File "${file.name}" has unsupported format`);
+        continue;
+      }
+      setUploadingFiles((prev) => ({ ...prev, [file.name]: true }));
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        assets.append({
+          file: file, // This matches z.file() in your schema
+          title: file.name, // This matches z.string() in your schema
+        });
+
+        toast.success(`File "${file.name}" uploaded successfully`);
+      } catch (error) {
+        toast.error(`Failed to upload "${file.name}"`);
+      } finally {
+        setUploadingFiles((prev) => ({ ...prev, [file.name]: false }));
+      }
+    }
+
+    event.target.value = "";
+  };
+
+  const handleProfilePictureUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+
+    // Basic validation
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Picture must be less than 5MB");
+      return;
+    }
+
+    if (!file.type.includes("image")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    setValue("profilePicture", file);
+    toast.success("Profile picture uploaded");
+
+    event.target.value = "";
+  };
 
   // Handler functions
   const handleAddEligibility = () => {
@@ -261,43 +394,28 @@ const InviteLink = () => {
           {/* Header */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <div className="text-center">
-              <h1 className="text-xl font-bold text-gray-900 mb-2">
-                POSITION: IT LEAD
-              </h1>
-              <p className="text-gray-600 mb-4">
-                Please fill out all required fields accurately and completely.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm text-gray-500">
-                <span>
-                  Invitation ID: <strong>{data.data.id}</strong>
-                </span>
-                <span>
-                  Expires: <strong>{formatDate(data.data.expiresAt)}</strong>
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Application Form
               </h1>
+              <h1 className="text-xl font-bold text-gray-900 mb-2 mt-10">
+                APPLYING FOR:
+              </h1>
               <p className="text-gray-600 mb-4">
-                Please fill out all required fields accurately and completely.
+                Please fill out all required fields.
               </p>
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm text-gray-500">
                 <span>
-                  Invitation ID: <strong>{data.data.id}</strong>
+                  {/* Invitation ID: <strong>{data.data.id}</strong> */}
                 </span>
-                <span>
+                {/* <span>
                   Expires: <strong>{formatDate(data.data.expiresAt)}</strong>
-                </span>
+                </span> */}
               </div>
             </div>
           </div>
 
           <Form {...form}>
-            <form onSubmit={handleSubmit(handlOnSubmit)} className="space-y-8">
+            <form onSubmit={handleSubmit(handleOnSubmit)} className="space-y-8">
               {/* Personal Information */}
               <Section title="Personal Information">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -464,6 +582,109 @@ const InviteLink = () => {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                <div className=" w-full grid mt-4">
+                  <FormLabel>Citizenship</FormLabel>
+                  <FormField
+                    control={control}
+                    name="citizenship.citizenship"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3 mt-4">
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex space-x-4"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="filipino" id="filipino" />
+                              <FormLabel
+                                htmlFor="filipino"
+                                className="font-normal cursor-pointer"
+                              >
+                                Filipino
+                              </FormLabel>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="dual" id="dual" />
+                              <FormLabel
+                                htmlFor="dual"
+                                className="font-normal cursor-pointer"
+                              >
+                                Dual Citizenship
+                              </FormLabel>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {citizenship !== "filipino" && (
+                    <>
+                      <FormField
+                        control={control}
+                        name="citizenship.by"
+                        render={({ field }) => (
+                          <FormItem className=" w-auto flex items-center mt-2">
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex space-x-4"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem
+                                    value="byBirth"
+                                    id="byBirth"
+                                  />
+                                  <FormLabel
+                                    htmlFor="byBirth"
+                                    className="font-normal cursor-pointer"
+                                  >
+                                    by Birth
+                                  </FormLabel>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem
+                                    value=" byNaturalization"
+                                    id="byNaturalization"
+                                  />
+                                  <FormLabel
+                                    htmlFor="dual"
+                                    className="font-normal cursor-pointer"
+                                  >
+                                    by Naturalization
+                                  </FormLabel>
+                                </div>
+                              </RadioGroup>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="citizenship.country"
+                        render={({ field }) => (
+                          <FormItem className=" mt-4">
+                            <FormControl>
+                              <Input
+                                className=" w-full lg:w-1/4"
+                                placeholder="Enter country"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              If holder of dual citizenship, please indicate the
+                              details.
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
@@ -712,11 +933,17 @@ const InviteLink = () => {
                   title="Residential Address"
                   prefix="residentialAddress"
                   control={control}
+                  regionId={residentialRegionId}
+                  provinceId={residentialProvinceId}
+                  municipalityId={residentialMunicipalityCityId}
                 />
                 <AddressSection
                   title="Permanent Address"
                   prefix="permanentAddress"
                   control={control}
+                  regionId={permanentRegionId}
+                  provinceId={permanentProvinceId}
+                  municipalityId={permanentMunicipalityCityId}
                 />
               </Section>
 
@@ -790,7 +1017,7 @@ const InviteLink = () => {
                       control={control}
                     />
                     <FamilyMemberSection
-                      title="Mother"
+                      title="Mother's Maiden Name"
                       prefix="mother"
                       control={control}
                     />
@@ -896,6 +1123,718 @@ const InviteLink = () => {
                 </div>
               </Section>
 
+              {/* Educational Background */}
+              <Section title="Educational Background">
+                <FormDescription className="mb-6">
+                  Please provide your educational history. Leave blank if not
+                  applicable.
+                </FormDescription>
+
+                {/* Elementary */}
+                <div className="border border-gray-200 rounded-lg p-6 bg-white mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Elementary
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="elementary.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            School Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter school name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.course"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Course and Major
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter course and major"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.from"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">From</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter start year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.to"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">To</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter end year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.highestAttained"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Highest Attained
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter highest level attained"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.yearGraduate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Year Graduated
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter graduation year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="elementary.records"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-gray-700">
+                            Records
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="bg-white border-gray-300 focus:border-blue-500 min-h-[80px]"
+                              placeholder="Enter academic records"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Secondary */}
+                <div className="border border-gray-200 rounded-lg p-6 bg-white mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Secondary
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="secondary.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            School Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter school name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.course"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Course and Major
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter course and major"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.from"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">From</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter start year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.to"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">To</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter end year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.highestAttained"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Highest Attained
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter highest level attained"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.yearGraduate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Year Graduated
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter graduation year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="secondary.records"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-gray-700">
+                            Records
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="bg-white border-gray-300 focus:border-blue-500 min-h-[80px]"
+                              placeholder="Enter academic records"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Vocational */}
+                <div className="border border-gray-200 rounded-lg p-6 bg-white mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Vocational
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="vocational.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            School Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter school name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.course"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Course and Major
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter course and major"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.from"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">From</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter start year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.to"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">To</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter end year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.highestAttained"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Highest Attained
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter highest level attained"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.yearGraduate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Year Graduated
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter graduation year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="vocational.records"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-gray-700">
+                            Records
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="bg-white border-gray-300 focus:border-blue-500 min-h-[80px]"
+                              placeholder="Enter academic records"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* College */}
+                <div className="border border-gray-200 rounded-lg p-6 bg-white mb-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    College
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="college.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            School Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter school name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.course"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Course and Major
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter course and major"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.from"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">From</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter start date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.to"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">To</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter end date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.highestAttained"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Highest Attained
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter highest level attained"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.yearGraduate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Year Graduated
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter graduation year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="college.records"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-gray-700">
+                            Records
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="bg-white border-gray-300 focus:border-blue-500 min-h-[80px]"
+                              placeholder="Enter academic records"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Graduate Studies */}
+                <div className="border border-gray-200 rounded-lg p-6 bg-white">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Graduate Studies
+                  </h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="graduateCollege.name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            School Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter school name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.course"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Course and Major
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter course and major"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.from"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">From</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter start date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.to"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">To</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter end date"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.highestAttained"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Highest Attained
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter highest level attained"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.yearGraduate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Year Graduated
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              placeholder="Enter graduation year"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="graduateCollege.records"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-gray-700">
+                            Records
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              className="bg-white border-gray-300 focus:border-blue-500 min-h-[80px]"
+                              placeholder="Enter academic records"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </Section>
               {/* Work Experience */}
               <Section title="Work Experience">
                 <FormDescription className="mb-6">
@@ -966,7 +1905,11 @@ const InviteLink = () => {
                                 From *
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="Start date" />
+                                <Input
+                                  {...field}
+                                  placeholder="Start "
+                                  type="date"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -981,7 +1924,11 @@ const InviteLink = () => {
                                 To *
                               </FormLabel>
                               <FormControl>
-                                <Input {...field} placeholder="End date" />
+                                <Input
+                                  {...field}
+                                  placeholder="End date"
+                                  type="date"
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1070,12 +2017,14 @@ const InviteLink = () => {
                         <FormField
                           control={control}
                           name={`civiService.${index}.dateExami`}
-                          render={() => (
+                          render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-gray-700">
                                 Examination Date
                               </FormLabel>
-                              <FormControl></FormControl>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -1159,6 +2108,463 @@ const InviteLink = () => {
                 </div>
               </Section>
 
+              {/* Attach Picture */}
+              {/* Profile Picture Section */}
+              <Section title="Profile Picture">
+                <FormDescription className="mb-4">
+                  Upload a recent photo of yourself. This will be used for
+                  identification purposes.
+                </FormDescription>
+
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Profile Picture Preview */}
+                  <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-full overflow-hidden bg-gray-50">
+                    {watch("profilePicture") ? (
+                      <img
+                        src={URL.createObjectURL(watch("profilePicture")!)}
+                        alt="Profile preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg
+                          className="w-8 h-8 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Button */}
+                  <div className="text-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        document
+                          .getElementById("profile-picture-upload")
+                          ?.click()
+                      }
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                      {watch("profilePicture")
+                        ? "Change Picture"
+                        : "Upload Picture"}
+                    </Button>
+
+                    {watch("profilePicture") && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 text-red-600 hover:text-red-800"
+                        onClick={() => setValue("profilePicture", undefined)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+
+                    <input
+                      id="profile-picture-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png"
+                      onChange={(e) => handleProfilePictureUpload(e)}
+                    />
+                  </div>
+
+                  {/* File Requirements */}
+                  <p className="text-sm text-gray-500 text-center">
+                    JPG or PNG, max 5MB
+                  </p>
+                </div>
+              </Section>
+              {/* Attach Relevant Files */}
+              <Section title="Attach Relevant Files">
+                <FormDescription className="mb-6">
+                  Upload required documents and supporting files. Maximum file
+                  size: 10MB per file. Accepted formats: PDF, JPG, PNG, DOC,
+                  DOCX.
+                </FormDescription>
+                <FormDescription>
+                  Please name the files appropriately (e.g.,
+                  "Resume_JohnDoe.pdf", "Certificate_TrainingName.jpg") to help
+                  us identify them easily.
+                </FormDescription>
+
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50 hover:bg-gray-100 transition-colors">
+                  {/* File Drop Zone */}
+                  <div className="text-center">
+                    <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                      <svg
+                        className="w-6 h-6 text-blue-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-700 mb-2">
+                      Upload Files
+                    </h4>
+                    <p className="text-gray-500 mb-4">
+                      Drag and drop files here or click to browse
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="bg-white border-blue-300 text-blue-600 hover:bg-blue-50"
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
+                      disabled={Object.values(uploadingFiles).some(
+                        (status) => status,
+                      )}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      {Object.values(uploadingFiles).some((status) => status)
+                        ? "Uploading..."
+                        : "Select Files"}
+                    </Button>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    />
+                  </div>
+                </div>
+
+                {/* Uploaded Files List */}
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                    Attached Files
+                  </h4>
+
+                  {assets.fields.length > 0 ? (
+                    <div className="space-y-3">
+                      {assets.fields.map((field, index) => (
+                        <div
+                          key={field.id}
+                          className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            {/* File Icon */}
+                            <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              {field.file?.type?.includes("image") ? (
+                                <svg
+                                  className="w-5 h-5 text-blue-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              ) : field.file?.type === "application/pdf" ? (
+                                <svg
+                                  className="w-5 h-5 text-red-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="w-5 h-5 text-blue-600"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+
+                            {/* File Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {field.title ||
+                                  field.file?.name ||
+                                  `File ${index + 1}`}
+                              </p>
+                              <div className="flex items-center space-x-2 text-xs text-gray-500">
+                                <span>
+                                  {field.file
+                                    ? fileSizeConverter(field.file.size)
+                                    : "Unknown size"}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                  {field.file?.type
+                                    ?.split("/")[1]
+                                    ?.toUpperCase() || "FILE"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Upload Status */}
+                            {field.file?.name &&
+                              uploadingFiles[field.file.name] && (
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                  <span className="text-xs text-blue-600">
+                                    Uploading...
+                                  </span>
+                                </div>
+                              )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center space-x-2 ml-4">
+                            {/* Preview Button */}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              onClick={() => handlePreviewFile(field)}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                            </Button>
+
+                            {/* Download Button */}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                              onClick={() => handleDownloadFile(field)}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                />
+                              </svg>
+                            </Button>
+
+                            {/* Remove Button */}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              onClick={() => handleRemoveFile(index)}
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Empty State */
+                    <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                      <svg
+                        className="mx-auto w-12 h-12 text-gray-400 mb-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      <p className="text-gray-500">No files attached yet</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Upload your documents to get started
+                      </p>
+                    </div>
+                  )}
+
+                  {/* File Requirements */}
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h5 className="text-sm font-semibold text-blue-800 mb-2">
+                      Documents you can attach
+                    </h5>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li className="flex items-center">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Resume/CV (PDF, DOC, DOCX)
+                      </li>
+                      <li className="flex items-center">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Valid ID (JPG, PNG, PDF)
+                      </li>
+                      <li className="flex items-center">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Transcript of Records (PDF)
+                      </li>
+                      <li className="flex items-center">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Diploma/Certificates (PDF, JPG, PNG)
+                      </li>
+                      <li className="flex items-center">
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        Cover letter
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </Section>
+
               {/* Form Actions */}
               <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex flex-col sm:flex-row justify-end gap-3">
@@ -1200,9 +2606,8 @@ const InviteLink = () => {
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       />
-
       <Modal
-        className=""
+        className="max-w-md"
         title="Submit Application"
         children={
           <div className="space-y-4">
@@ -1213,14 +2618,139 @@ const InviteLink = () => {
               Please review all information carefully before submitting. You
               won't be able to make changes after submission.
             </p>
+
+            {/* Data Security Message */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                <p className="text-xs text-blue-700">
+                  <strong>Your data is secure:</strong> All information you've
+                  provided will be encrypted and stored safely in accordance
+                  with data protection regulations.
+                </p>
+              </div>
+            </div>
           </div>
         }
         onOpen={onOpen === 2}
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Review Again"
-        onFunction={handleSubmit(handlOnSubmit)}
+        //onFunction={handleSubmit(handleOnSubmit)}
         footer={true}
         loading={isSubmitting}
+      />
+
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Application Submitted Successfully!
+          </div>
+        }
+        children={
+          <div className="space-y-4 text-center">
+            {/* Success Icon */}
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+
+            {/* Message */}
+            <div className="space-y-3">
+              <p className="text-gray-700 leading-relaxed">
+                You can track your application progress using the link below or
+                check your email for updates.
+              </p>
+              <p className="text-gray-600 font-medium">
+                Thank you for your application!
+              </p>
+            </div>
+
+            {/* Application Link */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-blue-800 mb-2">
+                Your Application Link:
+              </p>
+              <div className="flex items-center justify-between bg-white border border-blue-300 rounded px-3 py-2">
+                <code className="text-sm text-blue-600 truncate">
+                  {/* `${frontendUrl}public/application/${applicationId}` */}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+                  onClick={() => {
+                    // navigator.clipboard.writeText(
+                    //   `${frontendUrl}/public/application/${applicationId}`,
+                    // );
+                    toast.success("Link copied to clipboard!");
+                  }}
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="text-xs text-gray-500">
+              We've also sent a confirmation email with these details.
+            </div>
+          </div>
+        }
+        onOpen={onOpen === 3}
+        className="max-w-md"
+        cancelTitle="Close"
+        setOnOpen={() => {
+          setOnOpen(0);
+          //nav(-1);
+        }}
       />
     </div>
   );
@@ -1246,10 +2776,16 @@ const AddressSection = ({
   title,
   prefix,
   control,
+  regionId,
+  provinceId,
+  municipalityId,
 }: {
   title: string;
   prefix: string;
   control: any;
+  regionId: string;
+  provinceId: string;
+  municipalityId: string;
 }) => (
   <div className="mt-6">
     <h4 className="text-lg font-semibold text-gray-800 mb-4">{title}</h4>
@@ -1305,34 +2841,17 @@ const AddressSection = ({
           </FormItem>
         )}
       />
+
       <FormField
         control={control}
-        name={`${prefix}.barangay`}
+        name={`${prefix}.regionCode`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-gray-700">Barangay *</FormLabel>
+            <FormLabel className="text-gray-700">Region *</FormLabel>
             <FormControl>
-              <Input
-                className="bg-white border-gray-300 focus:border-blue-500"
-                {...field}
-                placeholder="Barangay"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={control}
-        name={`${prefix}.cityMunicipality`}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-gray-700">City/Municipality *</FormLabel>
-            <FormControl>
-              <Input
-                className="bg-white border-gray-300 focus:border-blue-500"
-                {...field}
-                placeholder="City or municipality"
+              <PublicRegionSelect
+                onChange={field.onChange}
+                value={field.value}
               />
             </FormControl>
             <FormMessage />
@@ -1346,16 +2865,53 @@ const AddressSection = ({
           <FormItem>
             <FormLabel className="text-gray-700">Province *</FormLabel>
             <FormControl>
-              <Input
-                className="bg-white border-gray-300 focus:border-blue-500"
-                {...field}
-                placeholder="Province"
+              <PublicProvinceSelect
+                onChange={field.onChange}
+                regionId={regionId}
+                value={field.value}
               />
             </FormControl>
             <FormMessage />
           </FormItem>
         )}
       />
+
+      <FormField
+        control={control}
+        name={`${prefix}.cityMunicipality`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-gray-700">City/Municipality *</FormLabel>
+            <FormControl>
+              <PublicMunicipalSelect
+                provinceId={provinceId}
+                onChange={field.onChange}
+                value={field.value}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name={`${prefix}.barangay`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-gray-700">Barangay *</FormLabel>
+            <FormControl>
+              <PublicBarangaySelect
+                municipalityId={municipalityId}
+                onChange={field.onChange}
+                value={field.value}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       <FormField
         control={control}
         name={`${prefix}.zipCode`}

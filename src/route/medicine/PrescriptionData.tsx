@@ -1,12 +1,10 @@
 import { useParams, useSearchParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
-
-//
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import Dispensary from "./Dispensary";
 import DispensaryProgress from "@/layout/medicine/DispensaryProgress";
+import { ClipboardList, Activity } from "lucide-react";
 
-//interfacs/props/schema
 const PrescriptionData = () => {
   const [params, setParams] = useSearchParams({ tabs: "dispense" });
   const { prescriptionId } = useParams();
@@ -26,48 +24,40 @@ const PrescriptionData = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
       <Tabs
         className="w-full h-full flex flex-col"
         defaultValue="dispense"
         onValueChange={(e) => handleChangeParams("tabs", e)}
         value={currentTabs}
       >
-        {/* Header with tabs - responsive */}
-        <div className="flex-shrink-0 border-b bg-card px-4 sm:px-6 py-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:justify-between">
-            <TabsList className="grid w-full sm:w-[300px] grid-cols-2">
-              <TabsTrigger
-                value="dispense"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm sm:text-base"
-              >
-                Dispense
-              </TabsTrigger>
-              <TabsTrigger
-                value="progress"
-                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm sm:text-base"
-              >
-                Progress
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Prescription ID badge - hidden on very small screens */}
-            <div className="text-xs sm:text-sm text-muted-foreground hidden xs:block">
-              <span className="hidden sm:inline">Prescription ID: </span>
-              <span className="font-mono font-medium break-all">
-                {prescriptionId}
-              </span>
-            </div>
-          </div>
+        {/* Tabs Navigation - Compact */}
+        <div className="border-b bg-white/50 px-4">
+          <TabsList className="h-9 bg-transparent gap-0">
+            <TabsTrigger
+              value="dispense"
+              className="h-9 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors gap-1.5"
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              <span>Dispense</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="progress"
+              className="h-9 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors gap-1.5"
+            >
+              <Activity className="h-3.5 w-3.5" />
+              <span>Progress</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        {/* Content area - responsive padding */}
-        <div className="flex-1 min-h-0 bg-background overflow-auto">
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto">
           <TabsContent
             value="dispense"
-            className="h-full m-0 p-3 sm:p-4 md:p-6"
+            className="h-full m-0 p-4 focus-visible:outline-none"
           >
-            <div className="h-full rounded-lg border bg-card shadow-sm overflow-auto">
+            <div className="h-full">
               <Dispensary
                 id={prescriptionId}
                 token={auth.token as string}
@@ -78,9 +68,9 @@ const PrescriptionData = () => {
 
           <TabsContent
             value="progress"
-            className="h-full m-0 p-3 sm:p-4 md:p-6"
+            className="h-full m-0 p-4 focus-visible:outline-none"
           >
-            <div className="h-full rounded-lg border bg-card shadow-sm overflow-auto">
+            <div className="h-full">
               <DispensaryProgress id={prescriptionId} token={auth.token} />
             </div>
           </TabsContent>

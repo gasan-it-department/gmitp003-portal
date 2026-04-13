@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import CameraWithCapture from "@/layout/CameraWithCapture";
 import {
   DndContext,
@@ -7,7 +7,7 @@ import {
   type DragEndEvent,
   closestCenter,
 } from "@dnd-kit/core";
-import { io } from "socket.io-client";
+// import { io } from "socket.io-client";
 import { generateSecureRef } from "@/utils/helper";
 
 interface AreaProps {
@@ -20,21 +20,21 @@ interface AreaProps {
 }
 
 // In your React component
-const socket = io("http://localhost:3000", {
-  withCredentials: true,
-  transports: ["websocket", "polling"],
-  // Add these configurations
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  timeout: 20000,
-  // Ping settings
-  // Force WebSocket if available
-  forceNew: true,
-  // Add if you're behind a proxy
-  // path: "/socket.io/",
-});
+// const socket = io("http://localhost:3000", {
+//   withCredentials: true,
+//   transports: ["websocket", "polling"],
+//   // Add these configurations
+//   reconnection: true,
+//   reconnectionAttempts: Infinity,
+//   reconnectionDelay: 1000,
+//   reconnectionDelayMax: 5000,
+//   timeout: 20000,
+//   // Ping settings
+//   // Force WebSocket if available
+//   forceNew: true,
+//   // Add if you're behind a proxy
+//   // path: "/socket.io/",
+// });
 function DraggableBox() {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: "signature-box",
@@ -89,9 +89,7 @@ function DropZone({ children }: { children: React.ReactNode }) {
 
 export default function Test() {
   const [areas, setAreas] = useState<AreaProps[]>([]);
-  const [mesasge, setMessage] = useState("");
-  const [socketConnected, setSocketConnected] = useState(false);
-  const [id, setId] = useState("");
+  const [socketConnected] = useState(false);
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id === "drop-zone") {
@@ -119,49 +117,49 @@ export default function Test() {
       setAreas((prev) => [...prev, newArea]);
 
       // Emit the new area to socket
-      if (socketConnected) {
-        socket.emit("new_area", newArea);
-      }
+      // if (socketConnected) {
+      //   socket.emit("new_area", newArea);
+      // }
     }
   };
 
-  useEffect(() => {
-    // Socket connection events
-    socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
-      setSocketConnected(true);
-    });
+  // useEffect(() => {
+  //   // Socket connection events
+  //   socket.on("connect", () => {
+  //     console.log("Socket connected:", socket.id);
+  //     setSocketConnected(true);
+  //   });
 
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected");
-      setSocketConnected(false);
-    });
+  //   socket.on("disconnect", () => {
+  //     console.log("Socket disconnected");
+  //     setSocketConnected(false);
+  //   });
 
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-    });
+  //   socket.on("connect_error", (error) => {
+  //     console.error("Socket connection error:", error);
+  //   });
 
-    // Listen for incoming messages
-    socket.on("message_received", (data) => {
-      console.log("Message from server:", data);
-      alert(data.message);
-    });
+  //   // Listen for incoming messages
+  //   socket.on("message_received", (data) => {
+  //     console.log("Message from server:", data);
+  //     alert(data.message);
+  //   });
 
-    // Listen for areas from other clients
-    socket.on("new_area_broadcast", (area) => {
-      console.log("New area from other client:", area);
-      setAreas((prev) => [...prev, area]);
-    });
+  //   // Listen for areas from other clients
+  //   socket.on("new_area_broadcast", (area) => {
+  //     console.log("New area from other client:", area);
+  //     setAreas((prev) => [...prev, area]);
+  //   });
 
-    // Cleanup
-    return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
-      socket.off("message_received");
-      socket.off("new_area_broadcast");
-    };
-  }, []);
+  //   // Cleanup
+  //   return () => {
+  //     socket.off("connect");
+  //     socket.off("disconnect");
+  //     socket.off("connect_error");
+  //     socket.off("message_received");
+  //     socket.off("new_area_broadcast");
+  //   };
+  // }, []);
 
   return (
     <>
@@ -173,7 +171,7 @@ export default function Test() {
           marginBottom: "10px",
         }}
       >
-        Socket: {socketConnected ? `Connected (${socket.id})` : "Disconnected"}
+        {/* Socket: {socketConnected ? `Connected (${socket.id})` : "Disconnected"} */}
       </div>
       <CameraWithCapture />
       <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
@@ -201,25 +199,17 @@ export default function Test() {
           <DraggableBox />
         </div>
       </DndContext>
-      <input
-        placeholder="ID"
-        onChange={(e) => setId(e.target.value)}
-        className="border"
-      />
-      <input
-        placeholder="Message"
-        onChange={(e) => setMessage(e.target.value)}
-        className="border"
-      />
+      <input placeholder="ID" className="border" />
+      <input placeholder="Message" className="border" />
       <button
         className=" border hover:border-neutral-300"
-        onClick={() =>
-          socket.emit("send_message_123", {
-            message: mesasge,
-            areas: areas,
-            id,
-          })
-        }
+        // onClick={() =>
+        //   socket.emit("send_message_123", {
+        //     message: mesasge,
+        //     areas: areas,
+        //     id,
+        //   })
+        // }
         style={{ marginTop: "20px", padding: "10px" }}
       >
         Send Test Message to Server

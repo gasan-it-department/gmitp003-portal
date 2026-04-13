@@ -138,11 +138,7 @@ const MedicineLogs = () => {
                   {totalCount > 0 ? (
                     <>
                       {allMedicines.map((item, i) => (
-                        <MedicineLogsItems
-                          key={item.id}
-                          item={item}
-                          no={i + 1}
-                        />
+                        <MedicineLogsItems key={item.id} item={item} no={i} />
                       ))}
 
                       {/* Infinite scroll loading */}
