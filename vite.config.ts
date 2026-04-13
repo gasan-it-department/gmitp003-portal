@@ -12,6 +12,8 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5173,
+    host: true, // This is critical - allows Railway to access the server
     proxy: {
       "/socket.io": {
         target: "http://localhost:3000",
@@ -19,5 +21,9 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+  },
+  preview: {
+    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
+    host: true, // Also critical for preview mode
   },
 });
