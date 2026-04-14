@@ -41,7 +41,6 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  X,
 } from "lucide-react";
 //
 import { copyToClipboard } from "@/utils/clipboard";
