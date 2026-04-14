@@ -115,11 +115,13 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
         queryKey: ["line-list"],
         refetchType: "active",
       });
+      console.log("respinse: ", { result: response.data });
+
       setLink(response.data.link);
       reset();
       setOpen(2);
     } catch (error) {
-      console.log(error);
+      // console.log(error);
       toast.error("FAILED TO SUBMIT", {
         description: `${error}`,
       });
