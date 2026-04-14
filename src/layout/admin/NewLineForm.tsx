@@ -115,7 +115,7 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
         queryKey: ["line-list"],
         refetchType: "active",
       });
-      console.log("respinse: ", { result: response.data });
+      console.log("response: ", { result: response.data });
 
       setLink(response.data.link);
       reset();
@@ -127,6 +127,7 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
       });
     }
   };
+  console.log({ link });
 
   return (
     <div className="w-full h-full">
