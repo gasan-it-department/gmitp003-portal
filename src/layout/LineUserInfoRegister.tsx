@@ -65,8 +65,6 @@ const LineUserInfoRegister = () => {
     enabled: !!lineInvitationId,
   });
 
-  console.log({ data });
-
   const form = useForm<AddUserProps>({
     resolver: zodResolver(AddUserSchema),
     defaultValues: {
@@ -228,7 +226,12 @@ const LineUserInfoRegister = () => {
       toast.success("Submitted Successfully", {
         position: "top-center",
       });
-
+      nav(
+        `/line/register/${lineInvitationId}/${data.lineId}/${unitPosId}/${sgId}`,
+        {
+          replace: true,
+        },
+      );
       return response.data;
     } catch (error) {
       toast.error("Submission failed. Please try again.", {
@@ -2814,6 +2817,7 @@ const LineUserInfoRegister = () => {
                 />
               </svg>
             </div>
+            <div>{}</div>
 
             {/* Message */}
           </div>

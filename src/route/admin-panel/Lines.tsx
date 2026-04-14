@@ -348,7 +348,7 @@ const Lines = () => {
       {/* Add Line Modal */}
       <Modal
         title={undefined}
-        children={<NewLineForm setOpen={setOpen} />}
+        children={<NewLineForm setOpen={setOpen} onOpen={onOpen} />}
         onOpen={onOpen === 1}
         className="min-w-2xl max-w-2xl overflow-auto"
         setOnOpen={() => setOpen(0)}

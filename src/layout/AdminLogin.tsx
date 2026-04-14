@@ -66,6 +66,7 @@ const AdminLogin = () => {
       }
 
       const { admin } = response.data;
+      console.log({ admin });
 
       setCookie(`auth_admin_token-${admin.id}`, admin.token, 1);
       localStorage.setItem("auth_admin", admin.id);
