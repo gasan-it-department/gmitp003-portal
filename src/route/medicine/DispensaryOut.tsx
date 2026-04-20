@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useAuth } from "@/provider/ProtectedRoute";
+import useLine from "@/hooks/useLine";
 import { useParams } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray } from "react-hook-form";
@@ -45,6 +46,7 @@ import { Badge } from "@/components/ui/badge";
 
 const DispensaryOut = () => {
   const auth = useAuth();
+  const line = useLine();
   const [onOpen, setOnOpen] = useState(0);
   const [data, setData] = useState<Prescription | undefined>(undefined);
   const form = useForm<DispensaryProps>({
@@ -54,9 +56,9 @@ const DispensaryOut = () => {
       lastname: "",
       age: "",
       desc: "",
-      region: "",
-      province: "",
-      municipal: "",
+      region: line.line?.region.id || "",
+      province: line.line?.province.id || "",
+      municipal: line.line?.municipal.id || "",
       barangay: "",
       prescribeMed: [],
     },
@@ -272,6 +274,7 @@ const DispensaryOut = () => {
                             <RegionSelect
                               onChange={field.onChange}
                               value={field.value}
+                              defaultValue={line.line?.region.id}
                             />
                           </FormControl>
                           <FormMessage />

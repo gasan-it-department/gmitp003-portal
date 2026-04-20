@@ -42,6 +42,10 @@ const NewUser = () => {
       confirmPassword: "",
     },
   });
+  const {
+    formState: { errors },
+    setError,
+  } = form;
 
   const onSubmit = async (data: NewUserProps) => {
     try {
@@ -51,11 +55,20 @@ const NewUser = () => {
         ...data,
       });
 
-      if (response.status !== 200) {
+      if (response.status === 200) {
+        if (response.data.error === 1) {
+          setError("root", { message: "USER ALEADY EXIST" });
+        } else if (response.data.error === 2) {
+          setError("root", { message: "APPLICATION NOT FOUND" });
+        } else {
+          nav("/auth");
+        }
+      } else {
         throw new Error(response.data.message);
       }
-      nav("/auth");
-    } catch (error) {}
+    } catch (error) {
+      form.setError("root", { message: (error as Error).message });
+    }
   };
 
   return (
@@ -78,6 +91,9 @@ const NewUser = () => {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6"
               >
+                {errors.root && (
+                  <FormMessage>{errors.root.message}</FormMessage>
+                )}
                 {/* Username Field */}
                 <FormField
                   control={form.control}
@@ -183,6 +199,9 @@ const NewUser = () => {
                 className="space-y-6"
               >
                 {/* Username Field */}
+                {errors.root && (
+                  <FormMessage>{errors.root.message}</FormMessage>
+                )}
                 <FormField
                   control={form.control}
                   name="username"

@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
+import axios from "@/db/axios";
 //
 import {
   FormControl,
@@ -97,9 +98,58 @@ const InviteLink = () => {
       experience: [],
       civiService: [],
       children: [],
-      vocational: undefined,
-      citizenship: {},
+      vocational: {
+        from: "",
+        to: "",
+        name: "",
+        highestAttained: "",
+        yearGraduate: "",
+        records: "",
+      },
+      citizenship: {
+        by: "byBirth",
+        country: "",
+        citizenship: "filipino",
+      },
       civilStatus: "",
+      elementary: {
+        from: "",
+        to: "",
+        name: "",
+        highestAttained: "",
+        yearGraduate: "",
+        records: "",
+        course: "",
+      },
+      secondary: {
+        from: "",
+        to: "",
+        name: "",
+        highestAttained: "",
+        yearGraduate: "",
+        records: "",
+        course: "",
+      },
+      college: {
+        from: "",
+        to: "",
+        name: "",
+        highestAttained: "",
+        yearGraduate: "",
+        records: "",
+        course: "",
+      },
+      graduateCollege: {
+        from: "",
+        to: "",
+        name: "",
+        highestAttained: "",
+        yearGraduate: "",
+        records: "",
+        course: "",
+      },
+      assets: [],
+      profilePicture: undefined,
     },
   });
 
@@ -320,6 +370,69 @@ const InviteLink = () => {
     });
   };
 
+  const onSubmit = async (dataInput: AddUserProps) => {
+    if (!data) {
+      throw new Error("DATA NOT FOUND");
+    }
+    try {
+      const formData = new FormData();
+      if (dataInput.assets && dataInput.assets.length > 0) {
+        dataInput.assets.forEach((item, index) => {
+          formData.append("files", item.file);
+          formData.append(`fileTitles[${index}]`, item.title);
+        });
+      }
+      formData.append("invitationId", data.data.id);
+      formData.append("lineId", data.data.lineId);
+      formData.append("municipalId", data.data.line.municipal.id);
+
+      dataInput.profilePicture &&
+        formData.append("profilePicture", dataInput.profilePicture);
+
+      Object.entries(dataInput).forEach(([key, value]) => {
+        if (key === "assets") return;
+
+        if (value instanceof Date) {
+          formData.append(key, value.toISOString());
+        } else if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else if (typeof value === "object" && value !== null) {
+          Object.entries(value).forEach(([nestedKey, nestedValue]) => {
+            if (nestedValue instanceof Date) {
+              formData.append(
+                `${key}[${nestedKey}]`,
+                nestedValue.toISOString(),
+              );
+            } else {
+              formData.append(`${key}[${nestedKey}]`, String(nestedValue));
+            }
+          });
+        } else {
+          formData.append(key, String(value));
+        }
+      });
+
+      const response = await axios.post(
+        "/invitation/line/submition",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      if (response.status !== 200) {
+        throw new Error(response.data.message);
+      }
+    } catch (error) {
+      toast.error("Submission failed. Please try again.", {
+        position: "top-center",
+      });
+      throw error;
+    }
+  };
+
   // Loading and Error States
   if (isFetching) {
     return (
@@ -395,11 +508,9 @@ const InviteLink = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Application Form
+                PERSONAL DATA FORM
               </h1>
-              <h1 className="text-xl font-bold text-gray-900 mb-2 mt-10">
-                APPLYING FOR:
-              </h1>
+
               <p className="text-gray-600 mb-4">
                 Please fill out all required fields.
               </p>
@@ -2647,7 +2758,7 @@ const InviteLink = () => {
         onOpen={onOpen === 2}
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Review Again"
-        //onFunction={handleSubmit(handleOnSubmit)}
+        onFunction={handleSubmit(onSubmit)}
         footer={true}
         loading={isSubmitting}
       />

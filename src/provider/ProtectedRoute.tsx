@@ -8,6 +8,7 @@ import { getCookie } from "@/utils/cookies";
 
 //
 import NotificationProvider from "./NotificationProvider";
+import LineProvider from "./LineProvider";
 //
 import type { ProtectedRouteProps } from "@/interface/data";
 
@@ -56,7 +57,9 @@ const ProtectedRoute = () => {
     >
       <NotificationProvider>
         <ModuleAuthProvider>
-          <Outlet />
+          <LineProvider>
+            <Outlet />
+          </LineProvider>
         </ModuleAuthProvider>
       </NotificationProvider>
     </AuthContext.Provider>

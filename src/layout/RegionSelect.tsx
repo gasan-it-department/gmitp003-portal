@@ -16,9 +16,10 @@ import type { Region } from "@/interface/data";
 interface Props {
   onChange: (...event: any[]) => void;
   value: string;
+  defaultValue?: string;
 }
 
-const RegionSelect = ({ onChange, value }: Props) => {
+const RegionSelect = ({ onChange, value, defaultValue }: Props) => {
   const { data, isFetching, error } = useQuery<Region[]>({
     queryKey: ["regions"],
     queryFn: getRegions,
@@ -29,8 +30,12 @@ const RegionSelect = ({ onChange, value }: Props) => {
       disabled={isFetching}
       onValueChange={(e) => onChange(e)}
       value={value}
+      defaultValue={defaultValue || ""}
     >
-      <SelectTrigger className=" w-full bg-white">
+      <SelectTrigger
+        className=" w-full bg-white"
+        defaultValue={defaultValue || ""}
+      >
         <SelectValue placeholder="Select Region" />
       </SelectTrigger>
       <SelectContent>

@@ -26,7 +26,7 @@ import {
 // } from "@/components/ui/popover";
 import { Card } from "@/components/ui/card";
 import StorageMedItem from "./item/StorageMedItem";
-
+import PrintMedicineReport from "./PrintMedicineReport";
 import {
   //Pen,
   Search,
@@ -113,7 +113,7 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
                 className="text-sm"
               />
             </InputGroup>
-
+            <PrintMedicineReport storageId={storageId as string} />
             <div className=" w-auto flex gap-2">
               <Button onClick={() => nav(`update`)} size="sm">
                 <PenLine />

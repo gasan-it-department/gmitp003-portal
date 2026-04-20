@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 //
 import type { MedicineOverviewProps } from "@/interface/data";
 
@@ -110,9 +111,10 @@ const MedicineDashboard = ({ token, lineId }: Props) => {
   // Success State
   return (
     <div className="w-full h-auto bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+      <Separator />
       <div className="p-4">
         {/* Header Section */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between">
           <div className="flex items-center gap-3 mb-2">
             <div>
               <h1 className="text-xl font-bold text-gray-900">
@@ -184,7 +186,10 @@ const MedicineDashboard = ({ token, lineId }: Props) => {
           </Card>
 
           {/* Expiring Card */}
-          <Card className="border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+          <Card
+            className="border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+            onClick={() => {}}
+          >
             <div className="h-1 bg-gradient-to-r from-amber-500 to-amber-600" />
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">

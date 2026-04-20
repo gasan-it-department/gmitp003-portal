@@ -12,11 +12,9 @@ const Index = () => {
           </div>
           <div>
             <h1 className="text-sm font-semibold text-gray-900">
-              Pharmaceuticals
+              Drugs and Medicines
             </h1>
-            <p className="text-xs text-gray-500">
-              Medicine and Inventory Management
-            </p>
+            <p className="text-xs text-gray-500">Inventory Management</p>
           </div>
         </div>
       </div>

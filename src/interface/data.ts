@@ -399,6 +399,7 @@ export interface Barangay {
 
 export interface LineProps {
   id: string;
+  region: Region;
   barangay: Barangay;
   municipal: Municipal;
   province: Province;

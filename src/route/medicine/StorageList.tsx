@@ -85,6 +85,9 @@ const StorageList = () => {
         "",
       ),
     enabled: !!lineId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const form = useForm({

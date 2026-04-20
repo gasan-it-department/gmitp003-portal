@@ -118,3 +118,31 @@ export const checkLineInvitation = async (lineInvitationId: string) => {
   }
   return response.data;
 };
+
+export const lineData = async (
+  token: string | undefined,
+  id: string | undefined,
+) => {
+  console.log({ token, id });
+
+  if (!token || !id) {
+    throw new Error("INVALID REQUIRED ID");
+  }
+  const response = await axios.get("/line/data", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data.message);
+  }
+
+  return response.data;
+};
