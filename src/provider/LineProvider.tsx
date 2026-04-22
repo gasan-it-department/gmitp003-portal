@@ -20,8 +20,6 @@ const LineProvider = ({ children }: { children: React.ReactNode }) => {
     refetchOnWindowFocus: false,
   });
 
-  console.log({ data });
-
   return (
     <LineContext.Provider value={{ line: data }}>
       {children}

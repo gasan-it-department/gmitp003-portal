@@ -1,7 +1,4 @@
 import { memo } from "react";
-
-//
-
 //
 import { TableRow, TableCell } from "@/components/ui/table";
 //
@@ -13,13 +10,13 @@ interface Props {
 const PersonnelItem = ({ item, no }: Props) => {
   return (
     <>
-      <TableRow>
+      <TableRow className=" cursor-pointer hover:bg-gray-100">
         <TableCell className=" font-medium">{no}</TableCell>
         <TableCell className=" font-medium">{item.lastName}</TableCell>
         <TableCell className=" font-medium">{item.firstName}</TableCell>
         <TableCell className=" font-medium">{item.middleName}</TableCell>
         <TableCell className=" font-medium">
-          {item.Position?.name || "N/A"}
+          {item?.PositionSlot?.pos?.name || "N/A"}
         </TableCell>
       </TableRow>
     </>

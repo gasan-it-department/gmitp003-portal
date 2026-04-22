@@ -27,7 +27,7 @@ export const formatPureDate = (isoDateString: string): string => {
 
 export const calculateExperienceDuration = (
   startDate: string,
-  endDate: string
+  endDate: string,
 ) => {
   const start = new Date(startDate);
   const end = endDate ? new Date(endDate) : new Date();
@@ -68,4 +68,8 @@ export const formatDateToday = (date: string) => {
     year:
       messageDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
   });
+};
+
+export const getCurrentDateISOstring = () => {
+  return new Date();
 };

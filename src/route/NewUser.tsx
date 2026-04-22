@@ -92,7 +92,9 @@ const NewUser = () => {
                 className="space-y-6"
               >
                 {errors.root && (
-                  <FormMessage>{errors.root.message}</FormMessage>
+                  <FormMessage className=" text-center">
+                    {errors.root.message}
+                  </FormMessage>
                 )}
                 {/* Username Field */}
                 <FormField
@@ -200,7 +202,9 @@ const NewUser = () => {
               >
                 {/* Username Field */}
                 {errors.root && (
-                  <FormMessage>{errors.root.message}</FormMessage>
+                  <FormMessage className=" text-center">
+                    {errors.root.message}
+                  </FormMessage>
                 )}
                 <FormField
                   control={form.control}

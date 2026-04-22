@@ -62,6 +62,10 @@ const Invite = () => {
 
   const form = useForm({
     resolver: zodResolver(CreateInviteLinkSchema),
+    defaultValues: {
+      expireDate: "",
+      time: "",
+    },
   });
   const { control, handleSubmit, reset } = form;
 

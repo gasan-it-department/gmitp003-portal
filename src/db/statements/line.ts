@@ -123,8 +123,6 @@ export const lineData = async (
   token: string | undefined,
   id: string | undefined,
 ) => {
-  console.log({ token, id });
-
   if (!token || !id) {
     throw new Error("INVALID REQUIRED ID");
   }

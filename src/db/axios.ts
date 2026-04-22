@@ -7,17 +7,18 @@ export const getUrl = () => {
   const domain = import.meta.env.VITE_DOMAIN;
   const status = import.meta.env.VITE_STATUS;
 
-  if (status === 1 && domain) {
+  if (status === "1" && domain) {
     return domain;
-  } else if (status === 2 && forwardedUrl) {
+  } else if (status === "2" && forwardedUrl) {
     return forwardedUrl;
   }
   return url;
 };
 
 export const url = import.meta.env.VITE_SERVER_URL;
+const onUrl = ["http://127.0.0.1:3000", "https://lgu-api.xyz"];
 const axios = axiosInstance.create({
-  baseURL: "https://lgu-api.xyz",
+  baseURL: onUrl[0],
   withCredentials: true,
   timeout: 30000,
 });

@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
+import { getCurrentDateISOstring } from "@/utils/date";
 import axios from "@/db/axios";
 //
 import {
@@ -56,6 +57,7 @@ const InviteLink = () => {
   const uniqueId = useId();
   const workExpId = useId();
   const eligibityId = useId();
+  const nav = useNavigate();
 
   const { data, isFetching } = useQuery<{
     data: InvitationLinkProps;
@@ -433,6 +435,10 @@ const InviteLink = () => {
     }
   };
 
+  const expirationDate = data?.data.expiresAt
+    ? new Date(data.data.expiresAt)
+    : null;
+
   // Loading and Error States
   if (isFetching) {
     return (
@@ -494,6 +500,25 @@ const InviteLink = () => {
           </h2>
           <p className="text-yellow-700">
             The requested invitation link could not be found or has expired.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    data.data.status === 0 ||
+    (expirationDate && expirationDate < getCurrentDateISOstring())
+  ) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-2xl bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+          <CircleAlert size={48} className="text-yellow-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-yellow-800 mb-2">
+            Invitation link suspended or expired
+          </h2>
+          <p className="text-yellow-700">
+            The requested invitation link could suspended or expired.
           </p>
         </div>
       </div>
@@ -2860,7 +2885,7 @@ const InviteLink = () => {
         cancelTitle="Close"
         setOnOpen={() => {
           setOnOpen(0);
-          //nav(-1);
+          nav(-1);
         }}
       />
     </div>

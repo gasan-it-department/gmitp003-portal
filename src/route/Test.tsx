@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CameraWithCapture from "@/layout/CameraWithCapture";
+//import { socket } from "@/db/socket";
+//import { getUrl } from "@/db/axios";
 import {
   DndContext,
   useDraggable,
@@ -89,7 +91,8 @@ function DropZone({ children }: { children: React.ReactNode }) {
 
 export default function Test() {
   const [areas, setAreas] = useState<AreaProps[]>([]);
-  const [socketConnected] = useState(false);
+  const [connected, socketConnected] = useState(false);
+  //const url = getUrl();
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (event.over?.id === "drop-zone") {
@@ -122,6 +125,49 @@ export default function Test() {
       // }
     }
   };
+
+  useEffect(() => {
+    // Make sure URL is correct
+    const ws = new WebSocket("http://localhost:3000/socket/test");
+
+    ws.onopen = () => {
+      console.log("Connected to server");
+      socketConnected(true);
+
+      // Optional: Send initial message
+      ws.send(JSON.stringify({ type: "ping", data: "Hello from React!" }));
+    };
+
+    ws.onmessage = (event) => {
+      console.log("Message from server:", event.data);
+      try {
+        // const data = JSON.parse(event.data);
+        // Handle your data here
+      } catch (error) {
+        console.error("Failed to parse JSON:", error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      socketConnected(false);
+    };
+
+    ws.onclose = (event) => {
+      console.log("Disconnected from server", event.code, event.reason);
+      socketConnected(false);
+    };
+
+    // Cleanup on unmount
+    return () => {
+      if (
+        ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING
+      ) {
+        ws.close();
+      }
+    };
+  }, []);
 
   // useEffect(() => {
   //   // Socket connection events
@@ -166,7 +212,7 @@ export default function Test() {
       <div
         style={{
           padding: "10px",
-          background: socketConnected ? "green" : "red",
+          background: connected ? "green" : "red",
           color: "white",
           marginBottom: "10px",
         }}

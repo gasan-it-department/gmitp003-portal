@@ -87,12 +87,15 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
         pageParam as string | null,
         "20",
         currentQuery,
-        trend
+        trend,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
     enabled: !!id || !!auth.token,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const handleChangeParams = (key: string, value: string) => {
@@ -103,7 +106,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
       },
       {
         replace: true,
-      }
+      },
     );
   };
 
@@ -129,20 +132,8 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
     <div className="w-full h-full flex flex-col bg-gray-50/30">
       {/* Header Section */}
       <div className="p-4 border-b bg-white shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Supply Inventory
-            </h2>
-            <p className="text-sm text-gray-500">
-              Manage and track your supply stock levels
-            </p>
-          </div>
-
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-1">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {totalItems} items
-            </Badge>
             {hasSearchQuery && (
               <Badge variant="secondary" className="text-xs">
                 Search: "{query}"
@@ -368,7 +359,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
                 {/* Infinite scroll trigger */}
                 <TableRow ref={ref}>
                   <TableCell colSpan={7} className="border-t">
-                    <div className="py-6 text-center">
+                    <div className="py-1 text-center">
                       {isFetchingNextPage ? (
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -396,7 +387,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
       </div>
 
       {/* Footer Stats */}
-      <div className="p-3 border-t bg-white">
+      <div className="p-1 border-t bg-white">
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <span className="text-gray-600">

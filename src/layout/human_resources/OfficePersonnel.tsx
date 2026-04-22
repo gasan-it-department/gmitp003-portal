@@ -54,6 +54,9 @@ const OfficePersonnel = () => {
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) => lastPage.lastCursor,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   // Trigger fetch when scrolled to bottom
@@ -66,10 +69,12 @@ const OfficePersonnel = () => {
   const allPersonnel = data?.pages.flatMap((page) => page.list) || [];
   const totalCount = allPersonnel.length;
 
+  console.log("Person, ", data);
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Table Container */}
-      <div className="flex-1 overflow-hidden bg-white rounded-lg shadow-sm border">
+      <div className="flex-1 overflow-hidden bg-white">
         <div className="overflow-x-auto">
           <Table className="min-w-full">
             <TableHeader className="bg-gray-50">

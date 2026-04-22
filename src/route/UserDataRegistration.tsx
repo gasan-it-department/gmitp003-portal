@@ -65,11 +65,24 @@ const UserDataRegistration = () => {
 
   const nav = useNavigate();
 
-  const { data, isFetching } = useQuery<FillPositionInvitationProps>({
+  const { data, isFetching, refetch } = useQuery<FillPositionInvitationProps>({
     queryKey: ["invitationLink", positionInviteLinkId],
     queryFn: () => checkPositionInvitation(positionInviteLinkId as string),
     enabled: !!positionInviteLinkId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
+
+  const handleRefetch = async () => {
+    await refetch();
+    if (data && data.step === 1 && data.submittedApplicationId) {
+      nav(
+        `/position/register/${positionInviteLinkId}/${data.submittedApplicationId}`,
+        { replace: true },
+      );
+    }
+  };
 
   const form = useForm<AddUserProps>({
     resolver: zodResolver(AddUserSchema),
@@ -233,7 +246,9 @@ const UserDataRegistration = () => {
       toast.success("Submitted Successfully", {
         position: "top-center",
       });
-
+      setTimeout(() => {
+        handleRefetch();
+      }, 1000);
       return response.data;
     } catch (error) {
       toast.error("Submission failed. Please try again.", {
@@ -431,11 +446,10 @@ const UserDataRegistration = () => {
   };
 
   useEffect(() => {
-    if (data && data.step === 1 && data.submittedApplicationId) {
-      nav(
-        `/position/register/${positionInviteLinkId}/${data.submittedApplicationId}`,
-        { replace: true },
-      );
+    if (data?.concluded) {
+      setTimeout(() => {
+        handleRefetch();
+      }, 1000);
     }
   }, [data, positionInviteLinkId]);
 

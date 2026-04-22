@@ -435,7 +435,7 @@ export const RefinePeopleListSchema = z.object({
 });
 
 export const CreateInviteLinkSchema = z.object({
-  expireDate: z.string(),
+  expireDate: z.string().min(1, "Expiration date is required to set"),
   time: z.string().optional(),
 });
 

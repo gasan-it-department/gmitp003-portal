@@ -19,13 +19,7 @@ import {
   FormMessage,
   FormLabel,
 } from "@/components/ui/form";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/custom/Modal";
@@ -41,7 +35,6 @@ import {
   Info,
   PlusCircle,
   AlertCircle,
-  ChevronRight,
   Briefcase,
 } from "lucide-react";
 
@@ -222,29 +215,8 @@ const Department = () => {
         </div>
 
         {/* Main Content Card - Compact */}
-        <Card className="border shadow-md overflow-hidden bg-white">
-          <CardHeader className="border-b bg-gray-50/50 py-1 px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-gray-900">
-                  Organization Structure
-                </CardTitle>
-                <CardDescription className="text-xs text-gray-500">
-                  {totalDepartments > 0
-                    ? `${totalDepartments} unit${totalDepartments !== 1 ? "s" : ""} total`
-                    : "No units configured"}
-                </CardDescription>
-              </div>
-              {hasNextPage && totalDepartments > 0 && (
-                <Badge variant="outline" className="gap-1 text-xs">
-                  <ChevronRight className="h-3 w-3" />
-                  Scroll
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
+        <div className="  overflow-hidden bg-white">
+          <div className="p-0">
             <div className="h-[calc(100vh-180px)] overflow-auto">
               {isLoading ? (
                 // Loading skeleton - Compact
@@ -346,8 +318,8 @@ const Department = () => {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Add Unit Modal - Compact */}

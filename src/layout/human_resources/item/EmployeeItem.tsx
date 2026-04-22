@@ -47,6 +47,7 @@ const EmployeeItem = ({ item, no, query, token, userId }: Props) => {
         <TableCell>{searchedChar(query, item.middleName) || "N/A"}</TableCell>
         <TableCell>{searchedChar(query, item.username) || "N/A"}</TableCell>
         <TableCell>{item.department?.name || "N/A"}</TableCell>
+        <TableCell>{item?.PositionSlot?.pos?.name || "N/A"}</TableCell>
       </TableRow>
     </>
   );

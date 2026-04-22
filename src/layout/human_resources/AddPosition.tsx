@@ -29,7 +29,6 @@ import { AddPositionSchema } from "@/interface/zod";
 import type { AddPositionProps } from "@/interface/data";
 
 import { Save, Briefcase, Hash, Users, Lock, FileText } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
@@ -75,14 +74,12 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
     const currentSlots = slots || [];
 
     if (currentSlots.length < currentCount) {
-      // Add new slots with default values
       const newSlots = [...currentSlots];
       while (newSlots.length < currentCount) {
         newSlots.push({ status: true, salaryGrade: "1" });
       }
       setValue("slot", newSlots);
     } else if (currentSlots.length > currentCount) {
-      // Remove extra slots
       setValue("slot", currentSlots.slice(0, currentCount));
     }
   }, [slotCount, slots, setValue]);
@@ -122,7 +119,6 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
           closeButton: false,
           duration: 3000,
         });
-        console.log("Position added successfully");
       }
       if (response.data.error === 1 && response.status === 200) {
         toast.error(response.data.message, {
@@ -139,35 +135,36 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-    // Handle form submission
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-1 md:p-6">
-      <Card className="border shadow-sm">
-        <CardHeader className="bg-gray-50 border-b px-4 md:px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Briefcase className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <CardTitle className="text-lg md:text-xl">
-                Add New Position
-              </CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                Create a new position with customizable slots and settings
-              </p>
-            </div>
+    <div className="w-full max-w-3xl mx-auto bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-sm">
+            <Briefcase className="h-5 w-5 text-white" />
           </div>
-        </CardHeader>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">
+              Add New Position
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Create a new position with customizable slots and settings
+            </p>
+          </div>
+        </div>
+      </div>
 
-        <CardContent className="p-4 md:p-6">
+      {/* Form Container */}
+      <div className="bg-white rounded-lg overflow-hidden">
+        <div className="p-5">
           <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Options Section */}
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {/* Position Options Section */}
+              <div className="bg-gray-50 rounded-md p-4 space-y-3">
                 <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-gray-400" />
+                  <Lock className="h-4 w-4 text-gray-500" />
                   Position Options
                 </h3>
 
@@ -229,18 +226,18 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                   name="itemNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-gray-400" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <Hash className="h-4 w-4 text-gray-500" />
                         Item Number/ID
                       </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           placeholder="e.g., ITEM-2024-001"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">
+                      <FormDescription className="text-xs text-gray-500">
                         Unique identifier for plantilla position
                       </FormDescription>
                       <FormMessage />
@@ -257,15 +254,15 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-gray-400" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <Briefcase className="h-4 w-4 text-gray-500" />
                         Position Title <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           placeholder="e.g., Senior Developer"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </FormControl>
                       <FormMessage />
@@ -275,21 +272,23 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
 
                 <FormField
                   control={control}
-                  rules={{ required: true }}
                   name="designation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        Designation (Optional)
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <FileText className="h-4 w-4 text-gray-500" />
+                        Designation
                       </FormLabel>
                       <FormControl>
                         <Input
                           {...field}
                           placeholder="e.g., Team Lead"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </FormControl>
+                      <FormDescription className="text-xs text-gray-500">
+                        Optional: Specific role designation
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -304,8 +303,8 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                   control={control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-400" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <Users className="h-4 w-4 text-gray-500" />
                         Level <span className="text-red-500">*</span>
                       </FormLabel>
                       <Select
@@ -313,14 +312,18 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                         value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                          <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                             <SelectValue placeholder="Select level" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {["Key Personnel", "Administrative", "Technical"].map(
                             (item) => (
-                              <SelectItem key={item} value={item}>
+                              <SelectItem
+                                key={item}
+                                value={item}
+                                className="text-sm"
+                              >
                                 {item}
                               </SelectItem>
                             ),
@@ -337,8 +340,8 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                   name="slotCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-400" />
+                      <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                        <Users className="h-4 w-4 text-gray-500" />
                         Number of Slots <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
@@ -347,10 +350,10 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                           min="1"
                           {...field}
                           placeholder="e.g., 3"
-                          className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                          className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </FormControl>
-                      <FormDescription className="text-xs">
+                      <FormDescription className="text-xs text-gray-500">
                         Total available positions for this role
                       </FormDescription>
                       <FormMessage />
@@ -361,27 +364,29 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
 
               {/* Slots Configuration */}
               {slots?.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <Separator />
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-gray-700">
                       Slot Configuration
                     </h3>
                     <Badge variant="outline" className="text-xs">
-                      {slots.length} {slots.length === 1 ? "Slot" : "Slots"}{" "}
-                      Total
+                      {slots.length} {slots.length === 1 ? "Slot" : "Slots"}
                     </Badge>
                   </div>
 
-                  {slots?.map((_, index) => (
-                    <Card
-                      key={index}
-                      className="border border-gray-200 bg-gray-50/50"
-                    >
-                      <CardContent className="p-4">
+                  <div className="space-y-3">
+                    {slots?.map((_, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-md p-4 bg-gray-50/30"
+                      >
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <Badge variant="secondary" className="px-3">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs px-2 py-0.5"
+                            >
                               Slot #{index + 1}
                             </Badge>
                           </div>
@@ -416,7 +421,7 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                               name={`slot.${index}.salaryGrade`}
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-sm">
+                                  <FormLabel className="text-sm text-gray-700">
                                     Salary Grade
                                   </FormLabel>
                                   <FormControl>
@@ -427,15 +432,15 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
                                       value={field.value}
                                     />
                                   </FormControl>
-                                  <FormMessage className="text-xs" />
+                                  <FormMessage />
                                 </FormItem>
                               )}
                             />
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -443,9 +448,8 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
               <div className="flex justify-end pt-4 border-t">
                 <Button
                   type="submit"
-                  size="lg"
                   disabled={isSubmitting}
-                  className="min-w-[140px] bg-blue-600 hover:bg-blue-700 text-white"
+                  className="min-w-[140px] h-9 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 >
                   {isSubmitting ? (
                     <>
@@ -462,8 +466,8 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
               </div>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
