@@ -25,6 +25,7 @@ import {
 import { supplyDispenseTransactionInfo } from "@/db/statements/supply";
 //
 import { Button } from "@/components/ui/button";
+import UpdateTransaction from "./UpdateTransaction";
 //interface/schema/types
 import type { SupplyDispenseRecordProps } from "@/interface/data";
 
@@ -82,9 +83,12 @@ const DispenseRecordData = () => {
             Transaction ID: <span className="font-mono text-sm">{data.id}</span>
           </p>
         </div>
-        <Badge variant="outline" className="text-lg px-4 py-2">
-          {data.quantity} units dispensed
-        </Badge>
+        <div>
+          <Badge variant="outline" className="text-sm px-4 py-2">
+            {data.quantity} units dispensed
+          </Badge>
+          <UpdateTransaction item={data} userId={""} token={""} lineId="" />
+        </div>
       </div>
 
       <Separator />

@@ -53,6 +53,7 @@ import {
   FillPositionSchema,
   ArchiveNewDocsSchema,
   VacantPositionSchema,
+  UpdateTransactionSchema,
 } from "./zod";
 import z from "zod";
 export type LoginProps = z.infer<typeof LoginSchema>;
@@ -120,6 +121,7 @@ export type PositionInvitationProps = z.infer<typeof PositionInvitationSchema>;
 export type FillPositionProps = z.infer<typeof FillPositionSchema>;
 export type ArchiveNewDocsProps = z.infer<typeof ArchiveNewDocsSchema>;
 export type VacantPositionProps = z.infer<typeof VacantPositionSchema>;
+export type UpdateTransactionProps = z.infer<typeof UpdateTransactionSchema>;
 // Department Interface
 export interface Department {
   id: string;
@@ -483,6 +485,8 @@ export interface SuppliesProps {
   code: number;
   consumable: boolean;
   refNumber: string;
+  SupplyStockTrack: SupplyStockTrack[];
+  totalStock: number;
 }
 
 export interface ContainerAllowedUserProps {
@@ -551,6 +555,9 @@ export interface SupplyPriceTrack {
 export interface SupplyStockTrack {
   id: string;
   stock: number;
+  quantity: string;
+  perQuantity: number;
+  quality: string;
   supply: SuppliesProps;
   suppliesId: string;
   timestamp: Date;
@@ -575,6 +582,7 @@ export interface SupplyBrandProps {
 export interface SupplyBatchOrder {
   id: string;
   timestamp: string;
+  approvedAt: string;
   title?: string | null;
   user?: User | null;
   userId?: string | null;
@@ -694,6 +702,8 @@ export type Medicine = {
   phase: number;
   PrecribeMedicine: PrecribeMedicine[];
   timestamp: Date;
+  totalStock: number;
+  stockToExpire: number;
   MedicineHistory: MedicineHistory[];
   MedicineTrack: MedicineTrack[];
   MedicineStock: MedicineStock[];
@@ -791,6 +801,7 @@ export type Prescription = {
   comment: PrescriptionComment[];
   remark: number;
   progress: PrescriptionProgress[];
+  dateConcluded?: string;
   timestamp: string;
   assets: PrescriptionAsset[];
   MedicineTransaction: MedicineTransaction[];
@@ -1553,4 +1564,5 @@ export interface MedicineOverviewProps {
   medicines: { total: number; lowStock: number };
   storage: number;
   nearExpiration: number;
+  expired: number;
 }

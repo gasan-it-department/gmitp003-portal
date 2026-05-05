@@ -3,6 +3,7 @@ import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
+
 import axios from "@/db/axios";
 import {
   Card,
@@ -21,7 +22,6 @@ import {
   AlertCircle,
   Download,
 } from "lucide-react";
-import { formatDate } from "@/utils/date";
 
 //statements
 import { supplyUnitDispenseRecord } from "@/db/statements/supply";
@@ -211,7 +211,7 @@ const UnitDispenseRecord = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Unit Dispense Records
+            Dispense Records
           </h1>
           <p className="text-muted-foreground">
             Transaction history for {unitData.name}
@@ -242,27 +242,6 @@ const UnitDispenseRecord = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Section Chief/Depart. Head
-                  </span>
-                  <span className="font-medium">
-                    {unitData.head && unitData.head.lastName},{" "}
-                    {unitData.head && unitData.head.firstName}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Member Since
-                  </span>
-                  <span className="font-medium">
-                    {formatDate(unitData.createdAt)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
           </Card>
 
           <Card>
@@ -309,12 +288,11 @@ const UnitDispenseRecord = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead></TableHead>
                       <TableHead>Date & Time</TableHead>
                       <TableHead>Supply Item</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead>Dispensed By</TableHead>
+                      <TableHead>Quantity</TableHead>
                       <TableHead>Remarks</TableHead>
-                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

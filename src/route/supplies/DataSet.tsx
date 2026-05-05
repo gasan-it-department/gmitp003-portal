@@ -60,6 +60,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+
 const DataSet = () => {
   const [onOpen, setOnOpen] = useState(0);
   const [onSelect, setOnSelect] = useState(false);
@@ -99,15 +100,18 @@ const DataSet = () => {
   });
 
   const handleSubmitFile = async () => {
-    if (!file) return;
+    if (!file || !lineId || !dataSetId) return;
 
     const formData = new FormData();
-    formData.append("file", file, file.name);
+    formData.append("file", file);
+    formData.append("lineId", lineId);
+    formData.append("dataSetId", dataSetId);
 
     try {
-      const response = await axios.post("/add-supply-excel", formData, {
+      const response = await axios.post("/supply/upload-excel", formData, {
         headers: {
           Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "multipart/form-data",
         },
         transformRequest: (data) => data,
         onUploadProgress: (progressEvent) => {
@@ -116,6 +120,14 @@ const DataSet = () => {
           );
           setUploadProgress(percentCompleted);
         },
+      });
+
+      if (response.status !== 200) {
+        throw new Error(response.data.message);
+      }
+      await queryClient.invalidateQueries({
+        queryKey: ["dataSetSupplies", dataSetId],
+        refetchType: "active",
       });
       return response.data;
     } catch (error) {
@@ -589,7 +601,7 @@ const DataSet = () => {
           </div>
         }
         onOpen={onOpen === 2}
-        className="max-w-2xl"
+        className="max-w-2xl max-h-11/12 overflow-auto"
         onFunction={() => mutateAsync()}
         setOnOpen={() => {
           if (isPending) return;

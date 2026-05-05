@@ -249,10 +249,10 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
+    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4 relative">
       {/* Header Card */}
       <Card className="border shadow-sm">
-        <CardContent className="p-4 sm:p-5 md:p-6">
+        <CardContent className="p-2 sm:p-5 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="space-y-1">
               <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
@@ -278,8 +278,8 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
       </Card>
 
       {/* Search and Stats Card */}
-      <Card className="border">
-        <CardContent className="p-3 sm:p-4">
+      <Card className="border sticky top-0 z-20 bg-white">
+        <CardContent className="p-1 sm:p-4">
           <div className="space-y-3 sm:space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
@@ -324,7 +324,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
       </Card>
 
       {/* Orders Table Card */}
-      <Card className="flex-1 overflow-hidden">
+      <Card className="flex-1 ">
         <CardContent className="p-0 h-full">
           <div className="w-full h-full overflow-auto">
             <Table>
@@ -344,6 +344,9 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                   </TableHead>
                   <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
                     Date Ordered
+                  </TableHead>
+                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
+                    Date Completed
                   </TableHead>
                   <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
                     Status
@@ -434,6 +437,14 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
                             <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                             <span className="text-xs sm:text-sm whitespace-nowrap">
                               {formatDate(order.timestamp)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-2 sm:p-3 md:p-4">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs sm:text-sm whitespace-nowrap">
+                              {formatDate(order.approvedAt)}
                             </span>
                           </div>
                         </TableCell>

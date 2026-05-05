@@ -22,9 +22,7 @@ import {
   Award,
   Briefcase,
   AlertCircle,
-  Mail,
 } from "lucide-react";
-import { formatDate } from "@/utils/date";
 
 //statements
 import { supplyUserDispenseRecord } from "@/db/statements/supply";
@@ -80,7 +78,7 @@ const UserDispenseRecord = () => {
           userRecipientId,
           pageParam as string,
           "20",
-          ""
+          "",
         ),
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -111,34 +109,6 @@ const UserDispenseRecord = () => {
     return nameParts.join(" ");
   };
 
-  const getUserStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "inactive":
-        return "bg-gray-100 text-gray-800";
-      case "suspended":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getUserLevelLabel = (level: number) => {
-    switch (level) {
-      case 0:
-        return "User";
-      case 1:
-        return "Supervisor";
-      case 2:
-        return "Admin";
-      case 3:
-        return "System Admin";
-      default:
-        return `Level ${level}`;
-    }
-  };
-
   const handleCheckItem = (id: string) => {
     if (selectedItems.includes(id)) return true;
     return false;
@@ -167,7 +137,7 @@ const UserDispenseRecord = () => {
             "X-Requested-With": "XMLHttpRequest",
           },
           responseType: "blob",
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -182,7 +152,7 @@ const UserDispenseRecord = () => {
 
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(
-          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
+          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
         );
         if (filenameMatch && filenameMatch[1]) {
           filename = filenameMatch[1].replace(/['"]/g, "");
@@ -193,7 +163,7 @@ const UserDispenseRecord = () => {
       const url = window.URL.createObjectURL(
         new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        })
+        }),
       );
 
       const link = document.createElement("a");
@@ -225,7 +195,7 @@ const UserDispenseRecord = () => {
   const totalItems = data?.pages?.flatMap((page) => page.list) || [];
   const totalQuantity = totalItems.reduce(
     (sum, item) => sum + parseInt(item.quantity || "0"),
-    0
+    0,
   );
 
   if (userLoading) {
@@ -263,7 +233,7 @@ const UserDispenseRecord = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            User Dispense Records
+            Dispense Records
           </h1>
           <p className="text-muted-foreground">
             Transaction history for {getUserFullName()}
@@ -287,42 +257,16 @@ const UserDispenseRecord = () => {
                 </div>
                 <div>
                   <CardTitle className="text-xl">{getUserFullName()}</CardTitle>
-                  <CardDescription className="flex items-center justify-center gap-1 mt-1">
-                    <Mail className="h-3 w-3" />
-                    {userData.email}
-                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <Badge className={getUserStatusColor(userData.status)}>
-                    {userData.status || "Unknown"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Access Level
-                  </span>
-                  <Badge variant="secondary">
-                    {getUserLevelLabel(userData.level)}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     Username
                   </span>
                   <span className="font-medium">{userData.username}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Member Since
-                  </span>
-                  <span className="font-medium">
-                    {formatDate(userData.createdAt)}
-                  </span>
                 </div>
               </div>
             </CardContent>
@@ -438,10 +382,10 @@ const UserDispenseRecord = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Select</TableHead>
+                      <TableHead></TableHead>
                       <TableHead>Date & Time</TableHead>
                       <TableHead>Supply Item</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
+                      <TableHead>Quantity</TableHead>
                       <TableHead>Dispensed By</TableHead>
                       <TableHead>Remarks</TableHead>
                       <TableHead>Status</TableHead>

@@ -161,88 +161,83 @@ const DispensaryOut = () => {
   };
 
   return (
-    <div className="w-full h-full flex bg-gray-50/50">
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="border rounded-lg bg-white shadow-sm"
-      >
-        <ResizablePanel className="min-w-[30%]">
-          <div className="w-full h-full p-6 overflow-auto">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <User className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Patient Information
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Enter patient details and location
-                </p>
-              </div>
+    <div className="w-full h-full flex flex-col lg:flex-row bg-gray-50/50">
+      {/* Mobile: Stack vertically, Desktop: Use resizable panels */}
+      <div className="lg:hidden w-full h-full overflow-auto">
+        <div className="w-full p-4 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-1.5 bg-blue-50 rounded-md">
+              <User className="h-4 w-4 text-blue-600" />
             </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800">
+                Patient Information
+              </h2>
+              <p className="text-xs text-gray-500">
+                Enter patient details and location
+              </p>
+            </div>
+          </div>
 
-            <Form {...form}>
-              <div className="space-y-6">
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        rules={{ required: true }}
-                        control={control}
-                        name="firstname"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              First Name
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                className="bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="Enter first name"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        rules={{ required: true }}
-                        control={control}
-                        name="lastname"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-medium">
-                              Last Name
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                className="bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                                placeholder="Enter last name"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
+          <Form {...form}>
+            <div className="space-y-4">
+              <Card className="border shadow-sm">
+                <CardContent className="p-3">
+                  <div className="space-y-3">
+                    <FormField
+                      rules={{ required: true }}
+                      control={control}
+                      name="firstname"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">
+                            First Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="h-9 text-sm"
+                              placeholder="First name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      rules={{ required: true }}
+                      control={control}
+                      name="lastname"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">
+                            Last Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="h-9 text-sm"
+                              placeholder="Last name"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       rules={{ required: true }}
                       control={control}
                       name="age"
                       render={({ field }) => (
-                        <FormItem className="mt-4">
-                          <FormLabel className="text-sm font-medium">
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">
                             Age
                           </FormLabel>
                           <FormControl>
                             <Input
                               type="number"
-                              className="bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500 w-32"
-                              placeholder="Enter age"
+                              className="h-9 text-sm w-32"
+                              placeholder="Age"
                               {...field}
                             />
                           </FormControl>
@@ -250,253 +245,550 @@ const DispensaryOut = () => {
                         </FormItem>
                       )}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <CardTitle className="text-base font-medium">
-                        Location Details
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField
-                      rules={{ required: true }}
-                      control={control}
-                      name="region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">Region</FormLabel>
-                          <FormControl>
-                            <RegionSelect
-                              onChange={field.onChange}
-                              value={field.value}
-                              defaultValue={line.line?.region.id}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2 px-3 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-gray-500" />
+                    <CardTitle className="text-sm font-medium">
+                      Location Details
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 px-3 pb-3">
+                  <FormField
+                    rules={{ required: true }}
+                    control={control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Region</FormLabel>
+                        <FormControl>
+                          <RegionSelect
+                            onChange={field.onChange}
+                            value={field.value}
+                            defaultValue={line.line?.region.id}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="province"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Province</FormLabel>
+                        <FormControl>
+                          <ProvinceSelect
+                            onChange={field.onChange}
+                            regionId={regionId}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="municipal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Municipality</FormLabel>
+                        <FormControl>
+                          <MunicipalitySelect
+                            token={auth.token}
+                            onChange={field.onChange}
+                            provinceId={provinceId}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="barangay"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Barangay</FormLabel>
+                        <FormControl>
+                          <BarangaySelect
+                            token={auth.token}
+                            onChange={field.onChange}
+                            municipalityId={municipalId}
+                            value={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-                    <FormField
-                      control={control}
-                      name="province"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">Province</FormLabel>
-                          <FormControl>
-                            <ProvinceSelect
-                              onChange={field.onChange}
-                              regionId={regionId}
-                              value={field.value}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-2 px-3 pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-gray-500" />
+                    <CardTitle className="text-sm font-medium">
+                      Additional Information
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-3 pb-3">
+                  <FormField
+                    control={control}
+                    name="desc"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">
+                          Description (Optional)
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className="text-sm"
+                            placeholder="Enter any additional notes"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          </Form>
+        </div>
 
-                    <FormField
-                      control={control}
-                      name="municipal"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Municipality
-                          </FormLabel>
-                          <FormControl>
-                            <MunicipalitySelect
-                              token={auth.token}
-                              onChange={field.onChange}
-                              provinceId={provinceId}
-                              value={field.value}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+        <Separator className="my-2" />
 
-                    <FormField
-                      control={control}
-                      name="barangay"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">Barangay</FormLabel>
-                          <FormControl>
-                            <BarangaySelect
-                              token={auth.token}
-                              onChange={field.onChange}
-                              municipalityId={municipalId}
-                              value={field.value}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                      <CardTitle className="text-base font-medium">
-                        Additional Information
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={control}
-                      name="desc"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">
-                            Description (Optional)
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea
-                              className="bg-gray-50 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                              placeholder="Enter any additional notes or description"
-                              rows={3}
-                              {...field}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="border-0 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Pill className="h-4 w-4 text-gray-500" />
-                        <CardTitle className="text-base font-medium">
-                          Prescribed Medications
-                        </CardTitle>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {prescribeMeds.fields.length} items
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-48 border rounded-lg p-3">
-                      {prescribeMeds.fields.length > 0 ? (
-                        <div className="space-y-2">
-                          {prescribeMeds.fields.map((item, i) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-sm">
-                                    {item.medName}
-                                  </p>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    Qty: {item.quantity}
-                                  </Badge>
-                                </div>
-                                {item.comment && (
-                                  <p className="text-xs text-gray-600 mt-1 truncate">
-                                    {item.comment}
-                                  </p>
-                                )}
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleRemovePresMed(i);
-                                }}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full p-4">
-                          <div className="p-3 bg-gray-100 rounded-full mb-3">
-                            <Pill className="h-6 w-6 text-gray-400" />
-                          </div>
-                          <p className="text-sm text-gray-500 text-center">
-                            No medications added yet
-                          </p>
-                          <p className="text-xs text-gray-400 mt-1">
-                            Select medications from the right panel
-                          </p>
-                        </div>
-                      )}
-                      <ScrollBar />
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-            </Form>
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle
-          withHandle={true}
-          className="bg-gray-200 hover:bg-blue-500 transition-colors"
-        />
-
-        <ResizablePanel className="min-w-[30%]">
-          <div className="w-full h-full flex flex-col">
-            <div className="p-6 flex-1 overflow-auto">
-              <div className="border rounded-lg shadow-sm bg-white">
-                <DispensaryPrescribe
-                  handleAddPresMed={handleAddPresMed}
-                  lineId={lineId}
-                  storageId={undefined}
-                  token={auth.token}
-                />
+        <div className="w-full p-4">
+          <div className="border rounded-lg shadow-sm bg-white">
+            <div className="p-3 border-b bg-gray-50">
+              <div className="flex items-center gap-2">
+                <Pill className="h-4 w-4 text-blue-600" />
+                <h3 className="text-sm font-semibold text-gray-800">
+                  Available Medicines
+                </h3>
               </div>
             </div>
+            <div className="p-2 max-h-[300px] overflow-auto">
+              <DispensaryPrescribe
+                handleAddPresMed={handleAddPresMed}
+                lineId={lineId}
+                storageId={undefined}
+                token={auth.token}
+              />
+            </div>
+          </div>
+        </div>
 
-            <div className="p-6 border-t bg-white">
-              <Separator className="mb-4" />
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  <p>
-                    Total Items:{" "}
-                    <span className="font-medium">
-                      {prescribeMeds.fields.length}
-                    </span>
-                  </p>
+        <div className="w-full p-4 pt-0">
+          <div className="border rounded-lg shadow-sm bg-white">
+            <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Pill className="h-4 w-4 text-green-600" />
+                <h3 className="text-sm font-semibold text-gray-800">
+                  Selected ({prescribeMeds.fields.length})
+                </h3>
+              </div>
+            </div>
+            <div className="p-2 max-h-[250px] overflow-auto">
+              {prescribeMeds.fields.length > 0 ? (
+                <div className="space-y-2">
+                  {prescribeMeds.fields.map((item, i) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-medium text-gray-800">
+                            {item.medName}
+                          </p>
+                          <Badge variant="secondary" className="text-[10px]">
+                            Qty: {item.quantity}
+                          </Badge>
+                        </div>
+                        {item.comment && (
+                          <p className="text-[10px] text-gray-500 mt-1">
+                            {item.comment}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 hover:bg-red-50"
+                        onClick={() => handleRemovePresMed(i)}
+                      >
+                        <Trash className="h-3.5 w-3.5 text-gray-400" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Pill className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-xs text-gray-400">No medications added</p>
+                  <p className="text-xs text-gray-400">Select from above</p>
+                </div>
+              )}
+            </div>
+            <div className="p-3 border-t bg-gray-50">
+              <Button
+                onClick={() => setOnOpen(1)}
+                className="w-full gap-2"
+                disabled={prescribeMeds.fields.length === 0 || isSubmitting}
+              >
+                <Send className="h-4 w-4" />
+                {isSubmitting
+                  ? "Submitting..."
+                  : `Submit Prescription (${prescribeMeds.fields.length})`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Layout - Original resizable panels */}
+      <div className="hidden lg:flex w-full h-full">
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="border rounded-lg bg-white shadow-sm"
+        >
+          <ResizablePanel className="min-w-[30%]">
+            <div className="w-full h-full p-4 overflow-auto">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 bg-blue-50 rounded-md">
+                  <User className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-800">
+                    Patient Information
+                  </h2>
                   <p className="text-xs text-gray-500">
-                    Review information before submission
+                    Enter patient details and location
                   </p>
                 </div>
-                <Button
-                  onClick={() => setOnOpen(1)}
-                  className="gap-2 px-6 bg-blue-600 hover:bg-blue-700"
-                  disabled={prescribeMeds.fields.length === 0 || isSubmitting}
-                >
-                  <Send className="h-4 w-4" />
-                  {isSubmitting ? "Submitting..." : "Submit Prescription"}
-                </Button>
+              </div>
+
+              <Form {...form}>
+                <div className="space-y-4">
+                  <Card className="border shadow-sm">
+                    <CardContent className="p-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          rules={{ required: true }}
+                          control={control}
+                          name="firstname"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-medium">
+                                First Name
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  className="h-8 text-sm"
+                                  placeholder="First name"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          rules={{ required: true }}
+                          control={control}
+                          name="lastname"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-medium">
+                                Last Name
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  className="h-8 text-sm"
+                                  placeholder="Last name"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        rules={{ required: true }}
+                        control={control}
+                        name="age"
+                        render={({ field }) => (
+                          <FormItem className="mt-2">
+                            <FormLabel className="text-xs font-medium">
+                              Age
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                className="h-8 text-sm w-24"
+                                placeholder="Age"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border shadow-sm">
+                    <CardHeader className="pb-2 px-3 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-gray-500" />
+                        <CardTitle className="text-sm font-medium">
+                          Location Details
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 px-3 pb-3">
+                      <FormField
+                        rules={{ required: true }}
+                        control={control}
+                        name="region"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Region</FormLabel>
+                            <FormControl>
+                              <RegionSelect
+                                onChange={field.onChange}
+                                value={field.value}
+                                defaultValue={line.line?.region.id}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="province"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Province</FormLabel>
+                            <FormControl>
+                              <ProvinceSelect
+                                onChange={field.onChange}
+                                regionId={regionId}
+                                value={field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="municipal"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">
+                              Municipality
+                            </FormLabel>
+                            <FormControl>
+                              <MunicipalitySelect
+                                token={auth.token}
+                                onChange={field.onChange}
+                                provinceId={provinceId}
+                                value={field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="barangay"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Barangay</FormLabel>
+                            <FormControl>
+                              <BarangaySelect
+                                token={auth.token}
+                                onChange={field.onChange}
+                                municipalityId={municipalId}
+                                value={field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border shadow-sm">
+                    <CardHeader className="pb-2 px-3 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-gray-500" />
+                        <CardTitle className="text-sm font-medium">
+                          Additional Information
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-3 pb-3">
+                      <FormField
+                        control={control}
+                        name="desc"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">
+                              Description (Optional)
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea
+                                className="text-sm"
+                                placeholder="Enter any additional notes"
+                                rows={2}
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border shadow-sm">
+                    <CardHeader className="pb-2 px-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Pill className="h-3.5 w-3.5 text-gray-500" />
+                          <CardTitle className="text-sm font-medium">
+                            Prescribed Medications
+                          </CardTitle>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {prescribeMeds.fields.length} items
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-3 pb-3">
+                      <ScrollArea className="h-40 border rounded-md p-2">
+                        {prescribeMeds.fields.length > 0 ? (
+                          <div className="space-y-2">
+                            {prescribeMeds.fields.map((item, i) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="font-medium text-xs">
+                                      {item.medName}
+                                    </p>
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-[10px]"
+                                    >
+                                      Qty: {item.quantity}
+                                    </Badge>
+                                  </div>
+                                  {item.comment && (
+                                    <p className="text-[10px] text-gray-600 mt-1 truncate">
+                                      {item.comment}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRemovePresMed(i);
+                                  }}
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-32">
+                            <Pill className="h-5 w-5 text-gray-300 mb-2" />
+                            <p className="text-xs text-gray-400 text-center">
+                              No medications added
+                            </p>
+                          </div>
+                        )}
+                        <ScrollBar />
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+              </Form>
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle
+            withHandle={true}
+            className="bg-gray-200 hover:bg-blue-500 transition-colors"
+          />
+
+          <ResizablePanel className="min-w-[30%]">
+            <div className="w-full h-full flex flex-col">
+              <div className="flex-1 overflow-auto p-2">
+                <div className="border rounded-lg shadow-sm bg-white h-full">
+                  <DispensaryPrescribe
+                    handleAddPresMed={handleAddPresMed}
+                    lineId={lineId}
+                    storageId={undefined}
+                    token={auth.token}
+                  />
+                </div>
+              </div>
+              <div className="p-3 border-t bg-white">
+                <Separator className="mb-3" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Total:{" "}
+                      <span className="text-blue-600">
+                        {prescribeMeds.fields.length}
+                      </span>{" "}
+                      items
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Review before submission
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setOnOpen(1)}
+                    className="gap-2 h-9"
+                    disabled={prescribeMeds.fields.length === 0 || isSubmitting}
+                  >
+                    <Send className="h-4 w-4" />
+                    {isSubmitting ? "Submitting..." : "Submit"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
 
+      {/* Modals - unchanged */}
       <Modal
         title={"Submit Prescription"}
         children={undefined}

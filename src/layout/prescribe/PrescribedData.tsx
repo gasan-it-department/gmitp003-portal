@@ -8,38 +8,27 @@ import { formatDate } from "@/utils/date";
 //
 import { prescribedData } from "@/db/statement";
 //
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 //
 import {
   User,
-  MapPin,
   Calendar,
   FileText,
   Pill,
   MessageSquare,
   ArrowLeft,
   Download,
-  Clock,
   Stethoscope,
   AlertCircle,
   Package,
   File,
   CheckCircle,
   History,
-  ChevronRight,
 } from "lucide-react";
 //
 import type { Prescription } from "@/interface/data";
@@ -53,6 +42,9 @@ const PrescribedData = () => {
       prescribedData(auth.token as string, prescribedDataId as string),
     queryKey: ["prescribedData", prescribedDataId],
     enabled: !!auth.token && !!prescribedDataId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const getStatusBadge = (status: number) => {
@@ -76,23 +68,16 @@ const PrescribedData = () => {
 
   if (isFetching) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
-        <div className="text-center space-y-4">
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center space-y-3">
           <div className="relative">
-            <div className="w-20 h-20 border-4 border-blue-100 rounded-full mx-auto">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Pill className="w-8 h-8 text-blue-300 animate-pulse" />
-              </div>
-            </div>
-            <Spinner className="w-24 h-24 mx-auto text-blue-600" />
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent mx-auto" />
           </div>
-          <div className="space-y-2">
-            <p className="text-lg font-semibold text-gray-800">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-gray-700">
               Loading Prescription
             </p>
-            <p className="text-sm text-gray-500 max-w-sm mx-auto">
-              Fetching detailed prescription information...
-            </p>
+            <p className="text-xs text-gray-400">Fetching details...</p>
           </div>
         </div>
       </div>
@@ -101,31 +86,30 @@ const PrescribedData = () => {
 
   if (!data) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
-        <Card className="w-full max-w-md border-0 shadow-lg">
-          <CardContent className="p-8 text-center">
-            <div className="p-4 bg-red-50 rounded-full inline-flex mb-4">
-              <AlertCircle className="w-12 h-12 text-red-400" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <Card className="max-w-md border shadow-sm">
+          <CardContent className="p-6 text-center">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            <h2 className="text-base font-semibold text-gray-800 mb-1">
               Prescription Not Found
             </h2>
-            <p className="text-gray-600 mb-6">
-              The prescription data could not be loaded or doesn't exist in our
-              records.
+            <p className="text-xs text-gray-500 mb-4">
+              The prescription data could not be loaded.
             </p>
-            <div className="space-y-3">
+            <div className="flex gap-2 justify-center">
               <Button
+                size="sm"
                 variant="outline"
-                className="w-full"
                 onClick={() => window.history.back()}
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Return to Previous Page
+                <ArrowLeft className="w-3 h-3 mr-1" />
+                Back
               </Button>
               <Button
+                size="sm"
                 variant="ghost"
-                className="w-full text-sm"
                 onClick={() => window.location.reload()}
               >
                 Try Again
@@ -151,7 +135,6 @@ const PrescribedData = () => {
     .filter(Boolean)
     .join(", ");
 
-  // Get initials for avatar
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -162,52 +145,52 @@ const PrescribedData = () => {
   };
 
   return (
-    <div className="w-full h-full bg-gradient-to-b from-gray-50 to-white">
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
       <ScrollArea className="h-full">
-        <div className="max-w-7xl mx-auto p-4 md:p-8">
-          {/* Header Section */}
-          <div className="mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto p-4">
+          {/* Header Section - Compact */}
+          <div className="mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
+                  <FileText className="h-4 w-4 text-white" />
+                </div>
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                  <h1 className="text-base font-bold text-gray-900">
                     Prescription Details
                   </h1>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-0.5">
                     <Badge
                       variant={statusInfo.variant}
-                      className="text-xs px-3 py-1"
+                      className="text-[10px] px-2 py-0"
                     >
                       {prescriptionStatus[data.status]}
                     </Badge>
                     <Badge
                       variant={remarkInfo.variant}
-                      className="text-xs px-3 py-1"
+                      className="text-[10px] px-2 py-0"
                     >
                       {remarkInfo.label}
                     </Badge>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <FileText className="w-3 h-3" />
-                      <code className="font-mono">Ref: {data.refNumber}</code>
-                    </div>
+                    <code className="text-[10px] text-gray-500 font-mono">
+                      Ref: {data.refNumber}
+                    </code>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-white">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <User className="w-5 h-5 text-blue-600" />
+            {/* Quick Stats - Compact */}
+            <div className="grid grid-cols-3 gap-2">
+              <Card className="border shadow-sm">
+                <CardContent className="p-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-blue-50 rounded-md">
+                      <User className="h-3 w-3 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Patient
-                      </p>
-                      <p className="text-lg font-semibold text-gray-800 truncate">
+                      <p className="text-[10px] text-gray-500">Patient</p>
+                      <p className="text-xs font-medium text-gray-800 truncate max-w-[80px]">
                         {fullName}
                       </p>
                     </div>
@@ -215,36 +198,32 @@ const PrescribedData = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm bg-gradient-to-r from-green-50 to-white">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Calendar className="w-5 h-5 text-green-600" />
+              <Card className="border shadow-sm">
+                <CardContent className="p-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-green-50 rounded-md">
+                      <Calendar className="h-3 w-3 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Date Created
-                      </p>
-                      <p className="text-lg font-semibold text-gray-800">
-                        {moment(data.timestamp).format("MMM D, YYYY")}
+                      <p className="text-[10px] text-gray-500">Created</p>
+                      <p className="text-xs font-medium text-gray-800">
+                        {moment(data.timestamp).format("MMM D")}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-0 shadow-sm bg-gradient-to-r from-purple-50 to-white">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Pill className="w-5 h-5 text-purple-600" />
+              <Card className="border shadow-sm">
+                <CardContent className="p-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-purple-50 rounded-md">
+                      <Pill className="h-3 w-3 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Medicines
-                      </p>
-                      <p className="text-lg font-semibold text-gray-800">
-                        {data.presMed?.length || 0} prescribed
+                      <p className="text-[10px] text-gray-500">Medicines</p>
+                      <p className="text-xs font-medium text-gray-800">
+                        {data.presMed?.length || 0}
                       </p>
                     </div>
                   </div>
@@ -253,82 +232,230 @@ const PrescribedData = () => {
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Main Details */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Patient Information Card */}
-              <Card className="border-0 shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                      <User className="w-5 h-5 text-white" />
+          {/* Main Content - Compact Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Left Column */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Patient Info Card */}
+              <Card className="border shadow-sm">
+                <div className="px-4 py-2 border-b bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-blue-100 rounded-md">
+                      <User className="h-3 w-3 text-blue-600" />
                     </div>
-                    <h2 className="text-xl font-bold text-white">
+                    <h2 className="text-sm font-semibold text-gray-800">
                       Patient Information
                     </h2>
                   </div>
                 </div>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                          Personal Details
-                        </label>
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-sm text-gray-500">Full Name</p>
-                            <p className="text-lg font-semibold text-gray-800">
-                              {fullName}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase">
+                        Full Name
+                      </p>
+                      <p className="text-sm font-medium text-gray-800 mt-0.5">
+                        {fullName}
+                      </p>
                     </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 uppercase">
+                        Address
+                      </p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {fullAddress || "No address"}
+                      </p>
+                    </div>
+                  </div>
+                  {data.condtion && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-[10px] text-gray-500 uppercase">
+                        Medical Condition
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1 bg-gray-50 p-2 rounded">
+                        {data.condtion}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-                          Location Details
-                        </label>
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <p className="text-sm text-gray-500">
-                                Complete Address
-                              </p>
-                              <p className="text-gray-800 leading-relaxed">
-                                {fullAddress || "No address provided"}
+              {/* Prescribed Medicines */}
+              {data.presMed && data.presMed.length > 0 && (
+                <Card className="border shadow-sm">
+                  <div className="px-4 py-2 border-b bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 bg-green-100 rounded-md">
+                          <Pill className="h-3 w-3 text-green-600" />
+                        </div>
+                        <h2 className="text-sm font-semibold text-gray-800">
+                          Medicines
+                        </h2>
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">
+                        {data.presMed.length} items
+                      </Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-3 space-y-2">
+                    {data.presMed.map((medicine) => (
+                      <div key={medicine.id} className="border rounded-md p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-3 w-3 text-gray-400" />
+                            <h3 className="text-sm font-medium text-gray-800">
+                              {medicine.medicine?.name || "Unknown"}
+                            </h3>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px]">
+                            Qty: {medicine.quantity}
+                          </Badge>
+                        </div>
+                        {medicine.remark && (
+                          <div className="mt-2 pt-2 border-t">
+                            <div className="flex items-start gap-1.5">
+                              <MessageSquare className="h-3 w-3 text-gray-400 mt-0.5" />
+                              <p className="text-xs text-gray-600">
+                                {medicine.remark}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {data.barangay?.name || "N/A"}
-                            </Badge>
-                            <ChevronRight className="w-3 h-3 text-gray-400" />
-                            <Badge variant="outline" className="text-xs">
-                              {data.municipal?.name || "N/A"}
-                            </Badge>
-                          </div>
-                        </div>
+                        )}
                       </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Comments */}
+              {data.comment && data.comment.length > 0 && (
+                <Card className="border shadow-sm">
+                  <div className="px-4 py-2 border-b bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-3 w-3 text-purple-600" />
+                      <h2 className="text-sm font-semibold text-gray-800">
+                        Comments
+                      </h2>
                     </div>
                   </div>
-
-                  {data.condtion && (
-                    <div className="mt-6 pt-6 border-t">
-                      <div className="flex items-center gap-2 mb-3">
-                        <FileText className="w-4 h-4 text-gray-500" />
-                        <label className="text-sm font-semibold text-gray-700">
-                          Medical Condition
-                        </label>
+                  <CardContent className="p-3 space-y-3">
+                    {data.comment.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="border-l-2 border-purple-400 pl-3"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-[10px] bg-purple-100">
+                                {getInitials(
+                                  `${comment.User.firstName} ${comment.User.lastName}`,
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="text-xs font-medium text-gray-800">
+                              {comment.User.firstName} {comment.User.lastName}
+                            </p>
+                          </div>
+                          <span className="text-[10px] text-gray-400">
+                            {moment(comment.timestamp).fromNow()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {comment.message}
+                        </p>
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 border">
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {data.condtion}
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - Sidebar */}
+            <div className="space-y-4">
+              {/* Timeline Card */}
+              <Card className="border shadow-sm">
+                <div className="px-4 py-2 border-b bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <History className="h-3 w-3 text-amber-600" />
+                    <h2 className="text-sm font-semibold text-gray-800">
+                      Timeline
+                    </h2>
+                  </div>
+                </div>
+                <CardContent className="p-3">
+                  <div className="space-y-3">
+                    {data.progress?.map((progress) => (
+                      <div key={progress.id} className="flex items-start gap-2">
+                        <div className="mt-0.5">
+                          {progress.step >= data.status ? (
+                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                          ) : (
+                            <div className="h-2 w-2 rounded-full bg-gray-300 mt-1" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-800">
+                            {prescriptionProgressStatus[progress.step]?.desc ||
+                              `Step ${progress.step}`}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            {formatDate(progress.timestamp)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Staff Info */}
+              <Card className="border shadow-sm">
+                <div className="px-4 py-2 border-b bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <Stethoscope className="h-3 w-3 text-gray-600" />
+                    <h2 className="text-sm font-semibold text-gray-800">
+                      Staff
+                    </h2>
+                  </div>
+                </div>
+                <CardContent className="p-3 space-y-2">
+                  {data.processBy && (
+                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-[10px] bg-blue-100">
+                          {getInitials(
+                            `${data.processBy.firstName} ${data.processBy.lastName}`,
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">
+                          {data.processBy.firstName} {data.processBy.lastName}
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          Processed By
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {data.respondedBy && (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-md">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-[10px] bg-green-100">
+                          {getInitials(
+                            `${data.respondedBy.firstName} ${data.respondedBy.lastName}`,
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-xs font-medium text-gray-800">
+                          {data.respondedBy.firstName}{" "}
+                          {data.respondedBy.lastName}
+                        </p>
+                        <p className="text-[10px] text-gray-500">
+                          Responded By
                         </p>
                       </div>
                     </div>
@@ -336,328 +463,36 @@ const PrescribedData = () => {
                 </CardContent>
               </Card>
 
-              {/* Prescribed Medicines Card */}
-              {data.presMed && data.presMed.length > 0 && (
-                <Card className="border-0 shadow-lg overflow-hidden">
-                  <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                          <Pill className="w-5 h-5 text-white" />
-                        </div>
-                        <h2 className="text-xl font-bold text-white">
-                          Prescribed Medicines
-                        </h2>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-white/20 text-white border-0"
-                      >
-                        {data.presMed.length} items
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {data.presMed.map((medicine, index) => (
-                        <div
-                          key={medicine.id}
-                          className="border border-gray-200 rounded-xl p-4 hover:border-green-200 hover:bg-green-50/30 transition-all duration-200"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-green-100 rounded-lg">
-                                <Package className="w-4 h-4 text-green-600" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-900 text-lg">
-                                  {medicine.medicine?.name ||
-                                    "Unknown Medicine"}
-                                </h3>
-                                {medicine.medicine?.desc && (
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    {medicine.medicine.desc}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge
-                                variant="outline"
-                                className="bg-blue-50 border-blue-200 text-blue-700"
-                              >
-                                Qty: {medicine.quantity}
-                              </Badge>
-                              <Badge
-                                variant="secondary"
-                                className="bg-gray-100"
-                              >
-                                #{index + 1}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {medicine.remark && (
-                            <div className="mt-3 pt-3 border-t">
-                              <div className="flex items-start gap-2">
-                                <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-700 mb-1">
-                                    Dosage Instructions
-                                  </p>
-                                  <p className="text-sm text-gray-600 bg-gray-50 rounded p-3">
-                                    {medicine.remark}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Comments Section */}
-              {data.comment && data.comment.length > 0 && (
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-white border-b">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <MessageSquare className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          Comments & Notes
-                        </CardTitle>
-                        <CardDescription>
-                          {data.comment.length} comment
-                          {data.comment.length !== 1 ? "s" : ""} from staff
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {data.comment.map((comment) => (
-                        <div
-                          key={comment.id}
-                          className="border-l-4 border-purple-500 pl-4 py-3 bg-gradient-to-r from-white to-purple-50/30 rounded-r-lg"
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-purple-100 text-purple-700">
-                                  {getInitials(
-                                    `${comment.User.firstName} ${comment.User.lastName}`,
-                                  )}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {comment.User.firstName}{" "}
-                                  {comment.User.lastName}
-                                </p>
-                                {comment.User.Position && (
-                                  <p className="text-xs text-gray-500">
-                                    {comment.User.Position.name}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {moment(comment.timestamp).fromNow()}
-                            </span>
-                          </div>
-                          <p className="text-gray-700 bg-white p-3 rounded-lg border">
-                            {comment.message}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Right Column - Sidebar */}
-            <div className="space-y-6">
-              {/* Timeline Card */}
-              <Card className="border-0 shadow-lg sticky top-6">
-                <CardHeader className="bg-gradient-to-r from-amber-50 to-white border-b">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-100 rounded-lg">
-                      <History className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">
-                        Prescription Timeline
-                      </CardTitle>
-                      <CardDescription>
-                        Progress history and updates
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-6">
-                    {/* Timeline */}
-                    <div className="relative">
-                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-
-                      {data.progress &&
-                        data.progress.map((progress) => (
-                          <div
-                            key={progress.id}
-                            className="relative mb-6 last:mb-0"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-                                  progress.step >= data.status
-                                    ? "bg-green-100 border-2 border-green-500"
-                                    : "bg-gray-100 border-2 border-gray-300"
-                                }`}
-                              >
-                                {progress.step >= data.status ? (
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                                )}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-1">
-                                  <p className="font-medium text-gray-900">
-                                    {prescriptionProgressStatus[progress.step]
-                                      ?.desc || `Step ${progress.step}`}
-                                  </p>
-                                  <span className="text-xs text-gray-500">
-                                    {moment(progress.timestamp).format(
-                                      "h:mm A",
-                                    )}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-gray-600">
-                                  {formatDate(progress.timestamp)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-
-                    <Separator />
-
-                    {/* Staff Information */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Stethoscope className="w-4 h-4 text-gray-400" />
-                        <label className="text-sm font-medium text-gray-700">
-                          Responsible Staff
-                        </label>
-                      </div>
-
-                      {data.processBy && (
-                        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-blue-100 text-blue-700">
-                              {getInitials(
-                                `${data.processBy.firstName} ${data.processBy.lastName}`,
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {data.processBy.firstName}{" "}
-                              {data.processBy.lastName}
-                            </p>
-                            {data.processBy.Position && (
-                              <p className="text-xs text-gray-600">
-                                {data.processBy.Position.name}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500">
-                              Processed By
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {data.respondedBy && (
-                        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-green-100 text-green-700">
-                              {getInitials(
-                                `${data.respondedBy.firstName} ${data.respondedBy.lastName}`,
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {data.respondedBy.firstName}{" "}
-                              {data.respondedBy.lastName}
-                            </p>
-                            {data.respondedBy.Position && (
-                              <p className="text-xs text-gray-600">
-                                {data.respondedBy.Position.name}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-500">
-                              Responded By
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Attached Files */}
               {data.assets && data.assets.length > 0 && (
-                <Card className="border-0 shadow-lg">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 rounded-lg">
-                        <File className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          Attached Files
-                        </CardTitle>
-                        <CardDescription>
-                          {data.assets.length} file
-                          {data.assets.length !== 1 ? "s" : ""}
-                        </CardDescription>
-                      </div>
+                <Card className="border shadow-sm">
+                  <div className="px-4 py-2 border-b bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <File className="h-3 w-3 text-gray-600" />
+                      <h2 className="text-sm font-semibold text-gray-800">
+                        Files
+                      </h2>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
+                  </div>
+                  <CardContent className="p-2">
+                    <div className="space-y-1">
                       {data.assets.map((asset) => (
                         <div
                           key={asset.id}
-                          className="flex items-center gap-3 p-3 border rounded-lg hover:border-blue-300 hover:bg-blue-50/30 transition-colors cursor-pointer group"
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md"
                         >
-                          <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-blue-100">
-                            <FileText className="w-4 h-4 text-gray-500 group-hover:text-blue-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {asset.file_url}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-3 w-3 text-gray-400" />
+                            <p className="text-xs text-gray-600 truncate max-w-[120px]">
                               {asset.file_url}
                             </p>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="h-6 w-6 p-0"
                           >
-                            <Download className="w-3 h-3" />
+                            <Download className="h-3 w-3" />
                           </Button>
                         </div>
                       ))}

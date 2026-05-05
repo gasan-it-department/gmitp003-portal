@@ -30,6 +30,9 @@ const PrescriptionItem = ({ item, no, query }: Props) => {
         <TableCell>{searchedChar(query, item.lastname)}</TableCell>
         <TableCell>{searchedChar(query, item.firstname)}</TableCell>
         <TableCell>{formatDate(item.timestamp)}</TableCell>
+        <TableCell>
+          {item.dateConcluded ? formatDate(item.dateConcluded) : "N/A"}
+        </TableCell>
         <TableCell>{prescriptionStatus[item.status]}</TableCell>
       </TableRow>
       <Modal

@@ -53,6 +53,7 @@ import {
   Box,
   Warehouse,
   TableOfContents,
+  ChevronLeft,
 } from "lucide-react";
 
 //
@@ -64,6 +65,7 @@ import { AddStorageMedSchema } from "@/interface/zod";
 
 const StorageMedUpdate = () => {
   const [selected, setSelected] = useState<Medicine | undefined>(undefined);
+  const [mobileView, setMobileView] = useState<"select" | "form">("select");
   const form = useForm<AddStorageMedProps>({
     resolver: zodResolver(AddStorageMedSchema),
     defaultValues: {
@@ -98,6 +100,7 @@ const StorageMedUpdate = () => {
   const handleClear = () => {
     setSelected(undefined);
     reset();
+    setMobileView("select");
   };
 
   const onSubmit = async (data: AddStorageMedProps) => {
@@ -146,7 +149,6 @@ const StorageMedUpdate = () => {
       return response.data;
     } catch (error) {
       console.log(error);
-
       toast.error("Failed to add to the storage", {
         closeButton: false,
       });
@@ -154,86 +156,85 @@ const StorageMedUpdate = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
-      <ResizablePanelGroup direction="horizontal" className="w-full flex-1">
-        {/* Left Panel - Select Medicine */}
-        <ResizablePanel defaultSize={50} minSize={30} className="h-full">
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Select Medicine
-              </h2>
-              <p className="text-sm text-gray-500">
-                Search and select a medicine to add to storage
-              </p>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <SelectMed onChange={setSelected} value={selected} />
-            </div>
-          </div>
-        </ResizablePanel>
-
-        <ResizableHandle />
-
-        {/* Right Panel - Form */}
-        <ResizablePanel defaultSize={50} minSize={30} className="h-full">
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">Add to Storage</h2>
-                  <p className="text-sm text-gray-500">
-                    Configure storage details for{" "}
-                    {selected ? selected.name : "selected item"}
-                  </p>
-                </div>
-                {selected && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleClear}
-                    className="flex items-center gap-2"
-                  >
-                    <Trash className="h-4 w-4" />
-                    Clear
-                  </Button>
-                )}
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Desktop Layout - Hidden on mobile */}
+      <div className="hidden lg:flex w-full h-full">
+        <ResizablePanelGroup direction="horizontal" className="w-full flex-1">
+          {/* Left Panel - Select Medicine */}
+          <ResizablePanel defaultSize={50} minSize={30} className="h-full">
+            <div className="h-full flex flex-col bg-white rounded-l-lg border-r">
+              <div className="p-4 border-b">
+                <h2 className="text-base font-semibold flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Select Medicine
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Search and select a medicine to add to storage
+                </p>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <SelectMed onChange={setSelected} value={selected} />
               </div>
             </div>
+          </ResizablePanel>
 
-            <div className="flex-1 overflow-y-auto">
-              {selected ? (
-                <div className="p-4 space-y-6">
-                  {/* Selected Item Info */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <PackageCheck className="h-8 w-8 text-blue-600" />
-                      <div>
-                        <h3 className="font-semibold">{selected.name}</h3>
-                        {/* <p className="text-sm text-gray-600">
-                          {selected.genericName || "No generic name"} • Stock: {selected.quantity || "N/A"}
-                        </p> */}
+          <ResizableHandle />
+
+          {/* Right Panel - Form */}
+          <ResizablePanel defaultSize={50} minSize={30} className="h-full">
+            <div className="h-full flex flex-col bg-white rounded-r-lg">
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-semibold">Add to Storage</h2>
+                    <p className="text-xs text-gray-500">
+                      Configure storage details for{" "}
+                      {selected ? selected.name : "selected item"}
+                    </p>
+                  </div>
+                  {selected && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleClear}
+                      className="flex items-center gap-2 h-8 text-xs"
+                    >
+                      <Trash className="h-3.5 w-3.5" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                {selected ? (
+                  <div className="p-4 space-y-4">
+                    {/* Selected Item Info */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <PackageCheck className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <h3 className="font-semibold text-sm">
+                            {selected.name}
+                          </h3>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <Form {...form}>
-                    <div className="space-y-4">
-                      {/* Unit of Measure */}
-                      <FormField
-                        control={control}
-                        name="unitOfmeasure"
-                        render={({ field: { onChange, value } }) => (
-                          <FormItem>
-                            <FormLabel>Unit of Measure</FormLabel>
-                            <FormControl>
-                              <InputGroup className="bg-white">
-                                <InputGroupAddon>
-                                  <Package className="h-4 w-4" />
-                                </InputGroupAddon>
+                    <Form {...form}>
+                      <div className="space-y-4">
+                        {/* Unit of Measure */}
+                        <FormField
+                          control={control}
+                          name="unitOfmeasure"
+                          render={({ field: { onChange, value } }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">
+                                Unit of Measure
+                              </FormLabel>
+                              <FormControl>
                                 <Select value={value} onValueChange={onChange}>
-                                  <SelectTrigger className="flex-1">
+                                  <SelectTrigger className="h-9 text-sm">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -244,36 +245,505 @@ const StorageMedUpdate = () => {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </InputGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      {/* Quantity and Per Unit Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Quantity and Per Unit Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={control}
+                            name="quantity"
+                            render={({
+                              field: { onChange, value, onBlur },
+                            }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">
+                                  Quantity
+                                </FormLabel>
+                                <FormControl>
+                                  <InputGroup className="bg-white">
+                                    <InputGroupAddon>
+                                      <Tally5 className="h-3.5 w-3.5" />
+                                    </InputGroupAddon>
+                                    <InputGroupInput
+                                      onChange={onChange}
+                                      onBlur={onBlur}
+                                      value={value}
+                                      type="number"
+                                      min="1"
+                                      placeholder="Qty"
+                                      className="h-9 text-sm"
+                                    />
+                                  </InputGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={control}
+                            name="perUnit"
+                            render={({
+                              field: { onChange, value, onBlur },
+                            }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">
+                                  Per Unit
+                                </FormLabel>
+                                <FormControl>
+                                  <InputGroup className="bg-white">
+                                    <InputGroupAddon>
+                                      <Boxes className="h-3.5 w-3.5" />
+                                    </InputGroupAddon>
+                                    <InputGroupInput
+                                      onChange={onChange}
+                                      onBlur={onBlur}
+                                      value={value}
+                                      type="number"
+                                      min="1"
+                                      placeholder="Items/unit"
+                                      className="h-9 text-sm"
+                                    />
+                                  </InputGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Actual Total Display */}
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <FormLabel className="text-sm">
+                            Actual Total Items
+                          </FormLabel>
+                          <InputGroup className="bg-white mt-1">
+                            <InputGroupAddon>
+                              <Gauge className="h-3.5 w-3.5" />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              value={actualTotal}
+                              type="text"
+                              disabled={true}
+                              className="h-9 text-sm font-semibold"
+                            />
+                          </InputGroup>
+                          <FormDescription className="text-xs mt-1">
+                            Calculated: {quantity || 0} × {perUnit || 0} ={" "}
+                            {actualTotal}
+                          </FormDescription>
+                        </div>
+
+                        {/* Threshold */}
                         <FormField
                           control={control}
-                          name="quantity"
+                          name="thresHold"
                           render={({ field: { onChange, value, onBlur } }) => (
                             <FormItem>
-                              <FormLabel>Quantity</FormLabel>
+                              <FormLabel className="text-sm">
+                                Low Stock Threshold
+                              </FormLabel>
                               <FormControl>
                                 <InputGroup className="bg-white">
                                   <InputGroupAddon>
-                                    <Tally5 className="h-4 w-4" />
+                                    <Gauge className="h-3.5 w-3.5" />
                                   </InputGroupAddon>
                                   <InputGroupInput
                                     onChange={onChange}
                                     onBlur={onBlur}
                                     value={value}
                                     type="number"
-                                    min="1"
-                                    placeholder="Enter quantity"
+                                    min="0"
+                                    placeholder="Set alert level"
+                                    className="h-9 text-sm"
                                   />
                                 </InputGroup>
                               </FormControl>
+                              <FormDescription className="text-xs">
+                                Notification when stock falls below this level
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={control}
+                            name="manufacturingDate"
+                            render={({
+                              field: { onChange, value, onBlur },
+                            }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">
+                                  Manufacturing Date
+                                </FormLabel>
+                                <FormControl>
+                                  <InputGroup className="bg-white">
+                                    <InputGroupAddon>
+                                      <CalendarClock className="h-3.5 w-3.5" />
+                                    </InputGroupAddon>
+                                    <InputGroupInput
+                                      onChange={onChange}
+                                      onBlur={onBlur}
+                                      value={value}
+                                      type="date"
+                                      className="h-9 text-sm"
+                                    />
+                                  </InputGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={control}
+                            name="expiration"
+                            render={({
+                              field: { onChange, value, onBlur },
+                            }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">
+                                  Expiration Date
+                                </FormLabel>
+                                <FormControl>
+                                  <InputGroup className="bg-white">
+                                    <InputGroupAddon>
+                                      <CalendarClock className="h-3.5 w-3.5" />
+                                    </InputGroupAddon>
+                                    <InputGroupInput
+                                      onChange={onChange}
+                                      onBlur={onBlur}
+                                      value={value}
+                                      type="date"
+                                      className="h-9 text-sm"
+                                    />
+                                  </InputGroup>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Storage Location */}
+                        <div className="border-t pt-3">
+                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <LayoutPanelTop className="h-4 w-4" />
+                            Storage Location (optional)
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                              control={control}
+                              name="addressRoom"
+                              render={({
+                                field: { onChange, value, onBlur },
+                              }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">
+                                    Room
+                                  </FormLabel>
+                                  <FormControl>
+                                    <InputGroup className="bg-white">
+                                      <InputGroupAddon>
+                                        <Warehouse className="h-3.5 w-3.5" />
+                                      </InputGroupAddon>
+                                      <InputGroupInput
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        value={value}
+                                        placeholder="Room"
+                                        className="h-9 text-sm"
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={control}
+                              name="addressSec"
+                              render={({
+                                field: { onChange, value, onBlur },
+                              }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">
+                                    Section
+                                  </FormLabel>
+                                  <FormControl>
+                                    <InputGroup className="bg-white">
+                                      <InputGroupAddon>
+                                        <TableOfContents className="h-3.5 w-3.5" />
+                                      </InputGroupAddon>
+                                      <InputGroupInput
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        value={value}
+                                        placeholder="Section"
+                                        className="h-9 text-sm"
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={control}
+                              name="addressRow"
+                              render={({
+                                field: { onChange, value, onBlur },
+                              }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Row</FormLabel>
+                                  <FormControl>
+                                    <InputGroup className="bg-white">
+                                      <InputGroupAddon>
+                                        <Rows2 className="h-3.5 w-3.5" />
+                                      </InputGroupAddon>
+                                      <InputGroupInput
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        value={value}
+                                        placeholder="Row"
+                                        className="h-9 text-sm"
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={control}
+                              name="addressCol"
+                              render={({
+                                field: { onChange, value, onBlur },
+                              }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs">
+                                    Column
+                                  </FormLabel>
+                                  <FormControl>
+                                    <InputGroup className="bg-white">
+                                      <InputGroupAddon>
+                                        <Columns2 className="h-3.5 w-3.5" />
+                                      </InputGroupAddon>
+                                      <InputGroupInput
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        value={value}
+                                        placeholder="Column"
+                                        className="h-9 text-sm"
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={control}
+                              name="container"
+                              render={({
+                                field: { onChange, value, onBlur },
+                              }) => (
+                                <FormItem className="col-span-2">
+                                  <FormLabel className="text-xs">
+                                    Container
+                                  </FormLabel>
+                                  <FormControl>
+                                    <InputGroup className="bg-white">
+                                      <InputGroupAddon>
+                                        <Box className="h-3.5 w-3.5" />
+                                      </InputGroupAddon>
+                                      <InputGroupInput
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        value={value}
+                                        placeholder="Container"
+                                        className="h-9 text-sm"
+                                      />
+                                    </InputGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </Form>
+
+                    {/* Submit Button */}
+                    <div className="sticky bottom-0 bg-white border-t pt-3 mt-4 -mx-4 px-4 pb-3">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleClear}
+                          disabled={isSubmitting}
+                          className="h-9 text-sm"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleSubmit(onSubmit)}
+                          disabled={isSubmitting}
+                          className="h-9 text-sm min-w-[100px] bg-gradient-to-r from-blue-600 to-blue-700"
+                        >
+                          {isSubmitting ? "Adding..." : "Add to Storage"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-sm space-y-3">
+                      <div className="rounded-full bg-gray-100 p-4 inline-block">
+                        <MousePointerClick className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-700">
+                          Select a Medicine
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Choose a medicine from the left panel to configure
+                          storage details.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="lg:hidden flex flex-col h-full">
+        {mobileView === "select" ? (
+          // Select Medicine View
+          <div className="flex flex-col h-full bg-white">
+            <div className="p-3 border-b sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-blue-600" />
+                <h2 className="text-sm font-semibold">Select Medicine</h2>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Search and select a medicine to add to storage
+              </p>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <SelectMed
+                onChange={(med) => {
+                  setSelected(med);
+                  if (med) setMobileView("form");
+                }}
+                value={selected}
+              />
+            </div>
+          </div>
+        ) : (
+          // Add to Storage Form View
+          <div className="flex flex-col h-full bg-white">
+            <div className="p-3 border-b sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setMobileView("select")}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div>
+                    <h2 className="text-sm font-semibold">Add to Storage</h2>
+                    <p className="text-xs text-gray-500">
+                      {selected ? selected.name : "Configure details"}
+                    </p>
+                  </div>
+                </div>
+                {selected && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleClear}
+                    className="h-7 text-xs gap-1"
+                  >
+                    <Trash className="h-3 w-3" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3">
+              {selected ? (
+                <>
+                  {/* Selected Item Info */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <PackageCheck className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <h3 className="font-semibold text-sm">
+                          {selected.name}
+                        </h3>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Form {...form}>
+                    <div className="space-y-4">
+                      <FormField
+                        control={control}
+                        name="unitOfmeasure"
+                        render={({ field: { onChange, value } }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm">
+                              Unit of Measure
+                            </FormLabel>
+                            <Select value={value} onValueChange={onChange}>
+                              <SelectTrigger className="h-9 text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {unitOfMeasure.map((item, i) => (
+                                  <SelectItem key={i} value={item.value}>
+                                    {item.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={control}
+                          name="quantity"
+                          render={({ field: { onChange, value, onBlur } }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">
+                                Quantity
+                              </FormLabel>
+                              <InputGroup>
+                                <InputGroupAddon>
+                                  <Tally5 className="h-3.5 w-3.5" />
+                                </InputGroupAddon>
+                                <InputGroupInput
+                                  onChange={onChange}
+                                  onBlur={onBlur}
+                                  value={value}
+                                  type="number"
+                                  min="1"
+                                  className="h-9 text-sm"
+                                />
+                              </InputGroup>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -284,138 +754,131 @@ const StorageMedUpdate = () => {
                           name="perUnit"
                           render={({ field: { onChange, value, onBlur } }) => (
                             <FormItem>
-                              <FormLabel>Per Unit</FormLabel>
-                              <FormControl>
-                                <InputGroup className="bg-white">
-                                  <InputGroupAddon>
-                                    <Boxes className="h-4 w-4" />
-                                  </InputGroupAddon>
-                                  <InputGroupInput
-                                    onChange={onChange}
-                                    onBlur={onBlur}
-                                    value={value}
-                                    type="number"
-                                    min="1"
-                                    placeholder="Items per unit"
-                                  />
-                                </InputGroup>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* Actual Total Display */}
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <FormLabel>Actual Total Items</FormLabel>
-                        <InputGroup className="bg-white mt-2">
-                          <InputGroupAddon>
-                            <Gauge className="h-4 w-4" />
-                          </InputGroupAddon>
-                          <InputGroupInput
-                            value={actualTotal}
-                            type="text"
-                            placeholder="Total will be calculated"
-                            disabled={true}
-                            className="font-semibold"
-                          />
-                        </InputGroup>
-                        <FormDescription className="mt-2">
-                          Calculated: {quantity || 0} units × {perUnit || 0}{" "}
-                          items per unit
-                        </FormDescription>
-                      </div>
-
-                      {/* Threshold */}
-                      <FormField
-                        control={control}
-                        name="thresHold"
-                        render={({ field: { onChange, value, onBlur } }) => (
-                          <FormItem>
-                            <FormLabel>Low Stock Threshold</FormLabel>
-                            <FormControl>
-                              <InputGroup className="bg-white">
+                              <FormLabel className="text-sm">
+                                Per Unit
+                              </FormLabel>
+                              <InputGroup>
                                 <InputGroupAddon>
-                                  <Gauge className="h-4 w-4" />
+                                  <Boxes className="h-3.5 w-3.5" />
                                 </InputGroupAddon>
                                 <InputGroupInput
                                   onChange={onChange}
                                   onBlur={onBlur}
                                   value={value}
                                   type="number"
-                                  min="0"
-                                  placeholder="Set low stock alert level"
+                                  min="1"
+                                  className="h-9 text-sm"
                                 />
                               </InputGroup>
-                            </FormControl>
-                            <FormDescription>
-                              You'll receive notifications when stock falls
-                              below this level
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <FormLabel className="text-sm">
+                          Actual Total Items
+                        </FormLabel>
+                        <InputGroup className="mt-1">
+                          <InputGroupAddon>
+                            <Gauge className="h-3.5 w-3.5" />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            value={actualTotal}
+                            disabled={true}
+                            className="h-9 text-sm font-semibold"
+                          />
+                        </InputGroup>
+                      </div>
+
+                      <FormField
+                        control={control}
+                        name="thresHold"
+                        render={({ field: { onChange, value, onBlur } }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm">
+                              Low Stock Threshold
+                            </FormLabel>
+                            <InputGroup>
+                              <InputGroupAddon>
+                                <Gauge className="h-3.5 w-3.5" />
+                              </InputGroupAddon>
+                              <InputGroupInput
+                                onChange={onChange}
+                                onBlur={onBlur}
+                                value={value}
+                                type="number"
+                                min="0"
+                                className="h-9 text-sm"
+                              />
+                            </InputGroup>
+                            <FormDescription className="text-xs">
+                              Alert when stock falls below this level
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      <FormField
-                        control={control}
-                        name="manufacturingDate"
-                        render={({ field: { onChange, value, onBlur } }) => (
-                          <FormItem>
-                            <FormLabel>Manufacturing Date</FormLabel>
-                            <FormControl>
-                              <InputGroup className="bg-white">
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={control}
+                          name="manufacturingDate"
+                          render={({ field: { onChange, value, onBlur } }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">
+                                Manufacturing Date
+                              </FormLabel>
+                              <InputGroup>
                                 <InputGroupAddon>
-                                  <CalendarClock className="h-4 w-4" />
+                                  <CalendarClock className="h-3.5 w-3.5" />
                                 </InputGroupAddon>
                                 <InputGroupInput
                                   onChange={onChange}
                                   onBlur={onBlur}
                                   value={value}
                                   type="date"
-                                  min={new Date().toISOString().split("T")[0]}
+                                  className="h-9 text-sm"
                                 />
                               </InputGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      {/* Expiration Date */}
-                      <FormField
-                        control={control}
-                        name="expiration"
-                        render={({ field: { onChange, value, onBlur } }) => (
-                          <FormItem>
-                            <FormLabel>Expiration Date</FormLabel>
-                            <FormControl>
-                              <InputGroup className="bg-white">
+                        <FormField
+                          control={control}
+                          name="expiration"
+                          render={({ field: { onChange, value, onBlur } }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">
+                                Expiration Date
+                              </FormLabel>
+                              <InputGroup>
                                 <InputGroupAddon>
-                                  <CalendarClock className="h-4 w-4" />
+                                  <CalendarClock className="h-3.5 w-3.5" />
                                 </InputGroupAddon>
                                 <InputGroupInput
                                   onChange={onChange}
                                   onBlur={onBlur}
                                   value={value}
                                   type="date"
-                                  min={new Date().toISOString().split("T")[0]}
+                                  className="h-9 text-sm"
                                 />
                               </InputGroup>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
                       {/* Storage Location */}
-                      <div className="border-t pt-4">
-                        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                          <LayoutPanelTop className="h-5 w-5" />
+                      <div className="border-t pt-3">
+                        <h3 className="text-sm font-semibold mb-2">
                           Storage Location (optional)
                         </h3>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={control}
                             name="addressRoom"
@@ -423,20 +886,19 @@ const StorageMedUpdate = () => {
                               field: { onChange, value, onBlur },
                             }) => (
                               <FormItem>
-                                <FormLabel>Room</FormLabel>
-                                <FormControl>
-                                  <InputGroup className="bg-white">
-                                    <InputGroupAddon>
-                                      <Warehouse className="h-4 w-4" />
-                                    </InputGroupAddon>
-                                    <InputGroupInput
-                                      onChange={onChange}
-                                      onBlur={onBlur}
-                                      value={value}
-                                      placeholder="Room number/name"
-                                    />
-                                  </InputGroup>
-                                </FormControl>
+                                <FormLabel className="text-xs">Room</FormLabel>
+                                <InputGroup>
+                                  <InputGroupAddon>
+                                    <Warehouse className="h-3.5 w-3.5" />
+                                  </InputGroupAddon>
+                                  <InputGroupInput
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    value={value}
+                                    placeholder="Room"
+                                    className="h-9 text-sm"
+                                  />
+                                </InputGroup>
                               </FormItem>
                             )}
                           />
@@ -447,24 +909,24 @@ const StorageMedUpdate = () => {
                               field: { onChange, value, onBlur },
                             }) => (
                               <FormItem>
-                                <FormLabel>Section</FormLabel>
-                                <FormControl>
-                                  <InputGroup className="bg-white">
-                                    <InputGroupAddon>
-                                      <TableOfContents className="h-4 w-4" />
-                                    </InputGroupAddon>
-                                    <InputGroupInput
-                                      onChange={onChange}
-                                      onBlur={onBlur}
-                                      value={value}
-                                      placeholder="Section"
-                                    />
-                                  </InputGroup>
-                                </FormControl>
+                                <FormLabel className="text-xs">
+                                  Section
+                                </FormLabel>
+                                <InputGroup>
+                                  <InputGroupAddon>
+                                    <TableOfContents className="h-3.5 w-3.5" />
+                                  </InputGroupAddon>
+                                  <InputGroupInput
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    value={value}
+                                    placeholder="Section"
+                                    className="h-9 text-sm"
+                                  />
+                                </InputGroup>
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={control}
                             name="addressRow"
@@ -472,24 +934,22 @@ const StorageMedUpdate = () => {
                               field: { onChange, value, onBlur },
                             }) => (
                               <FormItem>
-                                <FormLabel>Row</FormLabel>
-                                <FormControl>
-                                  <InputGroup className="bg-white">
-                                    <InputGroupAddon>
-                                      <Rows2 className="h-4 w-4" />
-                                    </InputGroupAddon>
-                                    <InputGroupInput
-                                      onChange={onChange}
-                                      onBlur={onBlur}
-                                      value={value}
-                                      placeholder="Row"
-                                    />
-                                  </InputGroup>
-                                </FormControl>
+                                <FormLabel className="text-xs">Row</FormLabel>
+                                <InputGroup>
+                                  <InputGroupAddon>
+                                    <Rows2 className="h-3.5 w-3.5" />
+                                  </InputGroupAddon>
+                                  <InputGroupInput
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    value={value}
+                                    placeholder="Row"
+                                    className="h-9 text-sm"
+                                  />
+                                </InputGroup>
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={control}
                             name="addressCol"
@@ -497,45 +957,46 @@ const StorageMedUpdate = () => {
                               field: { onChange, value, onBlur },
                             }) => (
                               <FormItem>
-                                <FormLabel>Col</FormLabel>
-                                <FormControl>
-                                  <InputGroup className="bg-white">
-                                    <InputGroupAddon>
-                                      <Columns2 className="h-4 w-4" />
-                                    </InputGroupAddon>
-                                    <InputGroupInput
-                                      onChange={onChange}
-                                      onBlur={onBlur}
-                                      value={value}
-                                      placeholder="Column"
-                                    />
-                                  </InputGroup>
-                                </FormControl>
+                                <FormLabel className="text-xs">
+                                  Column
+                                </FormLabel>
+                                <InputGroup>
+                                  <InputGroupAddon>
+                                    <Columns2 className="h-3.5 w-3.5" />
+                                  </InputGroupAddon>
+                                  <InputGroupInput
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    value={value}
+                                    placeholder="Col"
+                                    className="h-9 text-sm"
+                                  />
+                                </InputGroup>
                               </FormItem>
                             )}
                           />
-
                           <FormField
                             control={control}
                             name="container"
                             render={({
                               field: { onChange, value, onBlur },
                             }) => (
-                              <FormItem>
-                                <FormLabel>Container</FormLabel>
-                                <FormControl>
-                                  <InputGroup className="bg-white">
-                                    <InputGroupAddon>
-                                      <Box className="h-4 w-4" />
-                                    </InputGroupAddon>
-                                    <InputGroupInput
-                                      onChange={onChange}
-                                      onBlur={onBlur}
-                                      value={value}
-                                      placeholder="Container"
-                                    />
-                                  </InputGroup>
-                                </FormControl>
+                              <FormItem className="col-span-2">
+                                <FormLabel className="text-xs">
+                                  Container
+                                </FormLabel>
+                                <InputGroup>
+                                  <InputGroupAddon>
+                                    <Box className="h-3.5 w-3.5" />
+                                  </InputGroupAddon>
+                                  <InputGroupInput
+                                    onChange={onChange}
+                                    onBlur={onBlur}
+                                    value={value}
+                                    placeholder="Container"
+                                    className="h-9 text-sm"
+                                  />
+                                </InputGroup>
                               </FormItem>
                             )}
                           />
@@ -543,50 +1004,44 @@ const StorageMedUpdate = () => {
                       </div>
                     </div>
                   </Form>
-
-                  {/* Submit Button */}
-                  <div className="sticky bottom-0 bg-white border-t pt-4 mt-6">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleClear}
-                        disabled={isSubmitting}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSubmit(onSubmit)}
-                        disabled={isSubmitting}
-                        className="min-w-[100px]"
-                      >
-                        {isSubmitting ? "Adding..." : "Add to Storage"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                </>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                  <div className="max-w-md space-y-4">
-                    <div className="rounded-full bg-gray-100 p-6 inline-block">
-                      <MousePointerClick className="h-12 w-12 text-gray-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700">
-                        Select a Medicine
-                      </h3>
-                      <p className="text-gray-500 mt-2">
-                        Choose a medicine from the left panel to configure
-                        storage details. You can search by name, generic name,
-                        or category.
-                      </p>
-                    </div>
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <div className="rounded-full bg-gray-100 p-4 mb-3">
+                    <MousePointerClick className="h-8 w-8 text-gray-400" />
                   </div>
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    No Medicine Selected
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Go back and select a medicine first
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMobileView("select")}
+                    className="mt-3"
+                  >
+                    Select Medicine
+                  </Button>
                 </div>
               )}
             </div>
+
+            {selected && (
+              <div className="sticky bottom-0 bg-white border-t p-3">
+                <Button
+                  onClick={handleSubmit(onSubmit)}
+                  disabled={isSubmitting}
+                  className="w-full h-9 text-sm bg-gradient-to-r from-blue-600 to-blue-700"
+                >
+                  {isSubmitting ? "Adding..." : "Add to Storage"}
+                </Button>
+              </div>
+            )}
           </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        )}
+      </div>
     </div>
   );
 };

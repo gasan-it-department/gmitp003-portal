@@ -372,6 +372,7 @@ export const DispenseItemSchema = z.object({
   unitId: z.string().optional(),
   userId: z.string().optional(),
   desc: z.string().optional(),
+  stockId: z.string().min(1, "Select stock"),
   quantity: z
     .string()
     .min(1, "Quantity is required")
@@ -777,4 +778,13 @@ export const ArchiveNewDocsSchema = z.object({
 
 export const VacantPositionSchema = z.object({
   status: z.string().optional(),
+});
+
+export const UpdateTransactionSchema = z.object({
+  userId: z.string().optional(),
+  unitId: z.string().optional(),
+  quantity: z.string().optional(),
+  toAccount: z.boolean(),
+  forUnit: z.boolean(),
+  address: z.string(),
 });

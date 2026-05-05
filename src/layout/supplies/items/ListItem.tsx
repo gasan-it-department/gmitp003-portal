@@ -9,16 +9,17 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DispenseItem from "../DispenseItem";
 import ConfirmDelete from "@/layout/ConfirmDelete";
+import SelectStockDispense from "@/layout/SelectStockDispense";
 //utils
 import { searchedChar } from "@/utils/element";
 
 //
 import { CircleX, HandHelping, Package } from "lucide-react";
 //interfaces and Props
-import type { SupplyStockTrack, ProtectedRouteProps } from "@/interface/data";
+import type { SuppliesProps, ProtectedRouteProps } from "@/interface/data";
 
 interface Props {
-  item: SupplyStockTrack;
+  item: SuppliesProps;
   index: number;
   query: string;
   lineId: string;
@@ -37,17 +38,18 @@ const ListItem = ({
   auth,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const [itemId, setItemId] = useState("");
 
   const queryClient = useQueryClient();
 
-  const stockStatus = item.stock > 10 ? "Good" : "Low";
-  const stockColor = item.stock < 10 ? "text-red-600" : "text-green-600";
-  const stockBgColor = item.stock < 10 ? "bg-red-50" : "bg-green-50";
+  const stockStatus = item.totalStock > 10 ? "Good" : "Low";
+  const stockColor = item.totalStock < 10 ? "text-red-600" : "text-green-600";
+  const stockBgColor = item.totalStock < 10 ? "bg-red-50" : "bg-green-50";
 
   const handleRemove = useMutation({
     mutationFn: () =>
       removeStockInlist(
-        item.id,
+        itemId,
         auth.userId as string,
         lineId,
         listId,
@@ -77,10 +79,10 @@ const ListItem = ({
           {index}
         </TableCell>
         <TableCell className="py-3 px-4 font-mono text-sm text-slate-700">
-          {item.supply.code || "N/A"}
+          {item.code || "N/A"}
         </TableCell>
         <TableCell className="py-3 px-4 font-medium text-slate-900">
-          {searchedChar(query, item.supply.item)}
+          {searchedChar(query, item.item)}
         </TableCell>
         {/* <TableCell className="py-3 px-4 text-slate-600">
             {item.brand.length > 0 ? (
@@ -102,10 +104,10 @@ const ListItem = ({
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full ${
-                item.stock > 10 ? "bg-green-500" : "bg-red-500"
+                item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
-            <span className="font-semibold">{item.stock}</span>
+            <span className="font-semibold">{item.totalStock}</span>
           </div>
         </TableCell>
         <TableCell className="py-3 px-4">
@@ -114,7 +116,7 @@ const ListItem = ({
           >
             <div
               className={`w-2 h-2 rounded-full ${
-                item.stock > 10 ? "bg-green-500" : "bg-red-500"
+                item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
             <span className="font-medium text-sm">{stockStatus}</span>
@@ -141,10 +143,10 @@ const ListItem = ({
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-lg text-slate-900">
-                  {item.supply.item}
+                  {item.item}
                 </h3>
                 <p className="text-sm text-slate-500">
-                  Ref: {item.supply.refNumber || "N/A"}
+                  Ref: {item.refNumber || "N/A"}
                 </p>
               </div>
             </div>
@@ -154,10 +156,10 @@ const ListItem = ({
                 <p className="text-slate-500">Current Stock</p>
                 <p
                   className={`text-lg font-bold ${
-                    item.stock < 10 ? "text-red-600" : "text-green-600"
+                    item.totalStock < 10 ? "text-red-600" : "text-green-600"
                   }`}
                 >
-                  {item.stock} units
+                  {item.totalStock} units
                 </p>
               </div>
               <div className="space-y-1">
@@ -167,7 +169,7 @@ const ListItem = ({
                 >
                   <div
                     className={`w-2 h-2 rounded-full ${
-                      item.stock > 10 ? "bg-green-500" : "bg-red-500"
+                      item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
                     }`}
                   ></div>
                   <span className="font-medium">{stockStatus}</span>
@@ -212,9 +214,9 @@ const ListItem = ({
             >
               <CircleX className="w-4 h-4" />
               <div className="text-left">
-                <p className="font-medium">Remove Item</p>
+                <p className="font-medium">Collapse Item stock</p>
                 <p className="text-xs text-gray-200">
-                  Permanently delete from inventory
+                  Permanently remove from in-track list
                 </p>
               </div>
             </Button>
@@ -223,7 +225,7 @@ const ListItem = ({
       </Modal>
 
       <Modal
-        title="Remove Item"
+        title={undefined}
         onOpen={onOpen === 4}
         className="max-w-md"
         footer={1}
@@ -237,6 +239,15 @@ const ListItem = ({
       >
         <div className="space-y-6">
           <ConfirmDelete
+            title={`Collapse Item - ${item.item}`}
+            children={
+              <SelectStockDispense
+                items={item.SupplyStockTrack}
+                onChange={(e) => setItemId(e)}
+                value={itemId}
+                className={""}
+              />
+            }
             onFunction={() => {
               handleRemove.mutateAsync();
             }}

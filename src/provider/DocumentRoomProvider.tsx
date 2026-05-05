@@ -42,7 +42,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     refetchOnReconnect: false,
   });
 
-  console.log(data);
+  console.log({ data });
 
   if (isFetching) {
     return (

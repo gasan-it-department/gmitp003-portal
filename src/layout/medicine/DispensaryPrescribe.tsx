@@ -17,10 +17,8 @@ import {
   TableHeader,
   TableHead,
   TableRow,
-  //TableCell,
 } from "@/components/ui/table";
 import SWWItem from "../item/SWWItem";
-//import { searchedChar } from "@/utils/element";
 import { toast } from "sonner";
 //
 import { Search, Package, AlertCircle, Loader2 } from "lucide-react";
@@ -80,6 +78,9 @@ const DispensaryPrescribe = ({
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
@@ -95,30 +96,24 @@ const DispensaryPrescribe = ({
     }
   }, [inView, hasNextPage, isFetching, isFetchingNextPage, fetchNextPage]);
 
-  // Calculate flattened data once
   const allMedicines = data?.pages.flatMap((page) => page.list) || [];
   const totalCount = allMedicines.length;
   const hasSearchQuery = query.length > 0;
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-white">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600" />
+      {/* Header - Mobile responsive */}
+      <div className="p-3 sm:p-4 border-b bg-gradient-to-r from-blue-50 to-white">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Medication Inventory
-              </h2>
-              <p className="text-sm text-gray-500">
-                Browse and select available medications
-              </p>
-            </div>
+            <p className="text-xs sm:text-sm text-gray-500">
+              Browse medications
+            </p>
           </div>
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="text-[10px] sm:text-xs">
             {totalCount} items
           </Badge>
         </div>
@@ -127,21 +122,14 @@ const DispensaryPrescribe = ({
         <div className="relative">
           <InputGroup className="bg-white border shadow-sm">
             <InputGroupAddon>
-              <Search className="h-4 w-4 text-gray-400" />
+              <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
             </InputGroupAddon>
             <InputGroupInput
-              placeholder="Search by medicine name, brand, or code..."
+              placeholder="Search medicine..."
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="placeholder:text-gray-400"
+              className="placeholder:text-gray-400 text-sm h-9 sm:h-auto"
             />
-            {hasSearchQuery && (
-              <div className="absolute right-12 top-1/2 transform -translate-y-1/2">
-                <Badge variant="secondary" className="text-xs">
-                  Searching...
-                </Badge>
-              </div>
-            )}
           </InputGroup>
         </div>
       </div>
@@ -150,118 +138,119 @@ const DispensaryPrescribe = ({
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           {isFetching && !isFetchingNextPage ? (
-            // Initial loading skeleton
-            <div className="p-4 space-y-3">
+            // Loading skeleton - responsive
+            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
               {[...Array(5)].map((_, i) => (
                 <Card key={i} className="border">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-3 w-32" />
+                      <div className="space-y-1.5 sm:space-y-2 flex-1">
+                        <Skeleton className="h-3.5 sm:h-4 w-32 sm:w-48" />
+                        <Skeleton className="h-2.5 sm:h-3 w-24 sm:w-32" />
                       </div>
-                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-7 sm:h-8 w-16 sm:w-20" />
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           ) : allMedicines.length > 0 ? (
-            // Medicine list
-            <div className="p-4">
-              <Table>
-                <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-16 text-gray-600 font-semibold text-xs uppercase tracking-wider">
-                      No.
-                    </TableHead>
-                    <TableHead className="text-gray-600 font-semibold text-xs uppercase tracking-wider">
-                      Medicine Details
-                    </TableHead>
-                    <TableHead className="text-gray-600 font-semibold text-xs uppercase tracking-wider">
-                      Stock Status
-                    </TableHead>
-                    <TableHead className="w-32 text-gray-600 font-semibold text-xs uppercase tracking-wider">
-                      Action
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allMedicines.map((item, i) => (
-                    <PrescribeMedItem
-                      handleAddPresMed={handleAddPresMed}
-                      key={item.id}
-                      item={item}
-                      no={i + 1}
-                      query={query}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
+            // Medicine list - responsive table with horizontal scroll on mobile
+            <div className="p-3 sm:p-4">
+              <div className="overflow-x-auto">
+                <div className="min-w-[500px] md:min-w-0">
+                  <Table>
+                    <TableHeader className="bg-gray-50 sticky top-0 z-10">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-12 sm:w-16 text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                          No.
+                        </TableHead>
+                        <TableHead className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                          Medicine Details
+                        </TableHead>
+                        <TableHead className="text-gray-600 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">
+                          Ref.
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allMedicines.map((item, i) => (
+                        <PrescribeMedItem
+                          handleAddPresMed={handleAddPresMed}
+                          key={item.id}
+                          item={item}
+                          no={i + 1}
+                          query={query}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
 
               {/* Loading indicator for infinite scroll */}
               {isFetchingNextPage && (
-                <div className="flex items-center justify-center p-6 border-t">
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading more medications...
+                <div className="flex items-center justify-center p-4 sm:p-6 border-t">
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+                    <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                    Loading more...
                   </div>
                 </div>
               )}
 
               {/* End of list indicator */}
-              <div ref={ref} className="py-6">
+              <div ref={ref} className="py-4 sm:py-6">
                 {!hasNextPage && totalCount > 0 && (
                   <div className="text-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        All {totalCount} medications loaded
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 rounded-full border">
+                      <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+                      <span className="text-xs sm:text-sm text-gray-600">
+                        {totalCount} items loaded
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {hasSearchQuery
-                        ? "End of search results"
-                        : "End of inventory list"}
-                    </p>
+                    {hasSearchQuery && (
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5 sm:mt-2">
+                        End of search results
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            // Empty state
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <div className="p-4 bg-gray-100 rounded-full mb-4">
+            // Empty state - responsive
+            <div className="flex flex-col items-center justify-center h-full p-6 sm:p-8 text-center">
+              <div className="p-3 sm:p-4 bg-gray-100 rounded-full mb-3 sm:mb-4">
                 {hasSearchQuery ? (
-                  <Search className="h-8 w-8 text-gray-400" />
+                  <Search className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                 ) : (
-                  <Package className="h-8 w-8 text-gray-400" />
+                  <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
                 )}
               </div>
-              <h3 className="text-lg font-medium text-gray-700 mb-2">
+              <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-1 sm:mb-2">
                 {hasSearchQuery
                   ? "No medications found"
                   : "No medications available"}
               </h3>
-              <p className="text-sm text-gray-500 max-w-sm">
+              <p className="text-xs sm:text-sm text-gray-500 max-w-sm">
                 {hasSearchQuery
-                  ? `No medications match "${query}". Try a different search term.`
-                  : "There are currently no medications in the inventory. Please check back later."}
+                  ? `No matches for "${query}"`
+                  : "No medications in inventory"}
               </p>
             </div>
           )}
 
           {/* Error state */}
           {!isFetching && !data && !isFetchingNextPage && (
-            <div className="flex flex-col items-center justify-center h-full p-8">
-              <div className="p-4 bg-red-50 rounded-full mb-4">
-                <AlertCircle className="h-8 w-8 text-red-400" />
+            <div className="flex flex-col items-center justify-center h-full p-6 sm:p-8">
+              <div className="p-3 sm:p-4 bg-red-50 rounded-full mb-3 sm:mb-4">
+                <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-700 mb-2">
+              <h3 className="text-base sm:text-lg font-medium text-gray-700 mb-1 sm:mb-2">
                 Unable to load medications
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                There was an issue loading the medication list.
+              <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
+                Issue loading medication list
               </p>
               <SWWItem colSpan={4} />
             </div>
@@ -271,23 +260,23 @@ const DispensaryPrescribe = ({
         </ScrollArea>
       </div>
 
-      {/* Footer stats */}
-      <div className="p-3 border-t bg-gray-50">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
+      {/* Footer stats - responsive */}
+      <div className="p-2 sm:p-3 border-t bg-gray-50">
+        <div className="flex items-center justify-between text-xs sm:text-sm">
+          <div className="flex items-center gap-2 sm:gap-4">
             <span className="text-gray-600">
               Total: <span className="font-semibold">{totalCount}</span>
             </span>
             {hasSearchQuery && (
-              <span className="text-gray-600">
+              <span className="text-gray-600 hidden sm:inline">
                 Search: <span className="font-semibold">"{query}"</span>
               </span>
             )}
           </div>
           {isFetching && (
-            <div className="flex items-center gap-2 text-gray-500">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Updating...</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500">
+              <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin" />
+              <span className="text-[10px] sm:text-xs">Updating...</span>
             </div>
           )}
         </div>

@@ -1,26 +1,22 @@
 import axios from "@/db/axios";
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 
 //
-import { archiveDetail, removeArchiveDocument } from "@/db/statements/document";
+import { archiveDetail } from "@/db/statements/document";
 
 //
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Calendar, Hash, ArchiveIcon } from "lucide-react";
 import { toast } from "sonner";
-import ConfirmDelete from "@/layout/ConfirmDelete";
+import RemoveFromAcrhive from "@/layout/e-sign/RemoveFromAcrhive";
 //
 import type { ArchiveDocument } from "@/interface/data";
-import Modal from "@/components/custom/Modal";
 
 const ArchiveDetail = () => {
-  const [isOpen, setIsOpen] = useState(0);
   const auth = useAuth();
-  const { archiveId } = useParams();
-  const navigate = useNavigate();
+  const { archiveId, lineId } = useParams();
 
   const { data, isFetching } = useQuery<ArchiveDocument>({
     queryKey: ["archive-detail", archiveId],
@@ -29,6 +25,8 @@ const ArchiveDetail = () => {
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   });
+
+  console.log({ data });
 
   const handleDownloadFile = async () => {
     try {
@@ -79,21 +77,6 @@ const ArchiveDetail = () => {
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: handleDownloadFile,
-  });
-
-  const removeArchiveMutation = useMutation({
-    mutationFn: () =>
-      removeArchiveDocument(
-        auth.token as string,
-        archiveId as string,
-        auth.userId as string,
-      ),
-    onSuccess: () => {
-      navigate(-1);
-    },
-    onError: () => {
-      toast.error("TRANSACTION FAILED");
-    },
   });
 
   if (isFetching) {
@@ -339,41 +322,18 @@ const ArchiveDetail = () => {
                   <ArchiveIcon className="h-4 w-4 mr-2" />
                   Restore Document
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={() => setIsOpen(1)}
-                >
-                  Delete Permanently
-                </Button>
+                <RemoveFromAcrhive
+                  token={auth.token as string}
+                  userId={auth.userId as string}
+                  lineId={lineId as string}
+                  id={data.id}
+                  roomId={data.receivingRoomId as string}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
-      <Modal
-        title={undefined}
-        footer={1}
-        children={
-          <ConfirmDelete
-            confirmation={"confirm"}
-            setOnOpen={() => {
-              if (removeArchiveMutation.isPending) return;
-              setIsOpen(0);
-            }}
-            onFunction={() => {
-              removeArchiveMutation.mutateAsync();
-            }}
-            isLoading={removeArchiveMutation.isPending}
-          />
-        }
-        onOpen={isOpen === 1}
-        className={""}
-        setOnOpen={() => {
-          if (removeArchiveMutation.isPending) return;
-          setIsOpen(0);
-        }}
-      />
     </div>
   );
 };

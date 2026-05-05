@@ -146,6 +146,9 @@ const Prescriptions = () => {
                     <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[140px]">
                       Date Received
                     </TableHead>
+                    <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[140px]">
+                      Date Completed
+                    </TableHead>
                     <TableHead className="py-3 px-4 text-gray-700 font-semibold min-w-[100px]">
                       Status
                     </TableHead>

@@ -10,6 +10,7 @@ import {
   TableHead,
   TableHeader,
 } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import OverviewSupplyItem from "./items/OverviewSupplyItem";
 import hotkeys, { type HotkeysEvent } from "hotkeys-js";
 //lib/db/statement
@@ -19,7 +20,7 @@ import type { ProtectedRouteProps } from "@/interface/data";
 import { Spinner } from "@/components/ui/spinner"; // Add this import
 
 //
-import { type SupplyStockTrack } from "@/interface/data";
+import { type SuppliesProps } from "@/interface/data";
 interface Props {
   listId: string | undefined;
   auth: ProtectedRouteProps;
@@ -39,7 +40,7 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
     isFetchingNextPage,
     hasNextPage, // Add this
   } = useInfiniteQuery<{
-    list: SupplyStockTrack[];
+    list: SuppliesProps[];
     hasMore: boolean;
     lastCursor: string | null;
   }>({
@@ -98,8 +99,8 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      <div className="flex-1 overflow-hidden">
-        <Table className="w-full">
+      <ScrollArea className="flex-1">
+        <Table className="w-full overflow-x-auto">
           <TableHeader className="sticky top-0 bg-gray-800 z-10">
             <TableRow className="hover:bg-gray-800">
               <TableHead className="text-white py-3 px-4">No.</TableHead>
@@ -222,7 +223,9 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
             )}
           </TableBody>
         </Table>
-      </div>
+        <ScrollBar orientation="horizontal" />
+        <ScrollBar orientation="vertical" />
+      </ScrollArea>
 
       {/* Footer with summary */}
       {!isLoading && totalCount > 0 && (

@@ -17,7 +17,7 @@ import {
   FormMessage,
   FormLabel,
 } from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
+//import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import SelectUnit from "../SelectUnit";
@@ -48,10 +48,9 @@ interface Props {
   no: number;
   lineId: string;
   auth: ProtectedRouteProps;
-  onMultiSelect: boolean;
 }
 
-const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
+const MedicinItem = ({ item, no, lineId, auth }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const form = useForm<MedicineActionProps>({
     resolver: zodResolver(MedicineActionSchema),
@@ -83,13 +82,6 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
   return (
     <>
       <TableRow className="group hover:bg-blue-50/50 cursor-pointer transition-colors">
-        {onMultiSelect && (
-          <TableCell className="border-r">
-            <div className="flex items-center">
-              <Checkbox className="border-gray-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600" />
-            </div>
-          </TableCell>
-        )}
         <TableCell className="border-r py-4">
           <div className="flex items-center justify-center">
             <Badge variant="outline" className="font-mono text-xs">
@@ -383,7 +375,7 @@ const MedicinItem = ({ item, no, lineId, auth, onMultiSelect }: Props) => {
           </div>
         }
         onOpen={onOpen === 3}
-        className="max-w-md max-h-[90vh] overflow-y-auto"
+        className="max-w-md max-h-11/12 overflow-y-auto"
         loading={removeMedicineMutation.isPending}
         setOnOpen={() => {
           if (removeMedicineMutation.isPending) return;

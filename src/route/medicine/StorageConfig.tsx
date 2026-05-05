@@ -37,24 +37,13 @@ import {
 } from "@/components/ui/popover";
 import MedicinItem from "@/layout/medicine/item/MedicinItem";
 import SWWItem from "@/layout/item/SWWItem";
+import UploadMedicineExcel from "@/layout/medicine/UploadMedicineExcel";
 import Modal from "@/components/custom/Modal";
 import { KbdGroup, Kbd } from "@/components/ui/kbd";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 //
-import {
-  Pencil,
-  Plus,
-  Square,
-  SquareCheckBig,
-  Package,
-  Upload,
-  FileSpreadsheet,
-  Search,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import { Pencil, Plus, Package, Search, Loader2 } from "lucide-react";
 
 //
 import type { Medicine, AddNewMedicineProps } from "@/interface/data";
@@ -75,11 +64,8 @@ interface ListProps {
 const StorageConfig = () => {
   const { lineId } = useParams();
   const [onOpen, setOnOpen] = useState(0);
-  const [onMultiSelect, setOnMultiSelect] = useState(false);
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 1000);
-  const [excelFile, setExcelFile] = useState<File | null>(null);
-  const [fileKey, setFileKey] = useState(Date.now());
 
   const auth = useAuth();
   const queryClient = useQueryClient();
@@ -99,7 +85,7 @@ const StorageConfig = () => {
         lineId as string,
         pageParam as string | null,
         "10",
-        query
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
@@ -158,7 +144,7 @@ const StorageConfig = () => {
             "X-Requested-With": "XMLHttpRequest",
             "Cache-Control": "no-cache, no-store, must-revalidate",
           },
-        }
+        },
       );
 
       if (response.status !== 200) {
@@ -179,40 +165,6 @@ const StorageConfig = () => {
     } catch (error) {
       console.log(error);
     }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setExcelFile(file);
-      // You can add file validation here if needed
-      const allowedTypes = [
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "text/csv",
-      ];
-
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Invalid file type. Please upload Excel or CSV file.");
-        setExcelFile(null);
-        setFileKey(Date.now()); // Reset file input
-        return;
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size too large. Maximum size is 10MB.");
-        setExcelFile(null);
-        setFileKey(Date.now()); // Reset file input
-        return;
-      }
-
-      toast.success(`File selected: ${file.name}`);
-    }
-  };
-
-  // Add this function to trigger file input click
-  const triggerFileInput = () => {
-    document.getElementById("excel-file-input")?.click();
   };
 
   useEffect(() => {
@@ -268,20 +220,6 @@ const StorageConfig = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant={onMultiSelect ? "default" : "outline"}
-              size="sm"
-              className="gap-2"
-              onClick={() => setOnMultiSelect(!onMultiSelect)}
-            >
-              {onMultiSelect ? (
-                <SquareCheckBig className="h-4 w-4" />
-              ) : (
-                <Square className="h-4 w-4" />
-              )}
-              {onMultiSelect ? "Selecting..." : "Multi-select"}
-            </Button>
-
             <Popover>
               <PopoverTrigger asChild>
                 <Button className="gap-2 bg-blue-600 hover:bg-blue-700">
@@ -308,22 +246,10 @@ const StorageConfig = () => {
                     </KbdGroup>
                   </Button>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full justify-between h-10"
-                    onClick={() => setOnOpen(2)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="h-4 w-4" />
-                      <span>Upload Excel</span>
-                    </div>
-                    <KbdGroup>
-                      <Kbd>Ctrl</Kbd>
-                      <span>+</span>
-                      <Kbd>U</Kbd>
-                    </KbdGroup>
-                  </Button>
+                  <UploadMedicineExcel
+                    token={auth.token as string}
+                    lineId={lineId as string}
+                  />
                 </div>
                 <div className="mt-3 pt-3 border-t">
                   <p className="text-xs text-gray-500 text-center">
@@ -358,14 +284,6 @@ const StorageConfig = () => {
               <Table>
                 <TableHeader className="sticky top-0 bg-gray-50 z-10">
                   <TableRow className="hover:bg-transparent border-b">
-                    {onMultiSelect && (
-                      <TableHead className="w-16 border-r">
-                        <div className="flex items-center gap-2">
-                          <Checkbox />
-                          <span className="text-xs text-gray-600">Select</span>
-                        </div>
-                      </TableHead>
-                    )}
                     <TableHead className="w-20 text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
                       No.
                     </TableHead>
@@ -383,11 +301,6 @@ const StorageConfig = () => {
                     // Loading skeleton
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i} className="hover:bg-transparent">
-                        {onMultiSelect && (
-                          <TableCell className="border-r">
-                            <Skeleton className="h-4 w-4" />
-                          </TableCell>
-                        )}
                         <TableCell className="border-r">
                           <Skeleton className="h-4 w-6" />
                         </TableCell>
@@ -410,15 +323,11 @@ const StorageConfig = () => {
                         key={item.id}
                         item={item}
                         no={i + 1}
-                        onMultiSelect={onMultiSelect}
                       />
                     ))
                   ) : !isFetching ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={onMultiSelect ? 5 : 4}
-                        className="h-64 text-center"
-                      >
+                      <TableCell colSpan={4} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center h-full">
                           <div className="p-3 bg-gray-100 rounded-full mb-3">
                             <Package className="h-8 w-8 text-gray-400" />
@@ -447,10 +356,7 @@ const StorageConfig = () => {
 
                   {/* Infinite scroll trigger */}
                   <TableRow ref={ref}>
-                    <TableCell
-                      colSpan={onMultiSelect ? 5 : 4}
-                      className="py-6 border-t"
-                    >
+                    <TableCell colSpan={4} className="py-6 border-t">
                       <div className="text-center">
                         {isFetchingNextPage ? (
                           <div className="flex items-center justify-center gap-2">
@@ -477,126 +383,6 @@ const StorageConfig = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Excel Upload Modal */}
-      {/* Excel Upload Modal */}
-      <Modal
-        title="Upload Excel File"
-        onOpen={onOpen === 2}
-        className="max-w-2xl overflow-auto"
-        setOnOpen={() => {
-          setExcelFile(null);
-          setFileKey(Date.now());
-          setOnOpen(0);
-        }}
-      >
-        <div className="space-y-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-            <div className="p-3 bg-blue-50 rounded-full inline-flex mb-4">
-              <Upload className="h-8 w-8 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-2">
-              Upload Medicine Spreadsheet
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Upload an Excel file (.xlsx, .xls, .csv) with your medicine data
-            </p>
-
-            {/* Hidden file input */}
-            <input
-              key={fileKey}
-              id="excel-file-input"
-              type="file"
-              accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-
-            {/* Button to trigger file input */}
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={triggerFileInput}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Select Excel File
-            </Button>
-
-            {/* Show selected file */}
-            {excelFile && (
-              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileSpreadsheet className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-sm text-green-800">
-                        {excelFile.name}
-                      </p>
-                      <p className="text-xs text-green-600">
-                        {(excelFile.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setExcelFile(null);
-                      setFileKey(Date.now());
-                    }}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            <p className="text-xs text-gray-400 mt-6">
-              Supported formats: .xlsx, .xls, .csv (Max 10MB)
-            </p>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm text-blue-800 mb-1">
-                  File Requirements
-                </p>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>
-                    • File must include columns: Name, Description (optional)
-                  </li>
-                  <li>• Maximum file size: 10MB</li>
-                  <li>• First row should contain column headers</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Upload Button - Only show when file is selected */}
-          {excelFile && (
-            <div className="pt-4 border-t">
-              <Button
-                className="w-full gap-2 bg-green-600 hover:bg-green-700"
-                onClick={() => {
-                  // Handle the file upload logic here
-                  // You can call your API endpoint with the excelFile
-                  toast.success(`Uploading ${excelFile.name}...`);
-                  // Reset after upload
-                  setExcelFile(null);
-                  setFileKey(Date.now());
-                  setOnOpen(0);
-                }}
-              >
-                <Upload className="h-4 w-4" />
-                Upload File
-              </Button>
-            </div>
-          )}
-        </div>
-      </Modal>
 
       {/* Add Medicine Modal */}
       <Modal

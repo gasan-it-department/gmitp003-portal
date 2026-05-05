@@ -110,7 +110,7 @@ const DispenseTransactions = ({ listId, token }: Props) => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col relative">
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
@@ -162,8 +162,8 @@ const DispenseTransactions = ({ listId, token }: Props) => {
       )}
 
       {/* Table Container */}
-      <div className="flex-1 overflow-auto border rounded-lg px-2">
-        <div className=" w-full flex gap-2">
+      <div className="flex-1 border rounded-lg px-2">
+        <div className=" w-full flex gap-2 sticky top-0 z-30 bg-white">
           <InputGroup className=" w-full mt-2">
             <InputGroupAddon>
               <Search />
@@ -189,7 +189,6 @@ const DispenseTransactions = ({ listId, token }: Props) => {
               <TableHead>Recipient</TableHead>
               <TableHead>Dispensed By</TableHead>
               <TableHead>Remarks</TableHead>
-              <TableHead className="w-[100px]">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

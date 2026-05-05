@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { medicineOverview } from "@/db/statements/medicine";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+// import {
+//   Card,
+//   CardContent,
+//   CardHeader,
+//   CardTitle,
+//   CardDescription,
+// } from "@/components/ui/card";
 import {
   Package,
   Pill,
@@ -31,46 +31,36 @@ const MedicineDashboard = ({ token, lineId }: Props) => {
     enabled: !!token && !!lineId,
     queryKey: ["medicine-overview", lineId],
     queryFn: () => medicineOverview(token, lineId),
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   // Loading State
   if (isFetching) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
-        <div className="p-4">
-          {/* Header Skeleton */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Skeleton className="h-9 w-9 rounded-lg" />
+        <div className="p-3 sm:p-4">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Skeleton className="h-8 w-8 rounded-lg" />
               <div>
-                <Skeleton className="h-6 w-48 mb-1" />
-                <Skeleton className="h-3 w-64" />
+                <Skeleton className="h-5 w-36 mb-1" />
+                <Skeleton className="h-2.5 w-48" />
               </div>
             </div>
           </div>
 
-          {/* Stats Grid Skeleton */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="border shadow-sm overflow-hidden">
-                <div className="h-1 bg-gray-200" />
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-7 w-7 rounded-md" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-3 w-24" />
-                    <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100">
-                      <Skeleton className="h-3 w-3 rounded-full" />
-                      <Skeleton className="h-3 w-28" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="border rounded-lg p-2 sm:p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-6 rounded-md" />
+                </div>
+                <Skeleton className="h-6 w-12 mb-1" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
             ))}
           </div>
         </div>
@@ -82,24 +72,24 @@ const MedicineDashboard = ({ token, lineId }: Props) => {
   if (error || !data) {
     return (
       <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
-        <div className="p-4">
-          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-            <div className="w-16 h-16 mb-4 rounded-full bg-red-50 flex items-center justify-center">
-              <AlertCircle className="h-8 w-8 text-red-500" />
+        <div className="p-3 sm:p-4">
+          <div className="flex flex-col items-center justify-center min-h-[300px] text-center">
+            <div className="w-12 h-12 mb-3 rounded-full bg-red-50 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-500" />
             </div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">
               Failed to Load Dashboard
             </h3>
-            <p className="text-sm text-gray-500 mb-4 max-w-md">
-              Unable to load medicine overview data. Please check your
-              connection and try again.
+            <p className="text-xs text-gray-500 mb-3 max-w-md">
+              Unable to load medicine overview data.
             </p>
             <Button
               onClick={() => refetch()}
               variant="outline"
-              className="gap-2"
+              size="sm"
+              className="gap-1.5"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-3.5 w-3.5" />
               Try Again
             </Button>
           </div>
@@ -108,110 +98,98 @@ const MedicineDashboard = ({ token, lineId }: Props) => {
     );
   }
 
-  // Success State
   return (
-    <div className="w-full h-auto bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+    <div className="w-full h-auto bg-gradient-to-br from-gray-50 to-gray-100">
       <Separator />
-      <div className="p-4">
-        {/* Header Section */}
-        <div className="mb-6 flex justify-between">
-          <div className="flex items-center gap-3 mb-2">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                Medicine Dashboard
-              </h1>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Overview of pharmaceutical inventory and storage
+      <div className="p-3 sm:p-4">
+        {/* Header Section - Compact */}
+        <div className="mb-3">
+          <h1 className="text-base font-bold text-gray-900">
+            Medicine Dashboard
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Overview of pharmaceutical inventory
+          </p>
+        </div>
+
+        {/* Stats Grid - 2 columns on mobile, 4 on desktop */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          {/* Storage Card - Clickable */}
+          <div
+            className="border rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer hover:border-blue-300"
+            onClick={() => (window.location.href = `/medicine/storage`)}
+          >
+            <div className="h-0.5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mb-2" />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-gray-600">Storage</p>
+              <div className="p-1 rounded-md bg-gradient-to-br from-blue-500 to-blue-600">
+                <Package className="h-3 w-3 text-white" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-gray-900">
+              {data.storage || 0}
+            </p>
+            <p className="text-[10px] text-gray-400">Active locations</p>
+          </div>
+
+          {/* Medicine Card - Clickable */}
+          <div
+            className="border rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer hover:border-green-300"
+            onClick={() => (window.location.href = `/medicine/medicines`)}
+          >
+            <div className="h-0.5 bg-gradient-to-r from-green-500 to-green-600 rounded-full mb-2" />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-gray-600">Inventory</p>
+              <div className="p-1 rounded-md bg-gradient-to-br from-green-500 to-green-600">
+                <Pill className="h-3 w-3 text-white" />
+              </div>
+            </div>
+            <p className="text-xl font-bold text-gray-900">
+              {data.medicines?.total || 0}
+            </p>
+            <div className="flex items-center gap-1 mt-1">
+              <TrendingUp className="h-2.5 w-2.5 text-amber-500" />
+              <p className="text-[10px] text-gray-400">
+                {data.medicines?.lowStock || 0} low stock
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Storage Card */}
-          <Card className="border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  Storage Locations
-                </CardTitle>
-                <div className="p-1.5 rounded-md bg-gradient-to-br from-blue-500 to-blue-600">
-                  <Package className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-gray-900">
-                  {data.storage || 0}
-                </p>
-                <CardDescription className="text-xs">
-                  Active storage areas
-                </CardDescription>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Medicine Card */}
-          <Card className="border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-green-500 to-green-600" />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  Medicine Inventory
-                </CardTitle>
-                <div className="p-1.5 rounded-md bg-gradient-to-br from-green-500 to-green-600">
-                  <Pill className="h-4 w-4 text-white" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-gray-900">
-                  {data.medicines.total || 0}
-                </p>
-                <CardDescription className="text-xs">
-                  Total medicine items
-                </CardDescription>
-                <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100">
-                  <TrendingUp className="h-3 w-3 text-amber-500" />
-                  <p className="text-xs text-gray-500">
-                    {data.medicines.lowStock || 0} low stock items
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Expiring Card */}
-          <Card
-            className="border shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-            onClick={() => {}}
+          {/* Expiring Soon Card - Clickable */}
+          <div
+            className="border rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer hover:border-amber-300"
+            onClick={() => (window.location.href = `/medicine/expiring`)}
           >
-            <div className="h-1 bg-gradient-to-r from-amber-500 to-amber-600" />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-gray-700">
-                  Expiring Soon
-                </CardTitle>
-                <div className="p-1.5 rounded-md bg-gradient-to-br from-amber-500 to-amber-600">
-                  <CalendarClock className="h-4 w-4 text-white" />
-                </div>
+            <div className="h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full mb-2" />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-gray-600">Expiring Soon</p>
+              <div className="p-1 rounded-md bg-gradient-to-br from-amber-500 to-amber-600">
+                <CalendarClock className="h-3 w-3 text-white" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-gray-900">
-                  {data.nearExpiration || 0}
-                </p>
-                <CardDescription className="text-xs">
-                  Within 6 months
-                </CardDescription>
+            </div>
+            <p className="text-xl font-bold text-gray-900">
+              {data.nearExpiration || 0}
+            </p>
+            <p className="text-[10px] text-gray-400">Within 6 months</p>
+          </div>
+
+          {/* Expired Card - Clickable */}
+          <div
+            className="border rounded-lg p-2 sm:p-3 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer hover:border-red-300"
+            onClick={() => (window.location.href = `/medicine/expired`)}
+          >
+            <div className="h-0.5 bg-gradient-to-r from-red-500 to-red-600 rounded-full mb-2" />
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-gray-600">Expired</p>
+              <div className="p-1 rounded-md bg-gradient-to-br from-red-500 to-red-600">
+                <CalendarClock className="h-3 w-3 text-white" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+            <p className="text-xl font-bold text-gray-900">
+              {data.expired || 0}
+            </p>
+            <p className="text-[10px] text-gray-400">Past expiration</p>
+          </div>
         </div>
       </div>
     </div>

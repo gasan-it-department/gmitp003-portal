@@ -30,6 +30,9 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
   const { data, isFetching } = useQuery<Prescription>({
     queryKey: ["prescription", id],
     queryFn: () => prescriptionData(token, id),
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {

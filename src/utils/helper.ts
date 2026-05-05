@@ -92,7 +92,7 @@ export const supplyOrderStatusTextColor = [
   "red",
 ];
 
-export const medicineLogsMessage = ["Dispense", "Added", "Update", "Deleted"];
+export const medicineLogsMessage = ["Dispensed", "Added", "Update", "Deleted"];
 
 export const invitationErrorMessage = [
   "Application link Not found",

@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
@@ -33,6 +34,7 @@ import type { ArchiveNewDocsProps } from "@/interface/data";
 import { FileText, Calendar, Archive, Upload, AlertCircle } from "lucide-react";
 
 const ArchiveNewDocs = () => {
+  const [uploadProgress, setUploadProgress] = useState(0);
   const auth = useAuth();
   const room = useRoom();
   const queryClient = useQueryClient();
@@ -78,6 +80,12 @@ const ArchiveNewDocs = () => {
     const response = await axios.post("/document/archive/file", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / (progressEvent.total || 1),
+        );
+        setUploadProgress(percentCompleted);
       },
     });
     if (response.status !== 200) {
@@ -360,6 +368,19 @@ const ArchiveNewDocs = () => {
                       )}
                     />
                   </div>
+                  {isSubmitting && (
+                    <div className="mt-6">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Uploading: {uploadProgress}%
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Form Actions */}

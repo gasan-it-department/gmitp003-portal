@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Modal from "@/components/custom/Modal";
 //icons
-import { CircleAlert, Send, Undo2, Package } from "lucide-react";
+import { CircleAlert, Send, Package } from "lucide-react";
 
 //
 import type {
@@ -204,7 +204,7 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header - Compact */}
       <div className="flex-shrink-0 bg-white border-b sticky top-0 z-10">
-        <div className="px-4 py-3">
+        <div className="px-1 py-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
@@ -303,7 +303,7 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
               {totalCount} item{totalCount !== 1 ? "s" : ""} total
             </div>
             <div className="flex gap-3">
-              <Button
+              {/* <Button
                 variant="outline"
                 type="button"
                 disabled={isSubmitting || status === 2}
@@ -312,7 +312,7 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
               >
                 <Undo2 className="h-4 w-4" />
                 Return
-              </Button>
+              </Button> */}
               <Button
                 type="button"
                 disabled={

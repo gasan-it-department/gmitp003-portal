@@ -44,7 +44,7 @@ import { useInView } from "react-intersection-observer";
 //icons
 //statements
 import { supplyList } from "@/db/statement";
-import type { ProtectedRouteProps, SupplyStockTrack } from "@/interface/data";
+import type { ProtectedRouteProps, SuppliesProps } from "@/interface/data";
 
 //interface and Props
 interface Props {
@@ -75,7 +75,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
     hasNextPage,
     isFetching,
   } = useInfiniteQuery<{
-    list: SupplyStockTrack[];
+    list: SuppliesProps[];
     lastCursor: string | null;
     hasMore: boolean;
   }>({

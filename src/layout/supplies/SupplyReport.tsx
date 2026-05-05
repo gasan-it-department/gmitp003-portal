@@ -3,7 +3,8 @@ import { useAuth } from "@/provider/ProtectedRoute";
 //components
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import List from "./report/List";
-import Timebased from "./report/Timebased";
+//import Timebased from "./report/Timebased";
+import InventoryReport from "./report/InventoryReport";
 //icons
 import { ScrollText, CalendarDays } from "lucide-react";
 
@@ -36,7 +37,7 @@ const SupplyReport = () => {
           />
         </TabsContent>
         <TabsContent value="time-base">
-          <Timebased auth={auth} id={listId} lineId={lineId as string} />
+          <InventoryReport auth={auth} id={listId} lineId={lineId as string} />
         </TabsContent>
       </Tabs>
     </div>

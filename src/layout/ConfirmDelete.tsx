@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
 //
 interface Props {
   confirmation: string;
   setOnOpen: Dispatch<SetStateAction<number>>;
   onFunction: () => Promise<void> | void;
   isLoading: boolean;
+  children?: React.ReactNode;
+  permanent?: boolean;
+  title?: string;
 }
 
 const ConfirmDelete = ({
@@ -20,6 +23,8 @@ const ConfirmDelete = ({
   onFunction,
   setOnOpen,
   isLoading,
+  children,
+  title = "Deletion",
 }: Props) => {
   const [passKey, setPassKey] = useState("");
   const [error, setError] = useState("");
@@ -51,24 +56,24 @@ const ConfirmDelete = ({
     passKey.trim().toLowerCase() === confirmation.trim().toLowerCase();
 
   return (
-    <Card className="w-full border border-red-200">
-      <CardHeader className="pb-4 border-b bg-red-50">
+    <div className="w-full ">
+      <div className="pb-4 border-b bg-red-50">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-red-100 rounded-lg">
             <ShieldAlert className="h-6 w-6 text-red-600" />
           </div>
           <div>
             <CardTitle className="text-lg font-semibold text-red-800">
-              Confirm Deletion
+              Confirm {title}
             </CardTitle>
             <p className="text-sm text-red-600">
               Type the confirmation text to proceed
             </p>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-6 pt-6">
+      <div className="space-y-6 pt-6">
         <Alert variant="destructive" className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="text-red-800">
@@ -76,6 +81,8 @@ const ConfirmDelete = ({
             and remove all associated data.
           </AlertDescription>
         </Alert>
+
+        {children && <div>{children}</div>}
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -159,8 +166,8 @@ const ConfirmDelete = ({
             Confirm & Delete
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

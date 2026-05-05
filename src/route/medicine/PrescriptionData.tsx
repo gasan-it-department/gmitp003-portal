@@ -42,6 +42,7 @@ const PrescriptionData = () => {
               <span>Dispense</span>
             </TabsTrigger>
             <TabsTrigger
+              disabled
               value="progress"
               className="h-9 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors gap-1.5"
             >

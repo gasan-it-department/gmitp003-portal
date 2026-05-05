@@ -114,11 +114,6 @@ const DispenseTransactionItem = ({
           {item.remarks || "-"}
         </div>
       </TableCell>
-      <TableCell>
-        <Badge variant="secondary" className="text-xs px-2 py-1">
-          Completed
-        </Badge>
-      </TableCell>
     </TableRow>
   );
 };

@@ -5,7 +5,7 @@ export const supplyDispenseTransaction = async (
   id: string | undefined,
   lastCursor: string | null,
   limit: string,
-  query: string
+  query: string,
 ) => {
   const response = await axios.get("/supply/dispense/transactions", {
     headers: {
@@ -28,7 +28,7 @@ export const supplyDispenseTransaction = async (
 export const removeStock = async (
   token: string,
   id: string,
-  userId: string
+  userId: string,
 ) => {
   const response = await axios.delete("/storage/medicine/remove", {
     headers: {
@@ -52,8 +52,11 @@ export const removeStockInlist = async (
   lineId: string,
   listId: string,
   containerId: string,
-  token: string
+  token: string,
 ) => {
+  if (!id) {
+    throw new Error("INVALID ID");
+  }
   const response = await axios.delete("/supply/delete-item", {
     params: {
       id,
@@ -76,7 +79,7 @@ export const removeStockInlist = async (
 
 export const supplyDispenseTransactionInfo = async (
   token: string,
-  id: string
+  id: string,
 ) => {
   const response = await axios.get("/supply/dispense/transaction/info", {
     headers: {
@@ -98,7 +101,7 @@ export const supplyUserDispenseRecord = async (
   id: string | undefined,
   lastCursor: string | null,
   limit: string,
-  query: string
+  query: string,
 ) => {
   const response = await axios.get("/supply/user/dispense/record", {
     headers: {
@@ -123,7 +126,7 @@ export const supplyUnitDispenseRecord = async (
   id: string | undefined,
   lastCursor: string | null,
   limit: string,
-  query: string
+  query: string,
 ) => {
   const response = await axios.get("/supply/unit/dispense/record", {
     headers: {
@@ -163,3 +166,31 @@ export const supplyData = async (token: string, id: string) => {
 };
 
 // export const
+export const inventroyReport = async (
+  token: string,
+  id: string | undefined,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/supply/inventory/report", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lastCursor,
+      limit,
+      query,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data.message);
+  }
+
+  return response.data;
+};

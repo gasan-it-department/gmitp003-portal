@@ -68,6 +68,9 @@ const Archive = () => {
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.lastCursor : undefined,
       initialPageParam: null,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      refetchOnWindowFocus: false,
     });
 
   const list = data ? data.pages.flatMap((item) => item.list) : [];
@@ -230,7 +233,7 @@ const Archive = () => {
                         <TableCell className="font-medium text-gray-900">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-blue-500" />
-                            <span>Document {item.id.slice(0, 12)}</span>
+                            <span>{item.document?.title || "N/A"}</span>
                           </div>
                         </TableCell>
                         <TableCell>

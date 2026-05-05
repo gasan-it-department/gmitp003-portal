@@ -381,9 +381,10 @@ export const removeArchiveDocument = async (
   token: string,
   id: string,
   userId: string,
+  lineId: string,
 ) => {
   const response = await axios.delete("/document/archive/remove", {
-    params: { id, userId },
+    params: { id, userId, lineId },
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -452,5 +453,34 @@ export const documentRoute = async (token: string, id: string) => {
   if (response.status !== 200) {
     throw new Error(response.data);
   }
+  return response.data;
+};
+
+export const usersSignature = async (
+  token: string,
+  id: string | undefined,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/document/user/signatures", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lastCursor,
+      limit,
+      query,
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(response.data.message);
+  }
+
   return response.data;
 };
