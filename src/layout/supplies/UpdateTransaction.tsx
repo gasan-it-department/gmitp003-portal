@@ -111,7 +111,7 @@ const UpdateTransaction = ({ item, userId, token, lineId }: Props) => {
     <>
       <Button onClick={() => setOnOpen(1)} size="sm">
         <Edit2 />
-        Update
+        Edit
       </Button>
       <Modal
         onFunction={handleSubmit(onSubmit)}

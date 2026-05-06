@@ -4,11 +4,9 @@ import { iconMainColor } from "@/utils/helper";
 import {
   ClipboardList,
   SearchCheck,
-  CircleCheck,
   //Truck,
   PackageCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   status: number; // 0: Draft, 1: Review, 2: Approved, 3: In Transit, 4: Delivered
@@ -27,17 +25,6 @@ const OrderProgress = ({ status }: Props) => {
       description: "Checking: Person incharge reviewing the Purchase Request.",
       icon: <SearchCheck color={iconMainColor} />,
       status: 1,
-    },
-    {
-      title: "Approved",
-      description: "Checked: Order has been approved.",
-      icon: <CircleCheck color={iconMainColor} />,
-      status: 2,
-      component: (
-        <Button size="sm" variant="outline">
-          View
-        </Button>
-      ),
     },
 
     {

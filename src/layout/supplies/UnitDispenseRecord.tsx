@@ -5,13 +5,7 @@ import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
 
 import axios from "@/db/axios";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -21,6 +15,8 @@ import {
   Package,
   AlertCircle,
   Download,
+  Building2,
+  History,
 } from "lucide-react";
 
 //statements
@@ -118,7 +114,6 @@ const UnitDispenseRecord = () => {
         });
       }
 
-      // Extract filename from Content-Disposition header
       const contentDisposition = response.headers["content-disposition"];
       let filename = `${new Date().toISOString()}.xlsx`;
 
@@ -131,7 +126,6 @@ const UnitDispenseRecord = () => {
         }
       }
 
-      // Create download link
       const url = window.URL.createObjectURL(
         new Blob([response.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -144,7 +138,6 @@ const UnitDispenseRecord = () => {
       document.body.appendChild(link);
       link.click();
 
-      // Clean up
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
 
@@ -154,7 +147,6 @@ const UnitDispenseRecord = () => {
       return;
     } catch (error) {
       console.log(error);
-
       toast.error("Download Failed", {
         description: "Failed to download the file. Please try again.",
       });
@@ -163,7 +155,6 @@ const UnitDispenseRecord = () => {
     }
   };
 
-  // Infinite scroll effect
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -178,214 +169,235 @@ const UnitDispenseRecord = () => {
 
   if (userLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+          <p className="text-sm text-gray-500">Loading dispense records...</p>
+        </div>
       </div>
     );
   }
 
   if (userError || !unitData) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Error Loading User
-            </CardTitle>
-            <CardDescription>Unable to load user information.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              User ID: {unitRecipientId}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 max-w-md w-full text-center bg-white">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
+            Error Loading Records
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Unable to load dispense records for this unit.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full p-4 md:p-6 space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Dispense Records
-          </h1>
-          <p className="text-muted-foreground">
-            Transaction history for {unitData.name}
-          </p>
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-4 space-y-4">
+        {/* Header - Compact */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
+              <History className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-gray-900">
+                Dispense Records
+              </h1>
+              <p className="text-xs text-gray-500">
+                Transaction history for {unitData.name}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className="text-xs px-3 py-1">
+            Total: {totalQuantity} units
+          </Badge>
         </div>
-        <Badge variant="outline" className="text-lg px-4 py-2">
-          Total Dispensed: {totalQuantity} units
-        </Badge>
-      </div>
 
-      <Separator />
+        <Separator className="my-2" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* User Profile Card - Left Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-12 w-12 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl">{unitData.name}</CardTitle>
-                  <CardDescription className="flex items-center justify-center gap-1 mt-1">
-                    <Mail className="h-3 w-3" />
-                    {unitData.email || "N/A"}
-                  </CardDescription>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Left Sidebar - Compact */}
+          <div className="lg:col-span-1 space-y-3">
+            {/* Unit Info Card */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    Unit Information
+                  </h3>
                 </div>
               </div>
-            </CardHeader>
-          </Card>
+              <div className="p-4 text-center">
+                <div className="h-14 w-14 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center">
+                  <User className="h-7 w-7 text-blue-600" />
+                </div>
+                <h4 className="text-base font-semibold text-gray-900">
+                  {unitData.name}
+                </h4>
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <Mail className="h-3 w-3 text-gray-400" />
+                  <p className="text-xs text-gray-500">
+                    {unitData.email || "N/A"}
+                  </p>
+                </div>
+              </div>
+            </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                disabled={selectedItems.length === 0}
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  if (selectedItems.length === 0) return;
-                  handleDownloadExcelFile();
-                }}
-              >
-                RIS (CSV)
-              </Button>
-            </CardContent>
-            <CardDescription className=" px-2">
-              To export RIS, select at least one item.
-            </CardDescription>
-          </Card>
-        </div>
+            {/* Export Card */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b">
+                <div className="flex items-center gap-2">
+                  <Download className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    Export
+                  </h3>
+                </div>
+              </div>
+              <div className="p-4">
+                <Button
+                  disabled={selectedItems.length === 0}
+                  variant="outline"
+                  className="w-full gap-2 h-9 text-sm"
+                  onClick={() => {
+                    if (selectedItems.length === 0) return;
+                    handleDownloadExcelFile();
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export RIS (CSV)
+                </Button>
+                <p className="text-[10px] text-gray-500 mt-2 text-center">
+                  Select at least one item to export
+                </p>
+              </div>
+            </div>
+          </div>
 
-        {/* Dispense Records Table - Main Content */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Dispense Records
-              </CardTitle>
-              <CardDescription>
-                {totalItems.length} transaction
-                {totalItems.length !== 1 ? "s" : ""} recorded
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead></TableHead>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>Supply Item</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Remarks</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {totalItems.length > 0 ? (
-                      <>
-                        {totalItems.map((item) => (
-                          <DispenseTransactionItem
-                            key={item.id}
-                            item={item}
-                            ref={ref}
-                            handleCheckItem={handleCheckItem}
-                            handleSelectItem={handleSelectItem}
-                            multiSelect={true}
-                          />
-                        ))}
-                        {/* Infinite scroll trigger */}
-                        <TableRow ref={ref}>
-                          <TableCell colSpan={6} className="text-center py-4">
-                            {isFetchingNextPage ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Loading more records...
-                              </div>
-                            ) : hasNextPage ? (
-                              <span className="text-sm text-muted-foreground">
-                                Scroll to load more
-                              </span>
-                            ) : totalItems.length > 0 ? (
-                              <span className="text-sm text-muted-foreground">
-                                No more records to load
-                              </span>
-                            ) : null}
+          {/* Main Content - Dispense Records Table */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    Dispense Records
+                  </h3>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {totalItems.length} record
+                    {totalItems.length !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+              </div>
+              <div className="overflow-auto">
+                <div className="min-w-[600px]">
+                  <Table>
+                    <TableHeader className="bg-gray-50">
+                      <TableRow>
+                        <TableHead className="w-10"></TableHead>
+                        <TableHead className="text-xs">Date & Time</TableHead>
+                        <TableHead className="text-xs">Supply Item</TableHead>
+                        <TableHead className="text-xs text-center w-20">
+                          Qty
+                        </TableHead>
+                        <TableHead className="text-xs">Remarks</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {totalItems.length > 0 ? (
+                        <>
+                          {totalItems.map((item) => (
+                            <DispenseTransactionItem
+                              key={item.id}
+                              item={item}
+                              ref={ref}
+                              handleCheckItem={handleCheckItem}
+                              handleSelectItem={handleSelectItem}
+                              multiSelect={true}
+                            />
+                          ))}
+                          {/* Infinite scroll trigger */}
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-3">
+                              {isFetchingNextPage ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <span className="text-xs text-gray-500">
+                                    Loading more...
+                                  </span>
+                                </div>
+                              ) : hasNextPage ? (
+                                <span
+                                  ref={ref}
+                                  className="text-xs text-gray-400"
+                                >
+                                  Scroll to load more
+                                </span>
+                              ) : totalItems.length > 0 ? (
+                                <span className="text-xs text-gray-400">
+                                  No more records
+                                </span>
+                              ) : null}
+                            </TableCell>
+                          </TableRow>
+                        </>
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-10">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <Package className="h-10 w-10 text-gray-300" />
+                              <p className="text-sm text-gray-500">
+                                No dispense records found
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                This unit hasn't received any supplies yet.
+                              </p>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      </>
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Package className="h-12 w-12 text-muted-foreground" />
-                            <p className="text-muted-foreground">
-                              No dispense records found
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              This user hasn't received any supplies yet.
-                            </p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Summary Stats */}
-          {totalItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Total Transactions
-                    </p>
-                    <p className="text-3xl font-bold">{totalItems.length}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Total Quantity
-                    </p>
-                    <p className="text-3xl font-bold">{totalQuantity}</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Unique Items
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {new Set(totalItems.map((item) => item.suppliesId)).size}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
-          )}
+
+            {/* Summary Stats - Compact */}
+            {totalItems.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="border rounded-lg p-3 text-center bg-white">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    Transactions
+                  </p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {totalItems.length}
+                  </p>
+                </div>
+                <div className="border rounded-lg p-3 text-center bg-white">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    Total Qty
+                  </p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {totalQuantity}
+                  </p>
+                </div>
+                <div className="border rounded-lg p-3 text-center bg-white">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                    Items
+                  </p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {new Set(totalItems.map((item) => item.suppliesId)).size}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -18,10 +18,7 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import { toast } from "sonner";
 import ConfirmDelete from "../ConfirmDelete";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 //stmt
 import { getListData } from "@/db/statement";
@@ -76,24 +73,22 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
       const response = await axios.post(
         "/line/inventory/back-up",
         {
-          lineId: lineId, // Add required parameters
-          userId: userId, // Add required parameters
+          lineId: lineId,
+          userId: userId,
         },
         {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          responseType: "blob", // Important for file download
+          responseType: "blob",
         },
       );
 
-      // Create a download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
 
-      // Get filename from Content-Disposition header or use default
       const contentDisposition = response.headers["content-disposition"];
       let filename = "inventory-backup.json";
 
@@ -120,212 +115,185 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
 
   if (isFetching) {
     return (
-      <div className="w-full h-full flex flex-col gap-4 p-6">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-10 w-32" />
-          </CardContent>
-        </Card>
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="space-y-3">
+          <div className="border rounded-lg p-3 bg-white">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-3 w-full mt-2" />
+            <Skeleton className="h-3 w-3/4 mt-1" />
+          </div>
+          <div className="border rounded-lg p-3 bg-white">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-8 w-28 mt-3" />
+          </div>
+          <div className="border rounded-lg p-3 bg-white">
+            <div className="flex items-center gap-2 mb-2">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <Skeleton className="h-10 w-full mt-2" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-6">
-        <div className="p-4 bg-gray-100 rounded-full mb-4">
-          <AlertTriangle className="h-12 w-12 text-gray-400" />
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <AlertTriangle className="h-7 w-7 text-gray-400" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-700 mb-1">
+            List Not Found
+          </h3>
+          <p className="text-sm text-gray-500">
+            The list doesn't exist or you don't have permission.
+          </p>
         </div>
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">
-          List Not Found
-        </h3>
-        <p className="text-sm text-gray-500 max-w-md text-center">
-          The list you're looking for doesn't exist or you don't have permission
-          to access it.
-        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col gap-6 p-6">
-      {/* List Information Card */}
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-3 border-b">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Info className="h-5 w-5 text-blue-600" />
-            </div>
-            <CardTitle className="text-lg font-semibold">
-              List Information
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <Folder className="h-6 w-6 text-gray-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-gray-900 text-lg mb-1">
-                {data.data.title}
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-3 space-y-3">
+        {/* List Information Card - Compact */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="px-3 py-2 border-b bg-gray-50">
+            <div className="flex items-center gap-2">
+              <Info className="h-3.5 w-3.5 text-blue-600" />
+              <h3 className="text-xs font-semibold text-gray-800">
+                List Information
               </h3>
-              {/* {data.data.description && (
-                <p className="text-sm text-gray-600 mb-3">
-                  {data.data.description}
-                </p>
-              )} */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">
-                    Created: {formatDate(data.data.timestamp)}
-                  </span>
+            </div>
+          </div>
+          <div className="p-3">
+            <div className="flex items-start gap-2">
+              <div className="p-1.5 bg-gray-100 rounded-md">
+                <Folder className="h-4 w-4 text-gray-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-gray-900 mb-0.5">
+                  {data.data.title}
+                </h4>
+                <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs text-gray-500">
+                      Created: {formatDate(data.data.timestamp)}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    ID: {listId?.slice(-8)}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  ID: {listId?.slice(-8)}
-                </Badge>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-3 border-b">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Database className="h-5 w-5 text-blue-600" />
+        {/* Data Backup Card - Compact */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="px-3 py-2 border-b bg-gray-50">
+            <div className="flex items-center gap-2">
+              <Database className="h-3.5 w-3.5 text-blue-600" />
+              <h3 className="text-xs font-semibold text-gray-800">Data</h3>
             </div>
-            <CardTitle className="text-lg font-semibold">Data</CardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <Folder className="h-6 w-6 text-gray-600" />
-            </div>
-            <div className="flex-1 flex items-center">
+          <div className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-gray-100 rounded-md">
+                <Folder className="h-4 w-4 text-gray-600" />
+              </div>
               <Button
                 disabled={backupMutation.isPending}
                 size="sm"
-                onClick={() => {
-                  backupMutation.mutateAsync();
-                }}
+                onClick={() => backupMutation.mutateAsync()}
+                className="gap-1.5 h-7 text-xs"
               >
-                Download Back-Up Data
+                {backupMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-3 w-3" />
+                    Download Back-Up Data
+                  </>
+                )}
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Danger Zone Card */}
-      <Card className="border border-red-200 shadow-sm">
-        <CardHeader className="pb-3 border-b bg-red-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <ShieldAlert className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-semibold text-red-800">
-                Danger Zone
-              </CardTitle>
-              <p className="text-sm text-red-600">
-                Irreversible actions - proceed with caution
-              </p>
+        {/* Danger Zone Card - Compact */}
+        <div className="border border-red-200 rounded-lg bg-white overflow-hidden">
+          <div className="px-3 py-2 border-b bg-red-50">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-3.5 w-3.5 text-red-600" />
+              <div>
+                <h3 className="text-xs font-semibold text-red-800">
+                  Danger Zone
+                </h3>
+                <p className="text-[10px] text-red-600">Irreversible actions</p>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <Alert variant="destructive" className="border-red-200 bg-red-50">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-red-800">
-              <p className="font-medium mb-1">
-                Warning: This action cannot be undone
-              </p>
-              <p className="text-sm">
-                Deleting this list will permanently remove all associated data
-                including:
-              </p>
-            </AlertDescription>
-          </Alert>
-
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-800">
-              Data that will be deleted:
-            </h4>
-            <ul className="space-y-1 text-sm text-gray-600">
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                All items within this list
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                Order history and transactions
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                Activity logs and audit trail
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                User access permissions
-              </li>
-            </ul>
-          </div>
-
-          <Separator className="my-2" />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-800">
-                List: {data.data.title}
-              </p>
-              <p className="text-xs text-gray-500">
-                Last updated: {formatDate(data.data.timestamp)}
-              </p>
+          <div className="p-3 space-y-3">
+            <div className="rounded-md bg-red-50 p-2 border border-red-200">
+              <div className="flex items-start gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-red-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-medium text-red-800">
+                    Warning: This action cannot be undone
+                  </p>
+                  <p className="text-[10px] text-red-700 mt-0.5">
+                    Deleting this list will permanently remove all associated
+                    data.
+                  </p>
+                </div>
+              </div>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="gap-2"
-              onClick={() => setOnOpen(1)}
-              disabled={handleRemoveList.isPending}
-            >
-              {handleRemoveList.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              Delete List
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Delete Confirmation Modal */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-800">
+                  List: {data.data.title}
+                </p>
+                <p className="text-[10px] text-gray-500">
+                  Last updated: {formatDate(data.data.timestamp)}
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1.5 h-7 text-xs"
+                onClick={() => setOnOpen(1)}
+                disabled={handleRemoveList.isPending}
+              >
+                {handleRemoveList.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3 w-3" />
+                )}
+                Delete List
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal - Compact */}
       <Modal
         title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="h-5 w-5 text-red-600" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-red-100 rounded-md">
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </div>
-            <span className="text-lg font-semibold text-red-800">
+            <span className="text-sm font-semibold text-red-800">
               Delete List
             </span>
           </div>
@@ -342,7 +310,7 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
         }
         loading={handleRemoveList.isPending}
         onOpen={onOpen === 1}
-        className="max-w-lg"
+        className="max-w-md w-[90vw]"
         setOnOpen={() => {
           if (handleRemoveList.isPending) return;
           setOnOpen(0);

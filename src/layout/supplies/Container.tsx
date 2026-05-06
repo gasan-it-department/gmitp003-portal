@@ -20,7 +20,6 @@ import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "../ConfirmDelete";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 import {
@@ -48,7 +47,6 @@ import {
   Package,
   Search,
   FolderOpen,
-  //AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import InventoryList from "./InventoryList";
@@ -83,6 +81,7 @@ const Container = () => {
     handleSubmit,
     control,
     formState: { isSubmitting, errors },
+    reset,
   } = form;
 
   const nav = useNavigate();
@@ -151,6 +150,7 @@ const Container = () => {
         });
         throw new Error(`${response.data}`);
       }
+      reset();
       setOnOpen(0);
       await queryClient.invalidateQueries({
         queryKey: ["container-list", containerId],
@@ -162,161 +162,147 @@ const Container = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-50/30">
-      {/* Header Section */}
-      <div className="p-4 sm:p-6 border-b bg-white shadow-sm">
-        <div className="flex items-start justify-between mb-4 sm:mb-6">
-          <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
-            <div className="p-2 sm:p-3 bg-blue-100 rounded-lg sm:rounded-xl flex-shrink-0">
-              <FolderOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col xs:flex-row xs:items-center gap-2 mb-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
-                  {data?.data?.name || "Loading..."}
-                </h1>
-                <Badge
-                  variant="outline"
-                  className="font-mono text-xs self-start xs:self-center"
-                >
-                  {data?.data?.code || "..."}
-                </Badge>
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header Section - Compact */}
+      <div className="border-b bg-white sticky top-0 z-10">
+        <div className="p-3">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex-shrink-0">
+                <FolderOpen className="h-4 w-4 text-white" />
               </div>
-              {/* Optional description */}
-              {/* <p className="text-xs sm:text-sm text-gray-500 truncate">
-                {data?.data?.description ||
-                  "Manage lists and items in this container"}
-              </p> */}
+              <div className="min-w-0">
+                <div className="flex items-center flex-wrap gap-2">
+                  <h1 className="text-sm font-bold text-gray-900 truncate max-w-[180px] sm:max-w-none">
+                    {data?.data?.name || "Loading..."}
+                  </h1>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    {data?.data?.code || "..."}
+                  </Badge>
+                </div>
+              </div>
             </div>
+
+            {isFetching && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              </div>
+            )}
           </div>
 
-          {isFetching && (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 flex-shrink-0 ml-2">
-              <div className="h-3 w-3 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-              <span className="hidden xs:inline">Loading container...</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <div className="flex-1 w-full">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <Input
-                placeholder="Search lists and items..."
+                placeholder="Search lists..."
                 onChange={(e) => setText(e.target.value)}
-                className="pl-10 bg-gray-50 border-gray-200 w-full"
+                className="pl-8 h-8 text-xs bg-gray-50 border-gray-200"
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2 flex-1 sm:flex-none"
-                >
-                  <CircleEllipsis className="h-4 w-4" />
-                  <span className="hidden xs:inline">Manage</span>
-                  <span className="xs:hidden">Menu</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 sm:w-56 p-2" align="end">
-                <div className="space-y-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-start gap-2"
-                    disabled
-                  >
-                    <FolderClock className="h-4 w-4" />
-                    <span>Activity Logs</span>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                    <CircleEllipsis className="h-3.5 w-3.5" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-start gap-2"
-                    onClick={() =>
-                      nav(
-                        `/${lineId}/supplies/container/${containerId}/data-set-config`,
-                      )
-                    }
-                  >
-                    <FolderCog className="h-4 w-4" />
-                    <span>Data Set Config</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-start gap-2"
-                    onClick={() =>
-                      nav(
-                        `/${lineId}/supplies/container/${containerId}/accessibility`,
-                      )
-                    }
-                    disabled
-                  >
-                    <Key className="h-4 w-4" />
-                    <span>Accessibility</span>
-                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-1.5" align="end">
+                  <div className="space-y-0.5">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-7 text-xs"
+                      disabled
+                    >
+                      <FolderClock className="h-3.5 w-3.5" />
+                      Activity Logs
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-7 text-xs"
+                      onClick={() =>
+                        nav(
+                          `/${lineId}/supplies/container/${containerId}/data-set-config`,
+                        )
+                      }
+                    >
+                      <FolderCog className="h-3.5 w-3.5" />
+                      Data Set Config
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-7 text-xs"
+                      onClick={() =>
+                        nav(
+                          `/${lineId}/supplies/container/${containerId}/accessibility`,
+                        )
+                      }
+                      disabled
+                    >
+                      <Key className="h-3.5 w-3.5" />
+                      Accessibility
+                    </Button>
 
-                  <Separator className="my-1" />
+                    <Separator className="my-1" />
 
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => setOnOpen(2)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Remove Container</span>
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start gap-2 h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => setOnOpen(2)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove Container
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-            <Button
-              size="sm"
-              onClick={() => setOnOpen(1)}
-              className="gap-2 bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none"
-            >
-              <ScrollText className="h-4 w-4" />
-              <span className="hidden xs:inline">Create List</span>
-              <span className="xs:hidden">New List</span>
-            </Button>
+              <Button
+                size="sm"
+                onClick={() => setOnOpen(1)}
+                className="gap-1.5 h-8 text-xs bg-gradient-to-r from-blue-600 to-blue-700"
+              >
+                <ScrollText className="h-3.5 w-3.5" />
+                New List
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
-        <Card className="border shadow-sm">
-          <CardContent className="p-0">
-            <InventoryList query={query} />
-          </CardContent>
-        </Card>
+      {/* Main Content - Compact */}
+      <div className="p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <InventoryList query={query} />
+        </div>
       </div>
 
-      {/* Create List Modal */}
+      {/* Create List Modal - Compact */}
       <Modal
         onFunction={handleSubmit(onSubmit)}
         footer={true}
         yesTitle="Create List"
-        title="Create New List"
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
+              <Package className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="text-sm font-semibold">Create New List</span>
+          </div>
+        }
         children={
-          <div className="w-full space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-blue-800 truncate">
-                  {data?.data?.name || "Container"}
-                </p>
-                <p className="text-xs text-blue-600">
-                  Add a new list to this container
-                </p>
-              </div>
+          <div className="space-y-3 p-1">
+            <div className="p-2 bg-blue-50 rounded-md">
+              <p className="text-xs font-medium text-blue-800 truncate">
+                {data?.data?.name || "Container"}
+              </p>
+              <p className="text-[10px] text-blue-600">
+                Add a new list to this container
+              </p>
             </div>
 
             <Form {...form}>
@@ -325,23 +311,22 @@ const Container = () => {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium">
+                    <FormLabel className="text-xs font-medium">
                       List Title *
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter list title (e.g., Office Supplies, Equipment List, etc.)"
+                        placeholder="e.g., Office Supplies"
                         {...field}
-                        className="bg-gray-50"
+                        className="h-8 text-sm"
                         disabled={isSubmitting}
                       />
                     </FormControl>
                     {errors.title && (
-                      <FormMessage>{errors.title.message}</FormMessage>
+                      <FormMessage className="text-[10px]">
+                        {errors.title.message}
+                      </FormMessage>
                     )}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Give your list a clear, descriptive name
-                    </p>
                   </FormItem>
                 )}
               />
@@ -349,21 +334,22 @@ const Container = () => {
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md mx-4 sm:mx-auto"
-        setOnOpen={() => setOnOpen(0)}
+        className="max-w-md w-[90vw]"
+        setOnOpen={() => {
+          reset();
+          setOnOpen(0);
+        }}
         loading={isSubmitting}
       />
 
-      {/* Remove Container Modal */}
+      {/* Remove Container Modal - Compact */}
       <Modal
         title={
-          <div className="flex flex-col items-center text-center">
-            <div className="p-3 sm:p-4 bg-red-50 rounded-full mb-3 sm:mb-4">
-              <Trash2 className="h-8 w-8 sm:h-12 sm:w-12 text-red-600" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-red-100 rounded-md">
+              <Trash2 className="h-3.5 w-3.5 text-red-600" />
             </div>
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">
-              Remove Container
-            </h3>
+            <span className="text-sm font-semibold">Remove Container</span>
           </div>
         }
         children={
@@ -377,14 +363,10 @@ const Container = () => {
           />
         }
         onOpen={onOpen === 2}
-        className="max-w-lg max-h-[95vh] overflow-auto mx-4 sm:mx-auto"
+        className="max-w-md w-[90vw]"
         setOnOpen={() => setOnOpen(0)}
-        footer={1}
+        footer={true}
         loading={removeContainer.isPending}
-        onFunction={() => {
-          if (isFetching) return;
-          removeContainer.mutate();
-        }}
         yesTitle="Remove Container"
       />
     </div>

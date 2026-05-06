@@ -97,14 +97,15 @@ const OrderCompletionItem = ({
     defaultValues: {
       brandName: "",
       noBrand: true,
-      quantity: item.receivedQuantity.toString() || "1",
+      quantity: item.quantity.toString() || "1",
       perQuantity: item.perQuantity.toString() || "1",
       condition: item.condition || "new",
       comment: item.comment,
       resolved: item.remark || "1",
       price: item.price.toString(),
-      supplier: "",
-      expiration: "",
+      supplier: item.id || "",
+      expiration: item.expiration || "",
+      quality: item.quality || "",
     },
   });
 
@@ -321,7 +322,7 @@ const OrderCompletionItem = ({
           </div>
         }
         onOpen={onOpen}
-        className="w-[95%] sm:w-[90%] md:w-[85%] lg:w-[80%] max-w-4xl max-h-[90vh] overflow-auto mx-auto"
+        className="w-[95%] sm:w-[90%] md:w-[85%] lg:min-w-4xl max-w-4xl max-h-[90vh] overflow-auto mx-auto"
         setOnOpen={() => setOnOpen(false)}
         footer={true}
         onFunction={form.handleSubmit(onSubmit)}
@@ -527,15 +528,21 @@ const OrderCompletionItem = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs sm:text-sm">
-                          Resolution Status
+                          Status
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
-                              <SelectValue placeholder="Select resolution" />
+                            <SelectTrigger
+                              className="text-xs sm:text-sm h-8 sm:h-10"
+                              value={field.value}
+                            >
+                              <SelectValue
+                                placeholder="Select resolution"
+                                defaultValue={field.value}
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>

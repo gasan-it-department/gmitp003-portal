@@ -87,10 +87,7 @@ const DispenseTransactionItem = ({
         <div className="text-sm">{formatDate(item.timestamp)}</div>
       </TableCell>
       <TableCell>
-        <div className="max-w-[200px] truncate">{item.supply?.supply.item}</div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-          ID: {item.id.slice(0, 8)}...
-        </div>
+        <div className="max-w-[200px] truncate">{item.refCode || "N/A"}</div>
       </TableCell>
       <TableCell className="text-right">
         <Badge variant="outline" className="font-semibold">

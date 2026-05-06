@@ -8,13 +8,13 @@ import Modal from "@/components/custom/Modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DispenseItem from "../DispenseItem";
-import ConfirmDelete from "@/layout/ConfirmDelete";
+//import ConfirmDelete from "@/layout/ConfirmDelete";
 import SelectStockDispense from "@/layout/SelectStockDispense";
 //utils
 import { searchedChar } from "@/utils/element";
 
 //
-import { CircleX, HandHelping, Package } from "lucide-react";
+import { CircleX, HandHelping, Package, ChevronRight } from "lucide-react";
 //interfaces and Props
 import type { SuppliesProps, ProtectedRouteProps } from "@/interface/data";
 
@@ -72,163 +72,135 @@ const ListItem = ({
   return (
     <>
       <TableRow
-        className="cursor-pointer hover:bg-slate-50 transition-colors duration-150 border-b border-slate-100"
+        className="cursor-pointer hover:bg-gray-50 transition-colors group"
         onClick={() => setOnOpen(1)}
       >
-        <TableCell className="py-3 px-4 text-slate-500 font-medium">
+        <TableCell className="py-2 text-xs text-gray-500 font-medium w-12">
           {index}
         </TableCell>
-        <TableCell className="py-3 px-4 font-mono text-sm text-slate-700">
-          {item.code || "N/A"}
-        </TableCell>
-        <TableCell className="py-3 px-4 font-medium text-slate-900">
+        <TableCell className="py-2 text-sm font-medium text-gray-800">
           {searchedChar(query, item.item)}
         </TableCell>
-        {/* <TableCell className="py-3 px-4 text-slate-600">
-            {item.brand.length > 0 ? (
-              <span className="inline-flex items-center gap-1">
-                {item.brand.map((brand, i) => (
-                  <span
-                    key={i}
-                    className="text-xs px-2 py-1 bg-slate-100 rounded"
-                  >
-                    {brand.brand}
-                  </span>
-                ))}
-              </span>
-            ) : (
-              <span className="text-slate-400">-</span>
-            )}
-          </TableCell> */}
-        <TableCell className="py-3 px-4">
-          <div className="flex items-center gap-2">
+        <TableCell className="py-2">
+          <div className="flex items-center gap-1.5">
             <div
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full ${
                 item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
-            <span className="font-semibold">{item.totalStock}</span>
+            <span className="text-sm font-semibold text-gray-700">
+              {item.totalStock}
+            </span>
           </div>
         </TableCell>
-        <TableCell className="py-3 px-4">
+        <TableCell className="py-2">
           <div
-            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${stockBgColor} ${stockColor}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full ${stockBgColor} ${stockColor} text-xs font-medium`}
           >
             <div
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1 h-1 rounded-full ${
                 item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
-            <span className="font-medium text-sm">{stockStatus}</span>
+            <span>{stockStatus}</span>
           </div>
         </TableCell>
       </TableRow>
 
+      {/* Item Details Modal - Compact */}
       <Modal
-        title="Item Details"
+        title={item.item}
         onOpen={onOpen === 1}
-        className="max-w-md"
+        className="max-w-md w-[90vw]"
         loading={handleRemove.isPending}
         setOnOpen={() => {
           setOnOpen(0);
         }}
         cancelTitle="Close"
       >
-        <div className="space-y-6">
-          {/* Header with item info */}
-          <div className="bg-slate-50 rounded-lg p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="w-5 h-5 text-blue-600" />
+        <div className="space-y-4 p-1">
+          {/* Stock Info Card */}
+          <div className="bg-gray-50 rounded-md p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-blue-100 rounded-md">
+                <Package className="w-3.5 h-3.5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg text-slate-900">
-                  {item.item}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Ref: {item.refNumber || "N/A"}
+                <p className="text-xs text-gray-500">Reference</p>
+                <p className="text-xs font-mono text-gray-600">
+                  {item.refNumber || "N/A"}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="space-y-1">
-                <p className="text-slate-500">Current Stock</p>
-                <p
-                  className={`text-lg font-bold ${
-                    item.totalStock < 10 ? "text-red-600" : "text-green-600"
-                  }`}
-                >
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+              <div>
+                <p className="text-[10px] text-gray-500">Current Stock</p>
+                <p className={`text-base font-bold ${stockColor}`}>
                   {item.totalStock} units
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-slate-500">Status</p>
+              <div>
+                <p className="text-[10px] text-gray-500">Status</p>
                 <div
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${stockBgColor}`}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${stockBgColor} text-xs font-medium ${stockColor}`}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-1 h-1 rounded-full ${
                       item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
                     }`}
                   ></div>
-                  <span className="font-medium">{stockStatus}</span>
+                  {stockStatus}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="space-y-3">
-            {/* <Button
-              variant="outline"
-              className="w-full justify-start gap-3 py-6 text-slate-700 hover:text-slate-900 hover:bg-slate-50"
-            >
-              <Info className="w-4 h-4" />
-              <div className="text-left">
-                <p className="font-medium">View Full Details</p>
-                <p className="text-xs text-slate-500">
-                  Complete item information and history
-                </p>
-              </div>
-            </Button> */}
-
+          <div className="space-y-2">
             <Button
               variant="outline"
-              className="w-full justify-start gap-3 py-6 text-blue-700 hover:text-blue-900 hover:bg-blue-50"
+              className="w-full justify-between gap-3 py-2 h-auto text-blue-700 hover:text-blue-900 hover:bg-blue-50 border-blue-200"
               onClick={() => setOnOpen(3)}
             >
-              <HandHelping className="w-4 h-4" />
-              <div className="text-left">
-                <p className="font-medium">Dispense Item</p>
-                <p className="text-xs text-slate-500">
-                  Record item distribution
-                </p>
+              <div className="flex items-center gap-2">
+                <HandHelping className="w-3.5 h-3.5" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Dispense Item</p>
+                  <p className="text-[10px] text-blue-500">
+                    Record item distribution
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
 
             <Button
               variant="destructive"
-              className="w-full justify-start gap-3 py-6 cursor-pointer"
+              className="w-full justify-between gap-3 py-2 h-auto"
               onClick={() => setOnOpen(4)}
             >
-              <CircleX className="w-4 h-4" />
-              <div className="text-left">
-                <p className="font-medium">Collapse Item stock</p>
-                <p className="text-xs text-gray-200">
-                  Permanently remove from in-track list
-                </p>
+              <div className="flex items-center gap-2">
+                <CircleX className="w-3.5 h-3.5" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Collapse Item Stock</p>
+                  <p className="text-[10px] text-red-200">
+                    Permanently remove from list
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
       </Modal>
 
+      {/* Collapse Item Modal - Compact */}
       <Modal
-        title={undefined}
+        title={`Collapse Item - ${item.item}`}
         onOpen={onOpen === 4}
-        className="max-w-md"
-        footer={1}
+        className="max-w-md w-[90vw]"
+        footer={true}
         setOnOpen={() => {
           if (handleRemove.isPending) return;
           setOnOpen(0);
@@ -236,36 +208,32 @@ const ListItem = ({
         onFunction={() => {
           handleRemove.mutateAsync();
         }}
+        yesTitle="Confirm Collapse"
+        loading={handleRemove.isPending}
       >
-        <div className="space-y-6">
-          <ConfirmDelete
-            title={`Collapse Item - ${item.item}`}
-            children={
-              <SelectStockDispense
-                items={item.SupplyStockTrack}
-                onChange={(e) => setItemId(e)}
-                value={itemId}
-                className={""}
-              />
-            }
-            onFunction={() => {
-              handleRemove.mutateAsync();
-            }}
-            setOnOpen={setOnOpen}
-            confirmation="confirm"
-            isLoading={handleRemove.isPending}
+        <div className="space-y-3 p-1">
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-2">
+            <p className="text-[10px] text-amber-700 text-center">
+              ⚠️ This action cannot be undone. Select the stock to collapse:
+            </p>
+          </div>
+          <SelectStockDispense
+            items={item.SupplyStockTrack}
+            onChange={(e) => setItemId(e)}
+            value={itemId}
+            className="w-full"
           />
         </div>
       </Modal>
 
+      {/* Dispense Item Modal */}
       <Modal
-        title={undefined}
+        title="Dispense Item"
         onOpen={onOpen === 3}
-        footer={1}
-        className={" overflow-auto"}
-        setOnOpen={function (): void | Promise<void> {
-          throw new Error("Function not implemented.");
-        }}
+        footer={false}
+        className="max-w-lg w-[95vw] overflow-auto max-h-[90vh]"
+        setOnOpen={() => setOnOpen(0)}
+        cancelTitle="Close"
       >
         <DispenseItem
           queryKey="supply-list"

@@ -15,15 +15,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 //
-// import {
-//   InputGroup,
-//   InputGroupInput,
-//   InputGroupAddon,
-// } from "@/components/ui/input-group";
-// import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-//import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SupplyOverviewList from "./SupplyOverviewList";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,45 +48,33 @@ const SuppliesOverview = () => {
 
   if (isFetching && !data) {
     return (
-      <div className="w-full h-full flex flex-col space-y-4 sm:space-y-6 p-3 sm:p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="w-full h-full flex flex-col space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="border rounded-lg p-4 shadow-sm">
+            <div key={i} className="border rounded-lg p-3 bg-white">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-3 sm:h-4 w-16 sm:w-20" />
-                  <Skeleton className="h-6 sm:h-8 w-12 sm:w-16" />
+                <div className="space-y-1">
+                  <Skeleton className="h-2.5 w-16" />
+                  <Skeleton className="h-6 w-12" />
                 </div>
-                <Skeleton className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg" />
+                <Skeleton className="h-7 w-7 rounded-lg" />
               </div>
             </div>
           ))}
         </div>
-
-        <div className="border rounded-lg p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4">
-            <Skeleton className="h-9 sm:h-10 w-full max-w-lg" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-8 sm:h-9 w-16 sm:w-20" />
-              <Skeleton className="h-8 sm:h-9 w-16 sm:w-20" />
-            </div>
-          </div>
+        <div className="border rounded-lg p-3 bg-white">
+          <Skeleton className="h-8 w-full" />
         </div>
-
-        <div className="flex-1 min-h-0">
-          <div className="h-full border rounded-lg p-3 sm:p-4">
-            <div className="space-y-3 sm:space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="space-y-1.5 sm:space-y-2">
-                    <Skeleton className="h-3 sm:h-4 w-32 sm:w-48" />
-                    <Skeleton className="h-2.5 sm:h-3 w-24 sm:w-32" />
-                  </div>
-                  <Skeleton className="h-5 sm:h-6 w-12 sm:w-16" />
-                </div>
-              ))}
+        <div className="border rounded-lg bg-white p-3 space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-2 w-24" />
+              </div>
+              <Skeleton className="h-5 w-12" />
             </div>
-          </div>
+          ))}
         </div>
       </div>
     );
@@ -101,17 +82,24 @@ const SuppliesOverview = () => {
 
   if (isError) {
     return (
-      <div className="h-full border border-destructive/20 bg-destructive/5 rounded-lg">
-        <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
-          <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 text-destructive mb-3 sm:mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-destructive mb-1.5 sm:mb-2">
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md mx-auto">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
             Failed to load supplies data
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-3 sm:mb-4 max-w-sm">
-            There was an error loading the supplies overview. Please try again.
+          <p className="text-sm text-gray-500 mb-4">
+            There was an error loading the supplies overview.
           </p>
-          <Button onClick={handleRefresh} variant="outline" size="sm">
-            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
             Retry
           </Button>
         </div>
@@ -121,14 +109,14 @@ const SuppliesOverview = () => {
 
   if (!data) {
     return (
-      <div className="h-full border rounded-lg">
-        <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-          <Package className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50 mb-3 sm:mb-4" />
-          <h3 className="text-lg sm:text-xl font-semibold text-muted-foreground mb-1 sm:mb-2">
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md mx-auto">
+          <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-gray-700 mb-1">
             No supplies data
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground text-center">
-            There are no supplies to display for this list.
+          <p className="text-sm text-gray-500">
+            No supplies to display for this list.
           </p>
         </div>
       </div>
@@ -136,110 +124,93 @@ const SuppliesOverview = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col space-y-4 sm:space-y-6  p-3 sm:p-4">
-      {/* Stats Overview Cards - Mobile responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+    <div className="w-full h-full flex flex-col space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Stats Overview Cards - Compact */}
+      <div className="grid grid-cols-3 gap-3">
         {/* Total Items Card */}
-        <div className="border rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="border rounded-lg p-2 bg-white">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">
-                Total Items
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                {data.total}
-              </p>
+              <p className="text-[10px] text-gray-500 uppercase">Total</p>
+              <p className="text-lg font-bold text-gray-900">{data.total}</p>
             </div>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-50">
-              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <div className="p-1 rounded-md bg-blue-50">
+              <Package className="w-3.5 h-3.5 text-blue-600" />
             </div>
           </div>
         </div>
 
         {/* Low Stock Card */}
-        <div className="border rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="border rounded-lg p-2 bg-white">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">
-                Low Stock
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                {data.lowStock}
-              </p>
+              <p className="text-[10px] text-gray-500 uppercase">Low Stock</p>
+              <p className="text-lg font-bold text-gray-900">{data.lowStock}</p>
             </div>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-red-50">
-              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+            <div className="p-1 rounded-md bg-red-50">
+              <AlertCircle className="w-3.5 h-3.5 text-red-600" />
             </div>
           </div>
         </div>
 
         {/* Pending Orders Card */}
-        <div className="border rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
+        <div className="border rounded-lg p-2 bg-white">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs sm:text-sm text-gray-500 mb-0.5 sm:mb-1">
-                Pending Orders
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
-                {data.order}
-              </p>
+              <p className="text-[10px] text-gray-500 uppercase">Orders</p>
+              <p className="text-lg font-bold text-gray-900">{data.order}</p>
             </div>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-50">
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+            <div className="p-1 rounded-md bg-purple-50">
+              <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search and Info Section */}
-      <div className="space-y-3 sm:space-y-4">
+      {/* Search Section - Compact */}
+      <div className="border rounded-lg bg-white p-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full pl-8 sm:pl-9 pr-3 py-1.5 sm:py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-8 pr-3 py-1.5 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="Search items by name, SKU, or description..."
           />
         </div>
+      </div>
 
-        <div>
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-            Supplies List
-          </h2>
-          <div className="flex flex-wrap items-center gap-2 mt-1">
-            <p className="text-xs sm:text-sm text-gray-500">
-              Showing all items in the current list
-            </p>
-            {listId && (
-              <Badge variant="outline" className="text-[10px] sm:text-xs">
-                List ID: {listId.slice(0, 8)}...
-              </Badge>
-            )}
-          </div>
+      {/* Title Section - Compact */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-800">Supplies List</h2>
+        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+          <p className="text-xs text-gray-500">Showing all items</p>
+          {listId && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              ID: {listId.slice(0, 8)}...
+            </Badge>
+          )}
         </div>
       </div>
 
-      <Separator />
+      <Separator className="my-0" />
 
       {/* Supplies List - Takes remaining space */}
-      <div className="flex-1">
-        <div className="h-full border rounded-lg overflow-auto">
+      <div className="flex-1 min-h-0">
+        <div className="h-full border rounded-lg bg-white overflow-hidden">
           <SupplyOverviewList query={query} listId={listId} auth={auth} />
         </div>
       </div>
 
-      {/* Footer Notes - Mobile responsive */}
-      <div className="text-xs sm:text-sm text-gray-500">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span>In Stock</span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-            <span>Low Stock</span>
-          </div>
+      {/* Footer Notes - Compact */}
+      <div className="flex items-center gap-3 text-[10px] text-gray-500">
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+          <span>In Stock</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+          <span>Low Stock</span>
         </div>
       </div>
     </div>

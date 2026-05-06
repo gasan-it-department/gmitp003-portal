@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-//import { useAuth } from "@/provider/ProtectedRoute";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { useState, useRef } from "react";
@@ -30,10 +29,8 @@ import {
   FormMessage,
   FormLabel,
 } from "@/components/ui/form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-//import { Separator } from "@/components/ui/separator";
 //interface and props
 
 import type {
@@ -54,7 +51,7 @@ import {
   X,
 } from "lucide-react";
 import Modal from "@/components/custom/Modal";
-import { formatDate } from "@/utils/date";
+import { formatDate, formatPureDate } from "@/utils/date";
 import { supplyOrderStatusTextColor, supplyOrderStatus } from "@/utils/helper";
 
 interface Props {
@@ -88,6 +85,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
   const {
     handleSubmit,
     formState: { isSubmitting, errors },
+    reset,
   } = form;
 
   const onSubmit = async (data: NewOrderProps) => {
@@ -117,6 +115,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
         queryKey: ["orders", containerId, listId],
         refetchType: "active",
       });
+      reset();
       setOnOpen(0);
       toast.success("Order created successfully");
       nav(`order/${response.data.data.id}`);
@@ -150,7 +149,6 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
   });
-  console.log({ error });
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -182,7 +180,7 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
     return (
       <Badge
         style={{ backgroundColor: statusColor }}
-        className="text-white border-0 text-xs px-2 py-1 whitespace-nowrap"
+        className="text-white border-0 text-[10px] px-2 py-0.5 whitespace-nowrap"
       >
         {statusText}
       </Badge>
@@ -191,344 +189,328 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
 
   if (isLoading) {
     return (
-      <div className="h-full space-y-3 sm:space-y-4 p-2 sm:p-3">
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1.5 sm:space-y-2">
-                <Skeleton className="h-6 sm:h-8 w-40 sm:w-64" />
-                <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
-              </div>
-              <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
+      <div className="h-full space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="border rounded-lg p-3 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1.5">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-2.5 w-24" />
             </div>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardContent className="p-0">
-            <div className="p-2 border-b">
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 sm:h-6 w-16 sm:w-24" />
-                ))}
-              </div>
-            </div>
-            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 sm:h-12 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            <Skeleton className="h-7 w-20" />
+          </div>
+        </div>
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="p-2 border-b">
+            <Skeleton className="h-8 w-full" />
+          </div>
+          <div className="p-2 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="h-full border-destructive/20 bg-destructive/5 m-2 sm:m-3">
-        <CardContent className="flex flex-col items-center justify-center py-6 sm:py-12 px-3 sm:px-6">
-          <AlertTriangle className="h-8 w-8 sm:h-12 sm:w-12 text-destructive mb-3 sm:mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-destructive mb-1.5 sm:mb-2 text-center">
+      <div className="h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md mx-auto">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
             Failed to load orders
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-3 sm:mb-4">
-            {error.message || "An error occurred while loading orders"}
+          <p className="text-sm text-gray-500 mb-4">
+            {error.message || "An error occurred"}
           </p>
           <Button
             onClick={() => refetch()}
             variant="outline"
             size="sm"
-            className="gap-1.5 sm:gap-2"
+            className="gap-1.5"
           >
-            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
             Retry
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4 relative">
-      {/* Header Card */}
-      <Card className="border shadow-sm">
-        <CardContent className="p-2 sm:p-5 md:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="space-y-1">
-              <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight">
-                Supply Orders
-              </CardTitle>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Manage purchase requests and track order status
-              </p>
+    <div className="h-full flex flex-col space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header - Compact */}
+      <div className="border rounded-lg bg-white">
+        <div className="p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Supply Orders</h2>
+              <p className="text-xs text-gray-500">Manage purchase requests</p>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setOnOpen(1)}
-                className="gap-1.5 sm:gap-2"
-                size="sm"
-              >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">New Order</span>
-              </Button>
-            </div>
+            <Button
+              onClick={() => setOnOpen(1)}
+              size="sm"
+              className="gap-1 h-8 text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Order
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Search and Stats Card */}
-      <Card className="border sticky top-0 z-20 bg-white">
-        <CardContent className="p-1 sm:p-4">
-          <div className="space-y-3 sm:space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Search by reference, subject, or status..."
-                value={searchText}
-                onChange={handleSearchChange}
-                className="pl-8 sm:pl-9 pr-7 sm:pr-8 h-9 sm:h-10 text-xs sm:text-sm"
-              />
-              {searchText && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                >
-                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-              )}
-            </div>
-
-            {debouncedQuery && (
-              <div className="flex items-center justify-between text-xs sm:text-sm">
-                <span className="text-muted-foreground">
-                  {isEmpty
-                    ? "No orders found"
-                    : `Found ${totalOrders} order${
-                        totalOrders !== 1 ? "s" : ""
-                      }`}
-                </span>
-                {isFetching && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <RefreshCw className="h-3 w-3 animate-spin" />
-                    <span className="text-muted-foreground whitespace-nowrap">
-                      Searching...
-                    </span>
-                  </div>
-                )}
-              </div>
+      {/* Search Section - Compact */}
+      <div className="border rounded-lg bg-white sticky top-0 z-20">
+        <div className="p-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search by reference, subject, or status..."
+              value={searchText}
+              onChange={handleSearchChange}
+              className="pl-8 pr-7 h-8 text-xs"
+            />
+            {searchText && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Orders Table Card */}
-      <Card className="flex-1 ">
-        <CardContent className="p-0 h-full">
-          <div className="w-full h-full overflow-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
-                <TableRow>
-                  <TableHead className="w-10 sm:w-12 p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
-                    #
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
-                    Ref. No
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[120px] sm:min-w-48 text-xs sm:text-sm">
-                    Subject
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[60px] sm:min-w-24 text-center text-xs sm:text-sm">
-                    Items
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
-                    Date Ordered
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
-                    Date Completed
-                  </TableHead>
-                  <TableHead className="p-2 sm:p-3 md:p-4 min-w-[85px] sm:min-w-32 text-xs sm:text-sm">
-                    Status
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {showEmptyState ? (
+          {debouncedQuery && (
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className="text-gray-500">
+                {isEmpty
+                  ? "No orders found"
+                  : `Found ${totalOrders} order${totalOrders !== 1 ? "s" : ""}`}
+              </span>
+              {isFetching && (
+                <div className="flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  <span className="text-gray-500">Searching...</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Orders Table - Compact with horizontal scroll */}
+      <div className="flex-1 overflow-auto">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="overflow-auto">
+            <div className="min-w-[800px]">
+              <Table>
+                <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
-                    <TableCell colSpan={6} className="h-48 sm:h-64">
-                      <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
-                        <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
-                        <p className="text-sm sm:text-base text-muted-foreground font-medium">
-                          No orders yet
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          Create your first order to get started
-                        </p>
-                        <Button
-                          onClick={() => setOnOpen(1)}
-                          className="mt-3 sm:mt-4 gap-1.5 sm:gap-2"
-                          size="sm"
-                        >
-                          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                          Create New Order
-                        </Button>
-                      </div>
-                    </TableCell>
+                    <TableHead className="w-12 p-2 text-xs font-semibold">
+                      #
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold min-w-[100px]">
+                      Ref. No
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold min-w-[160px]">
+                      Subject
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold text-center w-20">
+                      Items
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold min-w-[100px]">
+                      Date Ordered
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold min-w-[100px]">
+                      Date Completed
+                    </TableHead>
+                    <TableHead className="p-2 text-xs font-semibold min-w-[80px]">
+                      Status
+                    </TableHead>
                   </TableRow>
-                ) : isEmpty ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-48 sm:h-64">
-                      <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
-                        <Search className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
-                        <p className="text-sm sm:text-base text-muted-foreground font-medium">
-                          No orders found for "{debouncedQuery}"
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          Try a different search term
-                        </p>
-                        <Button
-                          onClick={clearSearch}
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 sm:mt-4"
+                </TableHeader>
+                <TableBody>
+                  {showEmptyState ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-48 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <FileText className="h-10 w-10 text-gray-300 mb-2" />
+                          <p className="text-sm font-medium text-gray-700">
+                            No orders yet
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Create your first order to get started
+                          </p>
+                          <Button
+                            onClick={() => setOnOpen(1)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-3"
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            New Order
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : isEmpty ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-48 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <Search className="h-10 w-10 text-gray-300 mb-2" />
+                          <p className="text-sm font-medium text-gray-700">
+                            No orders found
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Try a different search term
+                          </p>
+                          <Button
+                            onClick={clearSearch}
+                            variant="outline"
+                            size="sm"
+                            className="mt-3"
+                          >
+                            Clear Search
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <>
+                      {allOrders.map((order, i) => (
+                        <TableRow
+                          key={order.id}
+                          onClick={() => nav(`order/${order.id}`)}
+                          className="group cursor-pointer hover:bg-gray-50 transition-colors"
                         >
-                          Clear Search
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  <>
-                    {allOrders.map((order, i) => (
-                      <TableRow
-                        key={order.id}
-                        onClick={() => nav(`order/${order.id}`)}
-                        className="group cursor-pointer hover:bg-accent/50 transition-colors"
-                      >
-                        <TableCell className="p-2 sm:p-3 md:p-4 font-medium text-xs sm:text-sm">
-                          {i + 1}
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4">
-                          <code className="text-xs bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded font-mono truncate block max-w-[85px] sm:max-w-none">
-                            {order.refNumber || "N/A"}
-                          </code>
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4">
-                          <div className="min-w-0 max-w-[120px] sm:max-w-none">
-                            <p className="text-xs sm:text-sm font-medium truncate">
+                          <TableCell className="p-2 text-xs font-medium">
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs">
+                              {i + 1}
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <code className="text-[10px] font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+                              {order.refNumber || "N/A"}
+                            </code>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <p className="text-xs font-medium text-gray-800 truncate max-w-[200px]">
                               {order.title || "Untitled Order"}
                             </p>
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                            <p className="text-[10px] text-gray-400 truncate">
                               ID: {order.id.slice(0, 6)}...
                             </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Package className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-xs sm:text-sm font-medium">
-                              {order._count?.order || 0}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs sm:text-sm whitespace-nowrap">
-                              {formatDate(order.timestamp)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                            <span className="text-xs sm:text-sm whitespace-nowrap">
-                              {formatDate(order.approvedAt)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-2 sm:p-3 md:p-4">
-                          {getStatusBadge(order.status)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="p-2 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Package className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs font-medium">
+                                {order._count?.order || 0}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600 whitespace-nowrap">
+                                {formatDate(order.timestamp)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-gray-400" />
+                              <span className="text-xs text-gray-600 whitespace-nowrap">
+                                {formatPureDate(order.approvedAt)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-2">
+                            {getStatusBadge(order.status)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
 
-                    {/* Infinite Scroll Loader */}
-                    {isFetchingNextPage && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="p-3 sm:p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                            <span className="text-xs sm:text-sm text-muted-foreground">
-                              Loading more orders...
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
+                      {/* Infinite Scroll Loader */}
+                      {isFetchingNextPage && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="p-2 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                              <span className="text-xs text-gray-500">
+                                Loading more orders...
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
 
-                    {/* Infinite Scroll Trigger */}
-                    {hasNextPage && !isFetchingNextPage && (
-                      <TableRow ref={ref}>
-                        <TableCell colSpan={6} className="p-2 sm:p-3">
-                          <div className="h-2 sm:h-4" />
-                        </TableCell>
-                      </TableRow>
-                    )}
+                      {/* Infinite Scroll Trigger */}
+                      {hasNextPage && !isFetchingNextPage && (
+                        <TableRow ref={ref}>
+                          <TableCell colSpan={7} className="p-2">
+                            <div className="h-2" />
+                          </TableCell>
+                        </TableRow>
+                      )}
 
-                    {/* End of Results */}
-                    {!hasNextPage && totalOrders > 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="p-3 sm:p-4 border-t">
-                          <div className="text-center">
-                            <p className="text-xs sm:text-sm text-muted-foreground">
-                              Showing all {totalOrders} order
-                              {totalOrders !== 1 ? "s" : ""}
-                            </p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </>
-                )}
-              </TableBody>
-            </Table>
+                      {/* End of Results */}
+                      {!hasNextPage && totalOrders > 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="p-2 border-t">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-400">
+                                Showing all {totalOrders} order
+                                {totalOrders !== 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* New Order Modal */}
+      {/* New Order Modal - Compact */}
       <Modal
         title={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-sm sm:text-base">Create New Order</span>
+          <div className="flex items-center gap-2">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="text-sm font-semibold">Create New Order</span>
           </div>
         }
         children={
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3 p-1">
             <Form {...form}>
               <FormField
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs sm:text-sm font-medium">
+                    <FormLabel className="text-xs font-medium">
                       Order Subject (Optional)
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g., Office Supplies Q4 2024"
+                        placeholder="e.g., Office Supplies"
                         {...field}
                         autoFocus
-                        className="text-xs sm:text-sm"
+                        className="h-8 text-sm"
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      A descriptive title helps identify this order later
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      A descriptive title helps identify this order
                     </p>
                     {errors.title && (
-                      <FormMessage className="text-xs">
+                      <FormMessage className="text-[10px]">
                         {errors.title.message}
                       </FormMessage>
                     )}
@@ -537,25 +519,21 @@ const OrderList = ({ auth, listId, lineId, containerId }: OrderListProps) => {
               />
             </Form>
 
-            <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
-              <p className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">
+            <div className="bg-gray-50 rounded-md p-2">
+              <p className="text-[10px] font-medium text-gray-700 mb-1">
                 Order Information
               </p>
-              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                <span className="text-muted-foreground">List:</span>
-                <span className="font-medium truncate">
-                  {listId?.slice(0, 8)}...
-                </span>
-                <span className="text-muted-foreground">Line:</span>
-                <span className="font-medium truncate">
-                  {lineId?.slice(0, 8)}...
-                </span>
+              <div className="grid grid-cols-2 gap-1 text-[10px]">
+                <span className="text-gray-500">List:</span>
+                <span className="font-mono">{listId?.slice(0, 8)}...</span>
+                <span className="text-gray-500">Line:</span>
+                <span className="font-mono">{lineId?.slice(0, 8)}...</span>
               </div>
             </div>
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md mx-3 sm:mx-auto"
+        className="max-w-md w-[90vw]"
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         onFunction={handleSubmit(onSubmit)}

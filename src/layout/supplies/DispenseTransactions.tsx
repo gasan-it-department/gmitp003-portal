@@ -6,11 +6,10 @@ import { useDebounce } from "use-debounce";
 import { supplyDispenseTransaction } from "@/db/statements/supply";
 //
 import { Spinner } from "@/components/ui/spinner";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   InputGroup,
-  InputGroupInput,
   InputGroupAddon,
+  InputGroupInput,
 } from "@/components/ui/input-group";
 import {
   Table,
@@ -99,48 +98,42 @@ const DispenseTransactions = ({ listId, token }: Props) => {
 
   if (isError) {
     return (
-      <Card className="w-full">
-        <CardContent className="p-6 text-center">
-          <div className="text-destructive">
-            Error loading transactions: {(error as Error)?.message}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="border rounded-lg p-4 text-center bg-white">
+        <div className="text-red-600 text-sm">
+          Error loading transactions: {(error as Error)?.message}
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col relative">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Dispense Transactions
-            </h2>
-            {totalItems !== undefined && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {totalItems} transaction{totalItems !== 1 ? "s" : ""} •{" "}
-                {totalQuantity || 0} total units
-              </p>
-            )}
-          </div>
-        </div>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header - Compact */}
+      <div className="border-b bg-white p-3">
+        <h2 className="text-sm font-semibold text-gray-800">
+          Dispense Transactions
+        </h2>
+        {totalItems !== undefined && (
+          <p className="text-xs text-gray-500 mt-0.5">
+            {totalItems} transaction{totalItems !== 1 ? "s" : ""} •{" "}
+            {totalQuantity || 0} total units
+          </p>
+        )}
+      </div>
 
-        {/* Summary stats - Slim version */}
-        <div className="flex items-center gap-6 mb-6 text-sm">
+      {/* Summary stats - Compact */}
+      <div className="border-b bg-white p-3">
+        <div className="flex items-center gap-4 text-xs">
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Total: </span>
+            <span className="text-gray-500">Total: </span>
             <span className="font-semibold">{totalQuantity || 0} units</span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">
-              Transactions:{" "}
-            </span>
+            <span className="text-gray-500">Transactions: </span>
             <span className="font-semibold">{totalItems || 0}</span>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Avg: </span>
+            <span className="text-gray-500">Avg: </span>
             <span className="font-semibold">
               {totalItems && totalQuantity
                 ? Math.round(totalQuantity / totalItems)
@@ -151,91 +144,115 @@ const DispenseTransactions = ({ listId, token }: Props) => {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="border-b bg-white p-3">
+        <div className="flex gap-2">
+          <InputGroup className="flex-1">
+            <InputGroupAddon>
+              <Search className="h-3.5 w-3.5" />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Search transaction..."
+              onChange={(e) => setText(e.target.value)}
+              className="h-8 text-xs"
+            />
+          </InputGroup>
+          <InputGroup className="w-32">
+            <InputGroupAddon>
+              <Search className="h-3.5 w-3.5" />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Date"
+              type="date"
+              className="h-8 text-xs"
+            />
+          </InputGroup>
+        </div>
+      </div>
+
       {/* Loading state for initial fetch */}
       {isFetching && !data && (
-        <div className="flex justify-center items-center py-12">
-          <Spinner />
-          <span className="ml-3 text-gray-600 dark:text-gray-400">
+        <div className="flex justify-center items-center py-8">
+          <Spinner className="h-5 w-5" />
+          <span className="ml-2 text-xs text-gray-500">
             Loading transactions...
           </span>
         </div>
       )}
 
-      {/* Table Container */}
-      <div className="flex-1 border rounded-lg px-2">
-        <div className=" w-full flex gap-2 sticky top-0 z-30 bg-white">
-          <InputGroup className=" w-full mt-2">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              placeholder="Searh transaction..."
-              onChange={(e) => setText(e.target.value)}
-            />
-          </InputGroup>
-          <InputGroup className=" w-1/4 mt-2">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput placeholder="Searh transaction..." type="date" />
-          </InputGroup>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50 dark:bg-gray-800/50">
-              <TableHead className="w-[180px]">Date & Time</TableHead>
-              <TableHead>Item</TableHead>
-              <TableHead className="w-[100px] text-right">Quantity</TableHead>
-              <TableHead>Recipient</TableHead>
-              <TableHead>Dispensed By</TableHead>
-              <TableHead>Remarks</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data ? (
-              data.pages.flatMap((item) => item.list).length > 0 ? (
-                data.pages
-                  .flatMap((item) => item.list)
-                  .map((item) => (
-                    <DispenseTransactionItem
-                      item={item}
-                      key={item.id}
-                      ref={ref}
-                    />
-                  ))
+      {/* Table Container - THIS IS THE SCROLLABLE AREA */}
+      <div className="flex-1 overflow-auto bg-white rounded-b-lg">
+        <div className="min-w-[800px]">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead className="p-2 text-xs w-[160px]">
+                  Date & Time
+                </TableHead>
+                <TableHead className="p-2 text-xs">Transaction Ref.</TableHead>
+                <TableHead className="p-2 text-xs text-center w-[80px]">
+                  Quantity
+                </TableHead>
+                <TableHead className="p-2 text-xs">Recipient</TableHead>
+                <TableHead className="p-2 text-xs">Dispensed By</TableHead>
+                <TableHead className="p-2 text-xs">Remarks</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data ? (
+                data.pages.flatMap((item) => item.list).length > 0 ? (
+                  data.pages
+                    .flatMap((item) => item.list)
+                    .map((item) => (
+                      <DispenseTransactionItem
+                        item={item}
+                        key={item.id}
+                        ref={ref}
+                      />
+                    ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="p-4 text-center text-gray-500 text-sm"
+                    >
+                      No data found!
+                    </TableCell>
+                  </TableRow>
+                )
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className=" text-muted-foreground">
-                    No data found!
+                  <TableCell colSpan={6} className="p-4">
+                    <SWWItem colSpan={6} />
                   </TableCell>
                 </TableRow>
-              )
-            ) : (
-              <SWWItem colSpan={7} />
-            )}
+              )}
 
-            {/* Empty state */}
-            {!isFetching && data?.pages[0]?.list.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-12">
-                  <div className="text-gray-400 dark:text-gray-500">
-                    <p className="font-medium mb-2">No transactions found</p>
-                    <p className="text-sm">
-                      There are no dispense transactions for this list yet.
-                    </p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              {/* Empty state */}
+              {!isFetching && data?.pages[0]?.list.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="text-gray-400">
+                      <p className="text-sm font-medium mb-1">
+                        No transactions found
+                      </p>
+                      <p className="text-xs">
+                        No dispense transactions for this list yet.
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
         {/* Loading indicator for next page */}
         {isFetchingNextPage && (
-          <div className="border-t">
-            <div className="flex justify-center items-center py-4">
-              <Spinner />
-              <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">
+          <div className="border-t p-2 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Spinner className="h-3.5 w-3.5" />
+              <span className="text-xs text-gray-500">
                 Loading more transactions...
               </span>
             </div>
@@ -244,25 +261,11 @@ const DispenseTransactions = ({ listId, token }: Props) => {
 
         {/* No more data message */}
         {!hasNextPage && data && data.pages[0]?.list.length > 0 && (
-          <div className="border-t">
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                All transactions loaded
-              </p>
-            </div>
+          <div className="border-t p-2 text-center">
+            <p className="text-xs text-gray-400">All transactions loaded</p>
           </div>
         )}
       </div>
-
-      {/* Loading state overlay for initial fetch */}
-      {isFetching && data && (
-        <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center">
-          <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow">
-            <Spinner />
-            <span className="text-sm">Loading more...</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

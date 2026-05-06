@@ -540,6 +540,9 @@ export interface SupplyOrder {
   comment?: string;
   user: User;
   supplieRecieveHistories: SupplieRecieveHistory | undefined;
+  supplierId?: string;
+  quality?: string;
+  expiration?: string;
 }
 
 export interface SupplyPriceTrack {
@@ -1115,6 +1118,7 @@ export interface JobPostProps {
 
 export interface SupplyDispenseRecordProps {
   id: string;
+  refCode?: string;
   userId: string | null;
   departmentId: string | null;
   quantity: string;

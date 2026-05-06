@@ -11,21 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ListItem from "../items/ListItem";
 
-// import {
-//   Select,
-//   SelectItem,
-//   SelectContent,
-//   SelectTrigger,
-// } from "@/components/ui/select";
 import Modal from "@/components/custom/Modal";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 //icons
 import {
-  // TrendingUp,
   Tally5,
-  ScanBarcode,
   ChartLine,
   PencilLine,
   Search,
@@ -41,7 +32,6 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { useInView } from "react-intersection-observer";
 
-//icons
 //statements
 import { supplyList } from "@/db/statement";
 import type { ProtectedRouteProps, SuppliesProps } from "@/interface/data";
@@ -129,26 +119,24 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
   const hasSearchQuery = query.length > 0;
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-50/30">
-      {/* Header Section */}
-      <div className="p-4 border-b bg-white shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-1">
-          <div className="flex items-center gap-2">
-            {hasSearchQuery && (
-              <Badge variant="secondary" className="text-xs">
-                Search: "{query}"
-              </Badge>
-            )}
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header Section - Compact */}
+      <div className="border-b bg-white p-3 space-y-2">
+        {hasSearchQuery && (
+          <div>
+            <Badge variant="secondary" className="text-[10px]">
+              Search: "{query}"
+            </Badge>
           </div>
-        </div>
+        )}
 
         {/* Controls Section */}
-        <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-2">
           {/* Search Bar */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
             <Input
-              className="pl-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+              className="pl-8 h-8 text-xs bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
               placeholder="Search by item name, reference number, or brand..."
               onChange={(e) => {
                 handleChangeParams("query", e.target.value);
@@ -159,7 +147,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
                 onClick={() => handleChangeParams("query", "")}
               >
                 ×
@@ -167,108 +155,51 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Refresh Button */}
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+              className="h-8 w-8 p-0"
               onClick={() => refetch()}
               disabled={isFetching}
             >
               {isFetching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-3.5 w-3.5" />
               )}
             </Button>
-
-            {/* <Select
-              value={trend}
-              onValueChange={(e) => handleChangeParams("trend", e)}
-            >
-              <SelectTrigger className="w-40 h-9">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="truncate">{trend} Trend</span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Current">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Current
-                  </div>
-                </SelectItem>
-                <SelectItem value="Quarter">
-                  <div className="flex items-center gap-2">
-                    <ChartLine className="h-4 w-4" />
-                    Quarterly
-                  </div>
-                </SelectItem>
-                <SelectItem value="1st-half">
-                  <div className="flex items-center gap-2">
-                    <ChartLine className="h-4 w-4" />
-                    1st Half
-                  </div>
-                </SelectItem>
-                <SelectItem value="2nd-half">
-                  <div className="flex items-center gap-2">
-                    <ChartLine className="h-4 w-4" />
-                    2nd Half
-                  </div>
-                </SelectItem>
-                <SelectItem value="Annual">
-                  <div className="flex items-center gap-2">
-                    <ChartLine className="h-4 w-4" />
-                    Annually
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select> */}
           </div>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="relative">
+      {/* Table Section - Scrollable */}
+      <div className="flex-1 overflow-auto p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="min-w-[600px]">
             <Table>
-              <TableHeader className="sticky top-0 bg-gray-50 z-10">
+              <TableHeader className="bg-gray-50 sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent border-b">
-                  <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
+                  <TableHead className="w-12 p-2 text-xs font-semibold text-gray-600">
                     <div className="flex items-center gap-1">
                       <Tally5 className="h-3 w-3" />
                       No.
                     </div>
                   </TableHead>
-                  <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-                    <div className="flex items-center gap-1">
-                      <ScanBarcode className="h-3 w-3" />
-                      Reference
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
+                  <TableHead className="p-2 text-xs font-semibold text-gray-600 min-w-[180px]">
                     <div className="flex items-center gap-1">
                       <PencilLine className="h-3 w-3" />
                       Item Name
                     </div>
                   </TableHead>
-
-                  <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-                    <div className="flex items-center gap-1">
+                  <TableHead className="p-2 text-xs font-semibold text-gray-600 text-center w-24">
+                    <div className="flex items-center justify-center gap-1">
                       <Tally5 className="h-3 w-3" />
-                      Stock Level
+                      Stock
                     </div>
                   </TableHead>
-                  {/* <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Trend Analysis
-                    </div>
-                  </TableHead> */}
-                  <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  <TableHead className="p-2 text-xs font-semibold text-gray-600 w-24">
                     <div className="flex items-center gap-1">
                       <ChartLine className="h-3 w-3" />
                       Status
@@ -281,27 +212,18 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
                 {isFetching &&
                   !data &&
                   [...Array(5)].map((_, i) => (
-                    <TableRow key={i} className="hover:bg-transparent">
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-6" />
+                    <TableRow key={i}>
+                      <TableCell className="p-2">
+                        <Skeleton className="h-3 w-6" />
                       </TableCell>
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-24" />
+                      <TableCell className="p-2">
+                        <Skeleton className="h-3 w-40" />
                       </TableCell>
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-48" />
+                      <TableCell className="p-2">
+                        <Skeleton className="h-3 w-16" />
                       </TableCell>
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-32" />
-                      </TableCell>
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-16" />
-                      </TableCell>
-                      <TableCell className="border-r">
-                        <Skeleton className="h-4 w-20" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="h-6 w-20" />
+                      <TableCell className="p-2">
+                        <Skeleton className="h-5 w-20" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -322,21 +244,21 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
                   ))
                 ) : !isFetching ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-64 text-center">
-                      <div className="flex flex-col items-center justify-center h-full py-12">
-                        <div className="p-4 bg-gray-100 rounded-full mb-4">
+                    <TableCell colSpan={4} className="p-8 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="p-3 bg-gray-100 rounded-full mb-3">
                           {hasSearchQuery ? (
-                            <Search className="h-8 w-8 text-gray-400" />
+                            <Search className="h-6 w-6 text-gray-400" />
                           ) : (
-                            <AlertTriangle className="h-8 w-8 text-gray-400" />
+                            <AlertTriangle className="h-6 w-6 text-gray-400" />
                           )}
                         </div>
-                        <h3 className="text-lg font-medium text-gray-700 mb-2">
+                        <h3 className="text-sm font-medium text-gray-700 mb-1">
                           {hasSearchQuery
                             ? "No results found"
                             : "No items available"}
                         </h3>
-                        <p className="text-sm text-gray-500 max-w-sm">
+                        <p className="text-xs text-gray-500 max-w-sm">
                           {hasSearchQuery
                             ? `No items match "${query}". Try a different search term.`
                             : "Start by adding items to your inventory."}
@@ -345,7 +267,7 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-4"
+                            className="mt-3 text-xs h-7"
                             onClick={() => handleChangeParams("query", "")}
                           >
                             Clear search
@@ -358,22 +280,19 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
 
                 {/* Infinite scroll trigger */}
                 <TableRow ref={ref}>
-                  <TableCell colSpan={7} className="border-t">
-                    <div className="py-1 text-center">
+                  <TableCell colSpan={4} className="p-2">
+                    <div className="py-2 text-center">
                       {isFetchingNextPage ? (
                         <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="text-sm text-gray-600">
-                            Loading more items...
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span className="text-xs text-gray-500">
+                            Loading more...
                           </span>
                         </div>
                       ) : !hasNextPage && totalItems > 0 ? (
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border">
-                          <Tally5 className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm text-gray-600">
-                            All {totalItems} items loaded
-                          </span>
-                        </div>
+                        <span className="text-xs text-gray-400">
+                          All {totalItems} items loaded
+                        </span>
                       ) : null}
                     </div>
                   </TableCell>
@@ -381,29 +300,25 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
               </TableBody>
             </Table>
           </div>
-          <ScrollBar orientation="horizontal" />
-          <ScrollBar orientation="vertical" />
-        </ScrollArea>
+        </div>
       </div>
 
-      {/* Footer Stats */}
-      <div className="p-1 border-t bg-white">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600">
-              Total Items: <span className="font-semibold">{totalItems}</span>
+      {/* Footer Stats - Compact */}
+      <div className="border-t bg-white p-2">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-3">
+            <span className="text-gray-500">
+              Total:{" "}
+              <span className="font-semibold text-gray-700">{totalItems}</span>
             </span>
             {hasSearchQuery && (
-              <span className="text-gray-600">
-                Searching: <span className="font-medium">"{query}"</span>
+              <span className="text-gray-500">
+                Search: <span className="font-medium">"{query}"</span>
               </span>
             )}
-            <span className="text-gray-600">
-              View: <span className="font-medium">{trend} Trend</span>
-            </span>
           </div>
           {isFetching && (
-            <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center gap-1 text-gray-400">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span>Updating...</span>
             </div>
@@ -411,26 +326,28 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modal */}
       <Modal
         title="Low Stock Alerts"
         onOpen={onOpen === 1}
-        className="max-w-lg"
+        className="max-w-md"
         setOnOpen={() => setOnOpen(0)}
       >
-        <div className="space-y-4">
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+        <div className="space-y-3 p-1">
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
               <div>
-                <h3 className="font-medium text-amber-800">Low Stock Items</h3>
-                <p className="text-sm text-amber-700 mt-1">
+                <h3 className="text-xs font-medium text-amber-800">
+                  Low Stock Items
+                </h3>
+                <p className="text-[10px] text-amber-700 mt-0.5">
                   Items that are running low and need restocking
                 </p>
               </div>
             </div>
           </div>
-          <p className="text-sm text-gray-600 text-center py-4">
+          <p className="text-xs text-gray-500 text-center py-3">
             Alert functionality will be implemented soon
           </p>
         </div>

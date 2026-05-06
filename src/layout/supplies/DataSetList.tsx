@@ -1,11 +1,3 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useInView } from "react-intersection-observer";
 import { useEffect } from "react";
@@ -41,7 +33,7 @@ const DataSetList = () => {
           token as string,
           pageParam as string | null,
           "20",
-          containerId as string
+          containerId as string,
         ),
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -59,144 +51,112 @@ const DataSetList = () => {
   const allItems = data?.pages.flatMap((page) => page.list) || [];
   const totalItems = allItems.length;
 
+  if (isFetching && !data) {
+    return (
+      <div className="divide-y divide-gray-100">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-5 w-16" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (allItems.length === 0 && !isFetching) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+          <FileText className="h-6 w-6 text-gray-400" />
+        </div>
+        <h3 className="text-sm font-medium text-gray-700 mb-1">
+          No data sets found
+        </h3>
+        <p className="text-xs text-gray-500">
+          Create your first data set to get started
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full">
-      <Table>
-        <TableHeader className="sticky top-0 bg-gray-50 z-10">
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-16 text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-              No.
-            </TableHead>
-            <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-              Data Set Name
-            </TableHead>
-            <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider border-r">
-              Items Count
-            </TableHead>
-            <TableHead className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              Created Date
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {isFetching && !data ? (
-            // Loading skeletons
-            [...Array(5)].map((_, i) => (
-              <TableRow key={i}>
-                <TableCell className="border-r">
-                  <Skeleton className="h-4 w-6" />
-                </TableCell>
-                <TableCell className="border-r">
-                  <Skeleton className="h-4 w-48" />
-                </TableCell>
-                <TableCell className="border-r">
-                  <Skeleton className="h-4 w-16" />
-                </TableCell>
-                <TableCell>
-                  <Skeleton className="h-4 w-32" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : allItems.length > 0 ? (
-            <>
-              {allItems.map((item, i) => (
-                <TableRow
-                  onClick={() => nav(`${item.id}`)}
-                  key={item.id}
-                  className="cursor-pointer hover:bg-blue-50/50 transition-colors group"
-                >
-                  <TableCell className="font-medium border-r">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-sm">
-                      {i + 1}
-                    </div>
-                  </TableCell>
-                  <TableCell className="border-r">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                        <Database className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {item.title}
-                        </p>
-                        {/* {item.description && (
-                          <p className="text-xs text-gray-500 truncate max-w-xs">
-                            {item.description}
-                          </p>
-                        )} */}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="border-r">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <Badge variant="outline" className="text-xs font-normal">
-                        {item._count.supplies} items
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-600">
-                        {formatDate(item.timestamp)}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </>
-          ) : (
-            // Empty state
-            <TableRow>
-              <TableCell colSpan={4} className="h-64">
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className="p-4 bg-gray-100 rounded-full mb-4">
-                    <FileText className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">
-                    No data sets found
-                  </h3>
-                  <p className="text-sm text-gray-500 max-w-sm mb-4">
-                    Create your first data set to define custom fields and
-                    structure for your items.
-                  </p>
-                </div>
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+    <div className="divide-y divide-gray-100">
+      {allItems.map((item, i) => (
+        <div
+          onClick={() => nav(`${item.id}`)}
+          key={item.id}
+          className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition-colors group"
+        >
+          {/* Serial Number */}
+          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-medium text-gray-600 flex-shrink-0">
+            {i + 1}
+          </div>
+
+          {/* Icon */}
+          <div className="p-1.5 bg-blue-100 rounded-md group-hover:bg-blue-200 transition-colors flex-shrink-0">
+            <Database className="h-3.5 w-3.5 text-blue-600" />
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+              {item.title}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1">
+                <Package className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  {item._count.supplies} items
+                </span>
+              </div>
+              <span className="text-gray-300">•</span>
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-500">
+                  {formatDate(item.timestamp)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Badge (optional) */}
+          <Badge
+            variant="outline"
+            className="text-[10px] px-2 py-0 flex-shrink-0"
+          >
+            View
+          </Badge>
+        </div>
+      ))}
 
       {/* Infinite scroll trigger */}
-      <div ref={ref} className="py-6">
-        <div className="text-center">
-          {isFetchingNextPage ? (
-            <div className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm text-gray-600">
-                Loading more data sets...
-              </span>
-            </div>
-          ) : !hasNextPage && totalItems > 0 ? (
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border">
-              <Database className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-600">
-                All {totalItems} data sets loaded
-              </span>
-            </div>
-          ) : hasNextPage ? (
-            <div className="h-2" /> // Invisible trigger
-          ) : null}
-        </div>
+      <div ref={ref} className="py-3 text-center">
+        {isFetchingNextPage ? (
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="text-xs text-gray-500">Loading more...</span>
+          </div>
+        ) : !hasNextPage && totalItems > 0 ? (
+          <div className="text-xs text-gray-400">
+            All {totalItems} data sets loaded
+          </div>
+        ) : hasNextPage ? (
+          <div className="h-1" />
+        ) : null}
       </div>
 
       {/* Initial loading state */}
       {isFetching && !isFetchingNextPage && totalItems === 0 && (
-        <div className="py-4">
+        <div className="py-4 text-center">
           <div className="flex items-center justify-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm text-gray-600">Loading data sets...</span>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="text-xs text-gray-500">Loading data sets...</span>
           </div>
         </div>
       )}

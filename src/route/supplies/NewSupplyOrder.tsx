@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import OrderProgress from "@/layout/supplies/OrderProgress";
 import AddSupplyOrder from "@/layout/supplies/AddSupplyOrder";
@@ -211,34 +210,33 @@ const NewSupplyOrder = () => {
   // Loading state
   if (isLoadingOrder || isLoadingItems) {
     return (
-      <div className="h-full space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1.5 sm:space-y-2">
-                <Skeleton className="h-6 sm:h-8 w-40 sm:w-64" />
-                <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+        <div className="p-3 space-y-3">
+          <div className="border rounded-lg p-3 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <div className="space-y-1.5">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-2.5 w-24" />
               </div>
-              <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
+              <Skeleton className="h-7 w-24" />
             </div>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardContent className="p-0">
-            <div className="p-2 sm:p-4 border-b">
-              <div className="flex flex-wrap gap-2 sm:gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 sm:h-6 w-16 sm:w-24" />
-                ))}
-              </div>
-            </div>
-            <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 sm:h-12 w-full" />
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-3 w-20" />
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="p-2 border-b">
+              <Skeleton className="h-8 w-full" />
+            </div>
+            <div className="p-2 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -246,43 +244,45 @@ const NewSupplyOrder = () => {
   // Error state
   if (orderError || itemsError) {
     return (
-      <Card className="h-full border-destructive/20 bg-destructive/5 m-2 sm:m-3">
-        <CardContent className="flex flex-col items-center justify-center py-6 sm:py-12 px-3 sm:px-6">
-          <AlertTriangle className="h-8 w-8 sm:h-12 sm:w-12 text-destructive mb-3 sm:mb-4" />
-          <h3 className="text-base sm:text-lg font-semibold text-destructive mb-1.5 sm:mb-2 text-center">
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md mx-auto">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="h-7 w-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
             Failed to load order
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground text-center mb-3 sm:mb-4">
+          <p className="text-sm text-gray-500 mb-4">
             {orderError?.message || itemsError?.message || "An error occurred"}
           </p>
           <Button
             onClick={() => refetch()}
             variant="outline"
             size="sm"
-            className="gap-1.5 sm:gap-2"
+            className="gap-1.5"
           >
-            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
             Retry
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   // No data state
   if (!orderData || !data) {
     return (
-      <Card className="h-full m-2 sm:m-3">
-        <CardContent className="flex flex-col items-center justify-center py-12 sm:py-16 px-3 sm:px-6">
-          <ShoppingCart className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground/50 mb-3 sm:mb-4" />
-          <h3 className="text-lg sm:text-xl font-semibold text-muted-foreground mb-2 text-center">
+      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg p-6 text-center bg-white max-w-md mx-auto">
+          <ShoppingCart className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-gray-700 mb-1">
             No order found
           </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground text-center">
-            The order you're looking for doesn't exist or has been removed.
+          <p className="text-sm text-gray-500">
+            The order doesn't exist or has been removed.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
@@ -297,183 +297,158 @@ const NewSupplyOrder = () => {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-3 sm:space-y-4 p-2 sm:p-3 md:p-4">
-      {/* Header Card */}
-      <Card className="border shadow-sm">
-        <CardContent className="p-4 sm:p-5 md:p-6">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-            <div className="space-y-2 min-w-0 flex-1">
-              <div className="flex flex-col xs:flex-row xs:items-start gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-3 space-y-3">
+        {/* Header Card - Compact */}
+        <div className="border rounded-lg bg-white">
+          <div className="p-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-1.5">
+                <div className="flex items-center flex-wrap gap-2">
+                  <div className="p-1 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
+                    <ShoppingCart className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <h1 className="text-base font-bold text-gray-900 truncate max-w-[180px] sm:max-w-none">
                     {orderData.order.title || "Untitled Order"}
                   </h1>
+                  <Badge
+                    style={{ backgroundColor: statusColor }}
+                    className="text-white border-0 text-[10px] px-2 py-0.5"
+                  >
+                    {statusText}
+                  </Badge>
                 </div>
-                <Badge
-                  style={{ backgroundColor: statusColor }}
-                  className="text-white border-0 text-xs sm:text-sm w-fit whitespace-nowrap"
-                >
-                  {statusText}
-                </Badge>
-              </div>
 
-              <div className="flex flex-wrap gap-y-2 gap-x-3 sm:gap-x-4 text-xs sm:text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <code className="bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs truncate max-w-[120px] sm:max-w-[200px]">
-                    {orderData.order.refNumber || "N/A"}
-                  </code>
-                </div>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">
-                    {totalItems} item{totalItems !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                {orderData.order.timestamp && (
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="hidden xs:inline">Created:</span>
-                    <span className="font-medium whitespace-nowrap">
-                      {new Date(orderData.order.timestamp).toLocaleDateString()}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3" />
+                    <code className="text-[10px] font-mono">
+                      {orderData.order.refNumber || "N/A"}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <ShoppingCart className="h-3 w-3" />
+                    <span>
+                      {totalItems} item{totalItems !== 1 ? "s" : ""}
                     </span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 mt-2 lg:mt-0">
-              {isEditable && (
-                <Button
-                  disabled={orderData.order.status === 2}
-                  onClick={() => {
-                    if (orderData.order.status === 2) return;
-                    setOnOpen(1);
-                  }}
-                  className="gap-1.5 sm:gap-2 whitespace-nowrap"
-                  size="sm"
-                >
-                  <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Add Items</span>
-                  <span className="sm:hidden">Add</span>
-                  <kbd className="hidden lg:inline ml-2 text-xs px-1.5 py-0.5 rounded border">
-                    Ctrl+A
-                  </kbd>
-                </Button>
-              )}
-
-              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0"
-                  >
-                    <EllipsisVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 sm:w-64"
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    Order Actions
-                  </div>
-
-                  {isEditable ? (
-                    <DropdownMenuItem
-                      disabled={orderData.order.status === 2}
-                      onClick={() => handleDropdownAction(3)}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      <span className="text-xs sm:text-sm">
-                        Submit for Review
+                  {orderData.order.timestamp && (
+                    <div className="flex items-center gap-1">
+                      <span>
+                        {new Date(
+                          orderData.order.timestamp,
+                        ).toLocaleDateString()}
                       </span>
-                      <kbd className="hidden sm:inline ml-auto text-xs">
-                        Ctrl+S
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                {isEditable && (
+                  <Button
+                    disabled={orderData.order.status === 2}
+                    onClick={() => {
+                      if (orderData.order.status === 2) return;
+                      setOnOpen(1);
+                    }}
+                    size="sm"
+                    className="gap-1 h-8 text-xs"
+                  >
+                    <PlusCircle className="h-3 w-3" />
+                    <span className="hidden xs:inline">Add Items</span>
+                    <span className="xs:hidden">Add</span>
+                    <kbd className="hidden lg:inline ml-2 text-[10px] px-1 py-0.5 rounded border">
+                      Ctrl+A
+                    </kbd>
+                  </Button>
+                )}
+
+                <DropdownMenu
+                  open={dropdownOpen}
+                  onOpenChange={setDropdownOpen}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                      <EllipsisVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {isEditable ? (
+                      <DropdownMenuItem
+                        disabled={orderData.order.status === 2}
+                        onClick={() => handleDropdownAction(3)}
+                      >
+                        <Send className="h-3.5 w-3.5 mr-2" />
+                        <span className="text-xs">Submit for Review</span>
+                        <kbd className="hidden sm:inline ml-auto text-[10px]">
+                          Ctrl+S
+                        </kbd>
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem disabled>
+                        <BadgeCheck className="h-3.5 w-3.5 mr-2" />
+                        <span className="text-xs">Already Submitted</span>
+                      </DropdownMenuItem>
+                    )}
+
+                    <DropdownMenuItem
+                      disabled={orderData.order.status < 1}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        nav(`completion`);
+                      }}
+                    >
+                      <Inbox className="h-3.5 w-3.5 mr-2" />
+                      <span className="text-xs">View Fulfillment</span>
+                      <ChevronRight className="h-3.5 w-3.5 ml-auto" />
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem onClick={() => handleDropdownAction(5)}>
+                      <Info className="h-3.5 w-3.5 mr-2" />
+                      <span className="text-xs">View Progress</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                      onClick={() => handleDropdownAction(2)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      <span className="text-xs">Delete Order</span>
+                      <kbd className="hidden sm:inline ml-auto text-[10px]">
+                        Ctrl+C
                       </kbd>
                     </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem disabled>
-                      <BadgeCheck className="h-4 w-4 mr-2" />
-                      <span className="text-xs sm:text-sm">
-                        Already Submitted
-                      </span>
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuItem
-                    disabled={orderData.order.status < 1}
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      nav(`completion`);
-                    }}
-                  >
-                    <Inbox className="h-4 w-4 mr-2" />
-                    <span className="text-xs sm:text-sm">View Fulfillment</span>
-                    <ChevronRight className="h-4 w-4 ml-auto" />
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem onClick={() => handleDropdownAction(5)}>
-                    <Info className="h-4 w-4 mr-2" />
-                    <span className="text-xs sm:text-sm">View Progress</span>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    onClick={() => handleDropdownAction(2)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    <span className="text-xs sm:text-sm">Delete Order</span>
-                    <kbd className="hidden sm:inline ml-auto text-xs">
-                      Ctrl+C
-                    </kbd>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Items Table Card - IMPROVED RESPONSIVE TABLE */}
-      <Card className="flex-1 overflow-hidden">
-        <CardContent className="p-0 h-full">
-          <div className="relative w-full h-full">
-            {/* Mobile scroll indicator */}
-            <div className="absolute bottom-2 right-2 z-20 sm:hidden">
-              <div className="bg-primary/10 backdrop-blur-sm rounded-full px-2 py-1 text-[10px] text-primary flex items-center gap-1">
-                <ChevronRight className="h-3 w-3" />
-                <span>Swipe to scroll</span>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Horizontal scroll container */}
-            <div className="w-full h-full overflow-x-auto overflow-y-auto">
-              <Table className="min-w-[800px] md:min-w-full">
-                <TableHeader className="sticky top-0 bg-muted/50 backdrop-blur-sm z-10">
+        {/* Items Table - Compact */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="overflow-auto">
+            <div className="min-w-[600px]">
+              <Table>
+                <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead className="w-10 sm:w-12 p-2 sm:p-3 md:p-4 text-xs sm:text-sm">
-                      #
-                    </TableHead>
-                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[120px] sm:min-w-[150px] md:min-w-[200px] text-xs sm:text-sm">
+                    <TableHead className="w-10 p-2 text-xs">#</TableHead>
+                    <TableHead className="p-2 text-xs min-w-[120px]">
                       Item
                     </TableHead>
-                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[200px] sm:min-w-[250px] md:min-w-[300px] text-xs sm:text-sm">
+                    <TableHead className="p-2 text-xs min-w-[180px]">
                       Description
                     </TableHead>
-                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-[120px] text-right text-xs sm:text-sm">
+                    <TableHead className="p-2 text-xs text-right w-24">
                       Quantity
                     </TableHead>
-                    <TableHead className="p-2 sm:p-3 md:p-4 min-w-[100px] sm:min-w-[120px] text-xs sm:text-sm">
-                      Status
-                    </TableHead>
+                    <TableHead className="p-2 text-xs w-24">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -491,25 +466,20 @@ const NewSupplyOrder = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-48 sm:h-64">
-                        <div className="flex flex-col items-center justify-center text-center py-6 sm:py-8 px-3">
-                          <ShoppingCart className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground/30 mb-2 sm:mb-3" />
-                          <p className="text-sm sm:text-base text-muted-foreground font-medium">
+                      <TableCell colSpan={5} className="h-32 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <ShoppingCart className="h-8 w-8 text-gray-300" />
+                          <p className="text-sm text-gray-500">
                             No items in this order yet
-                          </p>
-                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                            {isEditable
-                              ? "Add items to get started"
-                              : "This order doesn't contain any items"}
                           </p>
                           {isEditable && (
                             <Button
                               onClick={() => setOnOpen(1)}
                               variant="outline"
                               size="sm"
-                              className="mt-3 sm:mt-4"
+                              className="mt-1 text-xs"
                             >
-                              <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                              <PlusCircle className="h-3 w-3 mr-1" />
                               Add Items
                             </Button>
                           )}
@@ -520,10 +490,10 @@ const NewSupplyOrder = () => {
 
                   {isFetchingNextPage && (
                     <TableRow>
-                      <TableCell colSpan={5} className="p-3 sm:p-4">
+                      <TableCell colSpan={5} className="p-2 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                          <span className="text-xs sm:text-sm text-muted-foreground">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          <span className="text-xs text-gray-500">
                             Loading more items...
                           </span>
                         </div>
@@ -533,52 +503,48 @@ const NewSupplyOrder = () => {
                 </TableBody>
               </Table>
             </div>
-
-            {/* Footer Stats */}
-            {allItems.length > 0 && (
-              <div className="border-t p-3 sm:p-4 bg-background">
-                <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 text-xs sm:text-sm">
-                  <span className="text-muted-foreground">
-                    Showing {allItems.length} item
-                    {allItems.length !== 1 ? "s" : ""}
-                  </span>
-                  {isFetching && (
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                      <span className="text-muted-foreground whitespace-nowrap">
-                        Updating...
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Modals - IMPROVED MOBILE RESPONSIVENESS */}
+          {/* Footer Stats */}
+          {allItems.length > 0 && (
+            <div className="border-t p-2 bg-gray-50">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  Showing {allItems.length} item
+                  {allItems.length !== 1 ? "s" : ""}
+                </span>
+                {isFetching && (
+                  <div className="flex items-center gap-1">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    <span>Updating...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modals */}
       <Modal
         title={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ListPlus className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-            <span className="text-sm sm:text-base truncate">
-              Add Items to Order
-            </span>
+          <div className="flex items-center gap-2">
+            <ListPlus className="h-4 w-4" />
+            <span className="text-sm">Add Items to Order</span>
           </div>
         }
         children={<AddSupplyOrder />}
         onOpen={onOpen === 1}
-        className=" min-w-5xl  overflow-auto"
+        className="lg:min-w-4xl w-[95vw] max-h-[90vh] overflow-auto"
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       />
 
       <Modal
-        title={undefined}
+        title="Delete Order"
         children={
           <ConfirmDelete
-            confirmation={"confirm"}
+            confirmation="confirm"
             setOnOpen={setOnOpen}
             onFunction={() => deleteOrderMutation.mutateAsync()}
             isLoading={deleteOrderMutation.isPending}
@@ -586,46 +552,40 @@ const NewSupplyOrder = () => {
         }
         loading={deleteOrderMutation.isPending}
         onOpen={onOpen === 2}
-        className="w-[95%] sm:w-[90%] md:w-[60%] lg:w-[50%] max-w-md mx-auto"
+        className="max-w-md w-[90vw]"
         setOnOpen={() => setOnOpen(0)}
         footer={1}
-        onFunction={() => deleteOrderMutation.mutateAsync()}
-        yesTitle="Delete Order"
       />
 
       <Modal
         title={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Send className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-            <span className="text-sm sm:text-base truncate">
-              Submit for Review
-            </span>
+          <div className="flex items-center gap-2">
+            <Send className="h-4 w-4" />
+            <span className="text-sm">Submit for Review</span>
           </div>
         }
         children={
-          <div className="space-y-3 sm:space-y-4 max-h-[70vh] overflow-y-auto px-1">
-            <p className="text-xs sm:text-sm">
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
               Are you ready to submit this purchase request for review?
             </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
-              <p className="text-xs sm:text-sm font-medium text-amber-800">
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-xs font-medium text-amber-800">
                 ⚠️ Important: After submission
               </p>
-              <ul className="text-xs sm:text-sm text-amber-700 mt-2 space-y-1 list-disc pl-4 sm:pl-5">
+              <ul className="text-xs text-amber-700 mt-1 space-y-0.5 list-disc pl-4">
                 <li>You cannot add or remove items</li>
                 <li>Item quantities cannot be changed</li>
                 <li>Order details become read-only</li>
               </ul>
             </div>
-            <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
-              <p className="text-xs sm:text-sm font-medium mb-1.5 sm:mb-2">
-                Order Summary
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-                <span className="text-muted-foreground">Items:</span>
+            <div className="bg-gray-50 rounded-md p-3">
+              <p className="text-xs font-medium mb-1">Order Summary</p>
+              <div className="grid grid-cols-2 gap-1 text-xs">
+                <span className="text-gray-500">Items:</span>
                 <span className="font-medium">{totalItems}</span>
-                <span className="text-muted-foreground">Status:</span>
-                <Badge variant="outline" className="w-fit text-xs sm:text-sm">
+                <span className="text-gray-500">Status:</span>
+                <Badge variant="outline" className="text-xs w-fit">
                   Will be: {supplyOrderStatus[1]}
                 </Badge>
               </div>
@@ -634,7 +594,7 @@ const NewSupplyOrder = () => {
         }
         loading={handleSaveOrder.isPending}
         onOpen={onOpen === 3}
-        className="w-[95%] sm:w-[90%] md:w-[60%] lg:w-[50%] max-w-md mx-auto"
+        className="max-w-md w-[90vw]"
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         onFunction={() => handleSaveOrder.mutateAsync()}
@@ -643,20 +603,14 @@ const NewSupplyOrder = () => {
 
       <Modal
         title={
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Info className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-            <span className="text-sm sm:text-base truncate">
-              Order Progress
-            </span>
+          <div className="flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            <span className="text-sm">Order Progress</span>
           </div>
         }
-        children={
-          <div className="w-full max-h-[70vh] overflow-y-auto px-1">
-            <OrderProgress status={orderData.order.status} />
-          </div>
-        }
+        children={<OrderProgress status={orderData.order.status} />}
         onOpen={onOpen === 5}
-        className="w-[95%] sm:w-[90%] md:w-[70%] lg:w-[60%] max-w-2xl mx-auto max-h-[90vh] overflow-auto"
+        className="max-w-lg w-[90vw] max-h-[85vh] overflow-auto"
         setOnOpen={() => setOnOpen(0)}
         cancelTitle="Close"
       />

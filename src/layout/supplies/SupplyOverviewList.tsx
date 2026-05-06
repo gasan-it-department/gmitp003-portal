@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 import { useState, useEffect, useCallback } from "react";
-import { useInView } from "react-intersection-observer"; // Add this import
+import { useInView } from "react-intersection-observer";
 //layout const components
 import {
   Table,
@@ -10,14 +10,14 @@ import {
   TableHead,
   TableHeader,
 } from "@/components/ui/table";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+// import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import OverviewSupplyItem from "./items/OverviewSupplyItem";
 import hotkeys, { type HotkeysEvent } from "hotkeys-js";
 //lib/db/statement
 import { suppliesOverview } from "@/db/statement";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ProtectedRouteProps } from "@/interface/data";
-import { Spinner } from "@/components/ui/spinner"; // Add this import
+import { Spinner } from "@/components/ui/spinner";
 
 //
 import { type SuppliesProps } from "@/interface/data";
@@ -30,7 +30,7 @@ interface Props {
 const SupplyOverviewList = ({ listId, auth, query }: Props) => {
   const { lineId, containerId } = useParams();
   const [indexed, setIndex] = useState(0);
-  const { ref, inView } = useInView(); // Add this hook
+  const { ref, inView } = useInView();
 
   const {
     data,
@@ -38,7 +38,7 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
     fetchNextPage,
     refetch,
     isFetchingNextPage,
-    hasNextPage, // Add this
+    hasNextPage,
   } = useInfiniteQuery<{
     list: SuppliesProps[];
     hasMore: boolean;
@@ -56,14 +56,13 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
     queryKey: ["listSupplyOverview", listId],
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.lastCursor : undefined, // Fixed this
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
   });
 
   useEffect(() => {
     refetch();
   }, [query]);
 
-  // Add infinite scroll trigger effect
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -99,144 +98,149 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      <ScrollArea className="flex-1">
-        <Table className="w-full overflow-x-auto">
-          <TableHeader className="sticky top-0 bg-gray-800 z-10">
-            <TableRow className="hover:bg-gray-800">
-              <TableHead className="text-white py-3 px-4">No.</TableHead>
-              <TableHead className="text-white py-3 px-4">Ref</TableHead>
-              <TableHead className="text-white py-3 px-4">Item</TableHead>
-              <TableHead className="text-white py-3 px-4">
-                Product/Brand
-              </TableHead>
-              <TableHead className="text-white py-3 px-4">Stock</TableHead>
-              <TableHead className="text-white py-3 px-4">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <Spinner className="w-8 h-8" />
-                    <p className="text-gray-600">Loading supplies...</p>
-                  </div>
-                </TableCell>
+      <div className="flex-1 overflow-auto">
+        <div className="min-w-[700px]">
+          <Table>
+            <TableHeader className="sticky top-0 bg-gray-100 z-10">
+              <TableRow className="hover:bg-transparent border-b">
+                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold w-12">
+                  No.
+                </TableHead>
+                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold min-w-[100px]">
+                  Ref
+                </TableHead>
+                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold min-w-[160px]">
+                  Item
+                </TableHead>
+                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold text-center w-20">
+                  Stock
+                </TableHead>
+                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold w-24">
+                  Status
+                </TableHead>
               </TableRow>
-            ) : totalCount > 0 ? (
-              <>
-                {allItems.map((item, i) => (
-                  <OverviewSupplyItem
-                    key={item.id}
-                    index={i}
-                    item={item}
-                    onSelect={indexed}
-                    lineId={lineId as string}
-                    token={auth.token as string}
-                    userId={auth.userId as string}
-                    listId={listId as string}
-                    containerId={containerId as string}
-                  />
-                ))}
-
-                {/* Infinite scroll trigger */}
-                <TableRow ref={ref}>
-                  <TableCell colSpan={6} className="h-4 p-0">
-                    {/* Empty trigger cell */}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <Spinner className="w-5 h-5" />
+                      <p className="text-xs text-gray-500">
+                        Loading supplies...
+                      </p>
+                    </div>
                   </TableCell>
                 </TableRow>
+              ) : totalCount > 0 ? (
+                <>
+                  {allItems.map((item, i) => (
+                    <OverviewSupplyItem
+                      key={item.id}
+                      index={i}
+                      item={item}
+                      onSelect={indexed}
+                      lineId={lineId as string}
+                      token={auth.token as string}
+                      userId={auth.userId as string}
+                      listId={listId as string}
+                      containerId={containerId as string}
+                    />
+                  ))}
 
-                {/* Loading more indicator */}
-                {isFetchingNextPage && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-4">
-                      <div className="flex items-center justify-center gap-3">
-                        <Spinner className="w-5 h-5" />
-                        <span className="text-sm text-gray-600">
-                          Loading more supplies...
-                        </span>
-                      </div>
-                    </TableCell>
+                  {/* Infinite scroll trigger */}
+                  <TableRow ref={ref}>
+                    <TableCell colSpan={6} className="h-1 p-0" />
                   </TableRow>
-                )}
 
-                {/* End of list indicator */}
-                {!hasNextPage && totalCount > 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-4 text-center border-t"
-                    >
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                        <span className="h-px w-8 bg-gray-300"></span>
-                        <span>All supplies loaded</span>
-                        <span className="h-px w-8 bg-gray-300"></span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Showing {totalCount} item{totalCount !== 1 ? "s" : ""}
-                      </p>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </>
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-                      <svg
-                        className="h-8 w-8 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                  {/* Loading more indicator */}
+                  {isFetchingNextPage && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <Spinner className="w-3.5 h-3.5" />
+                          <span className="text-xs text-gray-500">
+                            Loading more...
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {/* End of list indicator */}
+                  {!hasNextPage && totalCount > 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="py-3 text-center border-t"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                        <div className="text-xs text-gray-400">
+                          All {totalCount} items loaded
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-10 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <svg
+                          className="h-6 w-6 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-0.5">
+                          No supplies found
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          {query
+                            ? "Try a different search term"
+                            : "No supply items available"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                        No supplies found
-                      </h3>
-                      <p className="text-gray-500 text-sm">
-                        {query
-                          ? "Try a different search term"
-                          : "No supply items available"}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+                  </TableCell>
+                </TableRow>
+              )}
 
-            {/* Error state (when data is undefined) */}
-            {!data && !isLoading && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
-                  <div className="text-gray-500">Failed to load supplies</div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        <ScrollBar orientation="horizontal" />
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
+              {/* Error state */}
+              {!data && !isLoading && (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center">
+                    <p className="text-xs text-gray-500">
+                      Failed to load supplies
+                    </p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
-      {/* Footer with summary */}
+      {/* Footer with summary - Compact */}
       {!isLoading && totalCount > 0 && (
-        <div className="border-t bg-gray-50 px-4 py-3">
-          <div className="flex items-center justify-between text-sm">
-            <div className="text-gray-600">
-              Showing <span className="font-semibold">{totalCount}</span> item
-              {totalCount !== 1 ? "s" : ""}
+        <div className="border-t bg-gray-50 px-3 py-2">
+          <div className="flex items-center justify-between text-xs">
+            <div className="text-gray-500">
+              Showing{" "}
+              <span className="font-semibold text-gray-700">{totalCount}</span>{" "}
+              item{totalCount !== 1 ? "s" : ""}
             </div>
-            <div className="text-gray-500 text-xs">
-              Use ↑ ↓ keys to navigate
+            <div className="text-[10px] text-gray-400">
+              ↑ ↓ keys to navigate
             </div>
           </div>
         </div>
