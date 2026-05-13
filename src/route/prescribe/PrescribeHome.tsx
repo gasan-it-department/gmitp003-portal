@@ -3,59 +3,53 @@ import { useAuth } from "@/provider/ProtectedRoute";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { History, Pen } from "lucide-react";
 import DispensaryOut from "../medicine/DispensaryOut";
-import Transaction from "@/layout/prescribe/Transaction";
+import PrescribeTransactionList from "@/layout/prescribe/Transaction";
 
 const PrescribeHome = () => {
   const [params, setParams] = useSearchParams({ tab: "prescribe" });
   const { lineId } = useParams();
   const auth = useAuth();
 
-  const handelChangeParams = (key: string, value: string) => {
-    setParams(
-      (prev) => {
-        prev.set(key, value);
-        return prev;
-      },
-      { replace: true },
-    );
+  const handleChangeTab = (value: string) => {
+    setParams((prev) => { prev.set("tab", value); return prev; }, { replace: true });
   };
+
   const currentTab = params.get("tab") || "prescribe";
 
   return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="w-full h-full flex flex-col">
       <Tabs
         value={currentTab}
         className="w-full h-full flex flex-col"
-        defaultValue="prescribe"
-        onValueChange={(e) => handelChangeParams("tab", e)}
+        onValueChange={handleChangeTab}
       >
-        {/* Tabs Navigation - Compact */}
-        <div className="border-b bg-white/50 px-4">
-          <TabsList className="h-9 bg-transparent gap-0">
+        {/* Compact tab bar */}
+        <div className="border-b bg-white px-3 flex-shrink-0">
+          <TabsList className="h-8 bg-transparent gap-0 p-0">
             <TabsTrigger
               value="prescribe"
-              className="h-9 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors gap-1.5"
+              className="h-8 px-3 text-[10px] font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 transition-colors gap-1.5"
             >
-              <Pen className="h-3.5 w-3.5" />
-              <span>Form</span>
+              <Pen className="h-3 w-3" />
+              Form
             </TabsTrigger>
             <TabsTrigger
               value="transaction"
-              className="h-9 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors gap-1.5"
+              className="h-8 px-3 text-[10px] font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 transition-colors gap-1.5"
             >
-              <History className="h-3.5 w-3.5" />
-              <span>Transaction</span>
+              <History className="h-3 w-3" />
+              Transactions
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Content Area */}
+        {/* Content */}
         <div className="flex-1 overflow-hidden">
           <TabsContent className="w-full h-full p-0 m-0" value="prescribe">
             <DispensaryOut />
           </TabsContent>
           <TabsContent className="w-full h-full p-0 m-0" value="transaction">
-            <Transaction
+            <PrescribeTransactionList
               token={auth.token as string}
               lineId={lineId as string}
             />

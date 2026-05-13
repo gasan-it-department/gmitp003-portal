@@ -42,9 +42,13 @@ const ListItem = ({
 
   const queryClient = useQueryClient();
 
-  const stockStatus = item.totalStock > 10 ? "Good" : "Low";
-  const stockColor = item.totalStock < 10 ? "text-red-600" : "text-green-600";
-  const stockBgColor = item.totalStock < 10 ? "bg-red-50" : "bg-green-50";
+  // Defensive defaults — older API responses or empty rows could give undefined
+  const totalStock = item.totalStock ?? 0;
+  const stockTracks = item.SupplyStockTrack ?? [];
+
+  const stockStatus = totalStock > 10 ? "Good" : "Low";
+  const stockColor = totalStock > 10 ? "text-green-600" : "text-red-600";
+  const stockBgColor = totalStock > 10 ? "bg-green-50" : "bg-red-50";
 
   const handleRemove = useMutation({
     mutationFn: () =>
@@ -85,11 +89,11 @@ const ListItem = ({
           <div className="flex items-center gap-1.5">
             <div
               className={`w-1.5 h-1.5 rounded-full ${
-                item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
+                totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
             <span className="text-sm font-semibold text-gray-700">
-              {item.totalStock}
+              {totalStock}
             </span>
           </div>
         </TableCell>
@@ -99,7 +103,7 @@ const ListItem = ({
           >
             <div
               className={`w-1 h-1 rounded-full ${
-                item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
+                totalStock > 10 ? "bg-green-500" : "bg-red-500"
               }`}
             ></div>
             <span>{stockStatus}</span>
@@ -137,7 +141,7 @@ const ListItem = ({
               <div>
                 <p className="text-[10px] text-gray-500">Current Stock</p>
                 <p className={`text-base font-bold ${stockColor}`}>
-                  {item.totalStock} units
+                  {totalStock} units
                 </p>
               </div>
               <div>
@@ -147,7 +151,7 @@ const ListItem = ({
                 >
                   <div
                     className={`w-1 h-1 rounded-full ${
-                      item.totalStock > 10 ? "bg-green-500" : "bg-red-500"
+                      totalStock > 10 ? "bg-green-500" : "bg-red-500"
                     }`}
                   ></div>
                   {stockStatus}
@@ -218,7 +222,7 @@ const ListItem = ({
             </p>
           </div>
           <SelectStockDispense
-            items={item.SupplyStockTrack}
+            items={stockTracks}
             onChange={(e) => setItemId(e)}
             value={itemId}
             className="w-full"

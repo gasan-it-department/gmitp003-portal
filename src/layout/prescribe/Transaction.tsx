@@ -1,25 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useDebounce } from "use-debounce";
-import {
-  Table,
-  TableBody,
-  TableRow,
-  TableHeader,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import { Spinner } from "@/components/ui/spinner";
-import SWWItem from "../item/SWWItem";
-import PrescribeTransactionItem from "./item/PrescribeTransactionItem";
-import { Search } from "lucide-react";
-import { prescribeTransaction } from "@/db/statement";
+//
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Search, ClipboardList, UserRound, CalendarDays, Pill } from "lucide-react";
+//
+import { prescribeTransaction } from "@/db/statements/prescription";
 import type { Prescription } from "@/interface/data";
 
 interface Props {
@@ -33,10 +21,15 @@ interface ListProps {
   lastCursor: string | null;
 }
 
-const Transaction = ({ token, lineId }: Props) => {
-  const { ref, inView } = useInView();
-  const [text, setText] = useState("");
-  const [query] = useDebounce(text, 1000);
+const statusLabel: Record<number, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  0: { label: "Pending", variant: "secondary" },
+  1: { label: "Processing", variant: "default" },
+  2: { label: "Dispensed", variant: "outline" },
+};
+
+const PrescribeTransactionList = ({ token, lineId }: Props) => {
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch] = useDebounce(searchText, 400);
 
   const {
     data,
@@ -44,202 +37,161 @@ const Transaction = ({ token, lineId }: Props) => {
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-    error,
-    refetch,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["prescribe-transaction", lineId],
+    queryKey: ["prescribe-transaction", lineId, debouncedSearch],
     queryFn: ({ pageParam }) =>
-      prescribeTransaction(token, lineId, pageParam as string | null, "20"),
+      prescribeTransaction(token, lineId, pageParam as string | null, "20", debouncedSearch || undefined),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnWindowFocus: false,
   });
 
-  // Infinite scroll trigger
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
-  useEffect(() => {
-    refetch();
-  }, [query, refetch]);
-
-  const allTransactions = data?.pages.flatMap((page) => page.list) || [];
-  const isEmpty = allTransactions.length === 0;
-
-  if (isFetching && isEmpty) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="text-center space-y-3">
-          <Spinner className="w-10 h-10 mx-auto text-blue-600" />
-          <p className="text-gray-600 font-medium">Loading transactions...</p>
-          <p className="text-sm text-gray-500">Please wait a moment</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md">
-          <SWWItem colSpan={1} />
-        </div>
-      </div>
-    );
-  }
+  const allItems = data?.pages.flatMap((p) => p.list) ?? [];
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      {/* Header with Search */}
-      <div className="px-6 py-4 border-b bg-gray-50/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Transactions
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {allTransactions.length} transaction
-              {allTransactions.length !== 1 ? "s" : ""} found
-            </p>
-          </div>
-          <InputGroup className="w-80 bg-white shadow-sm border">
-            <InputGroupAddon className="pl-3">
-              <Search className="w-4 h-4 text-gray-400" />
-            </InputGroupAddon>
-            <InputGroupInput
-              placeholder="Search by name, reference number, or date..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="pl-2"
-            />
-          </InputGroup>
+
+      {/* Toolbar */}
+      <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
+        <div>
+          <p className="text-xs font-semibold text-gray-800">Transactions</p>
+          <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+            {allItems.length} record{allItems.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="relative w-56">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <Input
+            placeholder="Search name or ref #..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            className="pl-7 h-7 text-[11px]"
+          />
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="overflow-auto flex-1">
-          <Table className="min-w-full">
-            <TableHeader className="sticky top-0 z-10">
-              <TableRow className="bg-gray-100 hover:bg-gray-100 border-b">
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 text-center w-16 border-r">
-                  No.
-                </TableHead>
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 min-w-[140px] border-r">
-                  Ref. Number
-                </TableHead>
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 min-w-[160px] border-r">
-                  Last Name
-                </TableHead>
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 min-w-[160px] border-r">
-                  First Name
-                </TableHead>
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 min-w-[120px] border-r">
-                  Date
-                </TableHead>
-                <TableHead className="font-semibold py-3 px-4 text-gray-700 min-w-[100px]">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-100">
-              {isEmpty ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-12 text-gray-500"
-                  >
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <Search className="w-12 h-12 text-gray-300" />
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          No transactions found
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {query
-                            ? "Try a different search term"
-                            : "No transactions available"}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                <>
-                  {allTransactions.map((transaction, index) => (
-                    <PrescribeTransactionItem
-                      key={transaction.id}
-                      item={transaction}
-                      no={index + 1}
-                      query={query}
-                    />
-                  ))}
-
-                  {/* Infinite scroll loader */}
-                  {hasNextPage && (
-                    <TableRow ref={ref} className="bg-gray-50/50">
-                      <TableCell colSpan={6} className="py-6">
-                        <div className="flex items-center justify-center gap-3">
-                          <Spinner className="w-5 h-5 text-blue-600" />
-                          <span className="text-sm font-medium text-gray-700">
-                            Loading more transactions...
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-
-                  {/* End of list indicator */}
-                  {!hasNextPage && allTransactions.length > 0 && (
-                    <TableRow className="bg-gray-50/30">
-                      <TableCell
-                        colSpan={6}
-                        className="py-4 text-center text-gray-500 text-sm font-medium border-t"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="h-px w-8 bg-gray-300"></span>
-                          <span>All transactions loaded</span>
-                          <span className="h-px w-8 bg-gray-300"></span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Showing {allTransactions.length} transactions
-                        </p>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Loading indicator at bottom */}
-        {isFetchingNextPage && (
-          <div className="border-t bg-white py-3 px-4">
-            <div className="flex items-center justify-center gap-3">
-              <Spinner className="w-4 h-4 text-blue-600" />
-              <span className="text-sm text-gray-600">
-                Loading additional transactions...
-              </span>
-            </div>
+      {/* List */}
+      <div className="flex-1 overflow-auto">
+        {isFetching && allItems.length === 0 ? (
+          <div className="flex items-center justify-center py-10 gap-1.5 text-gray-400">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span className="text-xs">Loading transactions...</span>
           </div>
-        )}
-
-        {/* Search status indicator */}
-        {query && (
-          <div className="border-t bg-blue-50 py-2 px-4">
-            <p className="text-sm text-blue-700 text-center">
-              Showing results for:{" "}
-              <span className="font-medium">"{query}"</span>
+        ) : allItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center p-4">
+            <ClipboardList className="h-8 w-8 text-gray-300 mb-2" />
+            <p className="text-xs font-medium text-gray-500">No transactions yet</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              {debouncedSearch ? "Try a different search term" : "Prescriptions will appear here once submitted"}
             </p>
           </div>
+        ) : (
+          <>
+            {/* Table header */}
+            <div className="grid grid-cols-[2rem_1fr_6rem_5rem_5rem] gap-2 px-3 py-1.5 border-b bg-gray-50 sticky top-0 z-10">
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">#</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Patient</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Ref. No.</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Date</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Status</span>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {allItems.map((item, index) => {
+                const status = statusLabel[item.status] ?? statusLabel[0];
+                const date = new Date(item.timestamp).toLocaleDateString("en-PH", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+                const medCount = item._count?.presMed ?? item.presMed?.length ?? 0;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-[2rem_1fr_6rem_5rem_5rem] gap-2 px-3 py-2.5 hover:bg-gray-50 transition-colors items-center"
+                  >
+                    {/* No. */}
+                    <div className="h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-medium text-gray-500">
+                      {index + 1}
+                    </div>
+
+                    {/* Patient info */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <UserRound className="h-2.5 w-2.5 text-blue-600" />
+                        </div>
+                        <p className="text-xs font-medium text-gray-800 truncate">
+                          {item.lastname}, {item.firstname}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 ml-6 flex-wrap">
+                        {item.age && (
+                          <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                            <CalendarDays className="h-2.5 w-2.5" />{item.age} yrs
+                          </span>
+                        )}
+                        {medCount > 0 && (
+                          <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                            <Pill className="h-2.5 w-2.5" />{medCount} med{medCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {item.patient && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 leading-none">
+                            Linked
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Ref number */}
+                    <code className="text-[10px] font-mono text-blue-700 font-semibold truncate">
+                      {item.refNumber}
+                    </code>
+
+                    {/* Date */}
+                    <p className="text-[10px] text-gray-500">{date}</p>
+
+                    {/* Status */}
+                    <Badge variant={status.variant} className="text-[10px] px-1.5 py-0 w-fit">
+                      {status.label}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Infinite scroll trigger */}
+            {hasNextPage && (
+              <div ref={ref} className="flex items-center justify-center py-3 gap-1.5">
+                {isFetchingNextPage && (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                    <span className="text-[10px] text-gray-400">Loading more...</span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {!hasNextPage && allItems.length > 0 && (
+              <div className="py-3 text-center">
+                <p className="text-[10px] text-gray-400">All {allItems.length} records loaded</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   );
 };
 
-export default Transaction;
+export default PrescribeTransactionList;

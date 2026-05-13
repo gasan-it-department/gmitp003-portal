@@ -1,11 +1,76 @@
 import axios from "../axios";
 
+export const inventoryTimebaseReportExport = async (
+  token: string,
+  id: string,
+  year?: string | number,
+  quarter?: string | number,
+) => {
+  const response = await axios.get(
+    "/supply/inventory/timebase/report/export",
+    {
+      responseType: "blob",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      params: {
+        id,
+        year: year === "" || year === undefined ? undefined : year,
+        quarter:
+          quarter === "" || quarter === undefined ? undefined : quarter,
+      },
+    },
+  );
+  if (response.status !== 200) throw new Error("Failed to export report");
+
+  // Pull suggested filename from Content-Disposition if present
+  const cd: string = response.headers["content-disposition"] ?? "";
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename =
+    match?.[1] ??
+    `SUPPLIES_${year ?? new Date().getFullYear()}${quarter ? `_Q${quarter}` : ""}.xlsx`;
+
+  return { blob: response.data as Blob, filename };
+};
+
+export const inventoryTimebaseReport = async (
+  token: string,
+  id: string,
+  lastCursor: string | null,
+  limit: string,
+  year?: string | number,
+  quarter?: string | number,
+) => {
+  const response = await axios.get("/supply/inventory/timebase/report", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      id,
+      lastCursor,
+      limit,
+      year: year === "" || year === undefined ? undefined : year,
+      quarter:
+        quarter === "" || quarter === undefined ? undefined : quarter,
+    },
+  });
+  if (response.status !== 200) throw new Error(response.data.message);
+  return response.data;
+};
+
 export const supplyDispenseTransaction = async (
   token: string,
   id: string | undefined,
   lastCursor: string | null,
   limit: string,
   query: string,
+  dateFrom?: string,
+  dateTo?: string,
 ) => {
   const response = await axios.get("/supply/dispense/transactions", {
     headers: {
@@ -19,6 +84,8 @@ export const supplyDispenseTransaction = async (
       lastCursor,
       limit,
       query,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     },
   });
   if (response.status !== 200) throw new Error(response.data.message);

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "@/db/axios";
+import { toast } from "sonner";
 //
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,17 +17,27 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import SearchUser from "../SearchUser";
 import SearchUnit from "../SearchUnit";
 import SelectStockDispense from "../SelectStockDispense";
-import { Separator } from "@/components/ui/separator";
 //
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 //schema and interfaces
 import { DispenseItemSchema } from "@/interface/zod";
 import { type DispenseItemProps, type SuppliesProps } from "@/interface/data";
-import { Package } from "lucide-react";
+import {
+  Package,
+  HandHelping,
+  AlertTriangle,
+  Loader2,
+  Send,
+  User as UserIcon,
+  Building2,
+  FileText,
+  Hash,
+} from "lucide-react";
 
 interface Props {
   item: SuppliesProps;
@@ -67,7 +78,7 @@ const DispenseItem = ({
     handleSubmit,
     watch,
     control,
-    formState: { isSubmitting },
+    formState: { isSubmitting, errors },
     setValue,
     setError,
   } = form;
@@ -75,6 +86,12 @@ const DispenseItem = ({
   const toAccount = watch("toAccount", true);
   const address = watch("address");
   const stockId = watch("stockId");
+  const quantityRaw = watch("quantity");
+
+  // Defensive: backend may omit SupplyStockTrack for some legacy rows
+  const stockTracks = item.SupplyStockTrack ?? [];
+  const totalStock = item.totalStock ?? 0;
+  const selectedStock = stockTracks.find((s) => s.id === stockId);
 
   useEffect(() => {
     if (!toAccount) {
@@ -87,17 +104,35 @@ const DispenseItem = ({
     const quantity = parseInt(data.quantity, 10);
 
     if (!stockId) {
-      return setError("root", { message: "Select stock" });
+      setError("root", { message: "Select a stock batch first." });
+      return;
     }
-    const selectedstock = item.SupplyStockTrack.find(
-      (item) => item.id === stockId,
-    );
-    if (!selectedstock) {
-      return setError("root", { message: "Invalid stock" });
+    const stockSel = stockTracks.find((s) => s.id === stockId);
+    if (!stockSel) {
+      setError("root", { message: "Selected stock is no longer valid." });
+      return;
     }
-    if (quantity > selectedstock.stock) {
-      return setError("quantity", { message: "Invalid quantity" });
+    if (Number.isNaN(quantity) || quantity < 1) {
+      setError("quantity", { message: "Enter a valid quantity." });
+      return;
     }
+    if (quantity > stockSel.stock) {
+      setError("quantity", {
+        message: `Only ${stockSel.stock} units available in this batch.`,
+      });
+      return;
+    }
+    if (data.toAccount) {
+      if (data.address === "user" && !data.userId) {
+        setError("userId", { message: "Select a user recipient." });
+        return;
+      }
+      if (data.address === "unit" && !data.unitId) {
+        setError("unitId", { message: "Select a unit recipient." });
+        return;
+      }
+    }
+
     try {
       const response = await axios.post(
         "/supply/dispense",
@@ -121,287 +156,340 @@ const DispenseItem = ({
       );
 
       if (response.status !== 200) {
-        throw new Error(response.data.message);
+        throw new Error(response.data?.message ?? "Failed to dispense.");
       }
-      await queryClient.invalidateQueries({
-        queryKey: [queryKey, listId],
-      });
+      await queryClient.invalidateQueries({ queryKey: [queryKey, listId] });
+      toast.success(`Dispensed ${quantity} unit${quantity !== 1 ? "s" : ""}`);
       setOnOpen(0);
-    } catch (error) {
-      console.log(error);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        (err instanceof Error ? err.message : "Failed to dispense.");
+      setError("root", { message: msg });
+      toast.error(msg);
     }
   };
 
   const handleCancel = () => {
+    if (isSubmitting) return;
     setOnOpen(0);
   };
 
+  const parsedQty = parseInt(quantityRaw || "0", 10) || 0;
+  const overLimit = !!selectedStock && parsedQty > selectedStock.stock;
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       <Form {...form}>
-        <form className="flex-1">
-          {/* Header Section - Compact */}
-          <div className="mb-4 pb-3 border-b">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-                <Package className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Dispense Item
-                </p>
-                <p className="text-xs text-gray-500">
-                  Current Total Stock: {item.totalStock}
-                </p>
-              </div>
+        <div className="space-y-3">
+
+          {/* ── Header ─────────────────────────────────────────────────── */}
+          <div className="flex items-center gap-2 pb-2 border-b">
+            <div className="p-1.5 bg-blue-50 rounded-md flex-shrink-0">
+              <HandHelping className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900 truncate">
+                Dispense Item
+              </h3>
+              <p className="text-[10px] text-gray-500">
+                Total stock on hand:{" "}
+                <span className="font-semibold text-gray-700">{totalStock}</span>
+              </p>
             </div>
           </div>
 
-          {/* Form Fields Section - Compact */}
-          <div className="space-y-4">
-            <FormField
-              control={control}
-              name="stockId"
-              rules={{
-                required: true,
-                minLength: 1,
-                min: 0.1,
-                max: item.totalStock,
-              }}
-              render={({ field: { onChange, value } }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-gray-700">
-                    Select Stock *
-                  </FormLabel>
-                  <FormControl>
-                    <SelectStockDispense
-                      value={value}
-                      onChange={onChange}
-                      className="w-full"
-                      items={item.SupplyStockTrack}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Choose the stock batch to dispense from
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+          {/* ── Item summary ────────────────────────────────────────────── */}
+          <div className="border rounded-lg bg-gray-50 p-2.5 flex items-center gap-2">
+            <Package className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-gray-900 truncate">
+                {item.item}
+              </p>
+              {item.refNumber && (
+                <p className="text-[10px] text-gray-400 font-mono truncate">
+                  Ref: {item.refNumber}
+                </p>
               )}
-            />
+            </div>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {stockTracks.length} batch{stockTracks.length !== 1 ? "es" : ""}
+            </Badge>
+          </div>
 
-            <FormField
-              control={control}
-              name="quantity"
-              rules={{
-                required: true,
-                minLength: 1,
-                min: 0.1,
-                max: item.totalStock,
-              }}
-              render={({ field: { onBlur, onChange, value } }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-gray-700">
-                    Quantity *
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      value={value}
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      placeholder="Enter quantity"
-                      min={0.1}
-                      max={item.totalStock}
-                      step="0.1"
-                      className="h-9 text-sm"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Max: {item.totalStock} units
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
-            <FormField
-              name="toAccount"
-              control={control}
-              render={({ field: { value, onBlur, onChange } }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-3 bg-gray-50 rounded-md">
-                  <FormControl>
-                    <Checkbox
-                      id="toAccount"
-                      onBlur={onBlur}
-                      checked={value}
-                      onCheckedChange={onChange}
-                      className="h-4 w-4 mt-0.5"
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="text-sm font-medium cursor-pointer">
-                      Dispense to Account
+          {/* ── Stock & quantity card ──────────────────────────────────── */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+              <Hash className="h-3 w-3 text-blue-500" />
+              <h4 className="text-xs font-semibold text-gray-800">
+                Stock & Quantity
+              </h4>
+            </div>
+            <div className="p-3 space-y-2.5">
+              <FormField
+                control={control}
+                name="stockId"
+                render={({ field: { onChange, value } }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold text-gray-700">
+                      Stock Batch *
                     </FormLabel>
-                    <p className="text-xs text-gray-500">
-                      Assign to a user or unit account
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            {toAccount && (
-              <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1">
-                <FormField
-                  control={control}
-                  name="address"
-                  render={({ field: { onBlur, onChange, value } }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className="text-sm font-semibold text-gray-700">
-                        Recipient Type
-                      </FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          disabled={toAccount ? false : true}
-                          className="flex gap-4"
-                          onValueChange={onChange}
-                          onBlur={onBlur}
-                          value={value}
-                          defaultValue="user"
-                        >
-                          <div className="flex items-center space-x-2 cursor-pointer">
-                            <RadioGroupItem value="user" id="user" />
-                            <FormLabel
-                              htmlFor="user"
-                              className="text-sm cursor-pointer"
-                            >
-                              User
-                            </FormLabel>
-                          </div>
-                          <div className="flex items-center space-x-2 cursor-pointer">
-                            <RadioGroupItem value="unit" id="unit" />
-                            <FormLabel
-                              htmlFor="unit"
-                              className="text-sm cursor-pointer"
-                            >
-                              Unit
-                            </FormLabel>
-                          </div>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {address === "user" ? (
-                  <FormField
-                    control={control}
-                    name="userId"
-                    render={({ field: { onChange, value } }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">
-                          Select User *
-                        </FormLabel>
-                        <FormControl>
-                          <SearchUser
-                            lineId={lineId}
-                            token={token}
-                            onChange={onChange}
-                            value={value}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs">
-                          Choose the user receiving this item
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ) : (
-                  <FormField
-                    control={control}
-                    name="unitId"
-                    render={({ field: { onChange, value } }) => (
-                      <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">
-                          Select Unit *
-                        </FormLabel>
-                        <FormControl>
-                          <SearchUnit
-                            lineId={lineId}
-                            token={token}
-                            onChange={onChange}
-                            value={value}
-                          />
-                        </FormControl>
-                        <FormDescription className="text-xs">
-                          Choose the unit receiving this item
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormControl>
+                      <SelectStockDispense
+                        value={value}
+                        onChange={onChange}
+                        className="w-full"
+                        items={stockTracks}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
                 )}
-              </div>
-            )}
+              />
 
-            <FormField
-              name="desc"
-              control={control}
-              render={({ field: { value, onBlur, onChange } }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold text-gray-700">
-                    Remarks
-                  </FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter any additional notes or remarks..."
-                      onBlur={onBlur}
-                      onChange={onChange}
-                      value={value}
-                      className="min-h-[80px] text-sm resize-none"
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Optional: Add any relevant information
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </form>
-
-        {/* Fixed Footer */}
-        <div className="sticky bottom-0 left-0 right-0 pt-4 mt-6 border-t bg-white">
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancel}
-              className="h-9 px-4 text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-              className="h-9 px-4 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
-                  Processing...
+              {selectedStock && (
+                <div className="flex items-center gap-1.5 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded">
+                  <span className="text-[10px] text-blue-700">
+                    Available in this batch:
+                  </span>
+                  <span className="text-xs font-semibold text-blue-700">
+                    {selectedStock.stock}
+                  </span>
+                  <span className="text-[10px] text-blue-600">units</span>
                 </div>
-              ) : (
-                "Confirm Dispense"
               )}
-            </Button>
+
+              <FormField
+                control={control}
+                name="quantity"
+                render={({ field: { onBlur, onChange, value } }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold text-gray-700">
+                      Quantity to Dispense *
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={value}
+                        onBlur={onBlur}
+                        onChange={onChange}
+                        placeholder="0"
+                        min={1}
+                        max={selectedStock?.stock ?? totalStock}
+                        step="1"
+                        className={`h-8 text-xs ${
+                          overLimit ? "border-red-300 focus-visible:ring-red-200" : ""
+                        }`}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-[10px]">
+                      {selectedStock
+                        ? `Max: ${selectedStock.stock} units in selected batch`
+                        : `Max: ${totalStock} units total`}
+                    </FormDescription>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
+
+          {/* ── Recipient card ─────────────────────────────────────────── */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+              <UserIcon className="h-3 w-3 text-blue-500" />
+              <h4 className="text-xs font-semibold text-gray-800">Recipient</h4>
+            </div>
+            <div className="p-3 space-y-2.5">
+              <FormField
+                name="toAccount"
+                control={control}
+                render={({ field: { value, onBlur, onChange } }) => (
+                  <FormItem className="flex flex-row items-start gap-2 p-2 bg-gray-50 rounded-md">
+                    <FormControl>
+                      <Checkbox
+                        id="toAccount"
+                        onBlur={onBlur}
+                        checked={value}
+                        onCheckedChange={onChange}
+                        className="h-3.5 w-3.5 mt-0.5"
+                      />
+                    </FormControl>
+                    <div className="leading-tight">
+                      <FormLabel className="text-xs font-medium cursor-pointer">
+                        Assign to user / unit
+                      </FormLabel>
+                      <p className="text-[10px] text-gray-500">
+                        Uncheck for an anonymous / general issuance
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {toAccount && (
+                <div className="space-y-2.5 pl-2 border-l-2 border-blue-200">
+                  <FormField
+                    control={control}
+                    name="address"
+                    render={({ field: { onBlur, onChange, value } }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
+                          Recipient Type
+                        </FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            className="flex gap-3"
+                            onValueChange={onChange}
+                            onBlur={onBlur}
+                            value={value || "user"}
+                          >
+                            <div className="flex items-center gap-1.5 cursor-pointer">
+                              <RadioGroupItem value="user" id="rec-user" />
+                              <FormLabel
+                                htmlFor="rec-user"
+                                className="text-xs cursor-pointer flex items-center gap-1"
+                              >
+                                <UserIcon className="h-2.5 w-2.5" />
+                                User
+                              </FormLabel>
+                            </div>
+                            <div className="flex items-center gap-1.5 cursor-pointer">
+                              <RadioGroupItem value="unit" id="rec-unit" />
+                              <FormLabel
+                                htmlFor="rec-unit"
+                                className="text-xs cursor-pointer flex items-center gap-1"
+                              >
+                                <Building2 className="h-2.5 w-2.5" />
+                                Unit
+                              </FormLabel>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+
+                  {address === "user" ? (
+                    <FormField
+                      control={control}
+                      name="userId"
+                      render={({ field: { onChange, value } }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700">
+                            Select User *
+                          </FormLabel>
+                          <FormControl>
+                            <SearchUser
+                              lineId={lineId}
+                              token={token}
+                              onChange={onChange}
+                              value={value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={control}
+                      name="unitId"
+                      render={({ field: { onChange, value } }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700">
+                            Select Unit *
+                          </FormLabel>
+                          <FormControl>
+                            <SearchUnit
+                              lineId={lineId}
+                              token={token}
+                              onChange={onChange}
+                              value={value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Remarks card ───────────────────────────────────────────── */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+              <FileText className="h-3 w-3 text-blue-500" />
+              <h4 className="text-xs font-semibold text-gray-800">Remarks</h4>
+            </div>
+            <div className="p-3">
+              <FormField
+                name="desc"
+                control={control}
+                render={({ field: { value, onBlur, onChange } }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Notes, purpose, observations..."
+                        onBlur={onBlur}
+                        onChange={onChange}
+                        value={value}
+                        className="min-h-[60px] resize-none text-xs"
+                      />
+                    </FormControl>
+                    <FormDescription className="text-[10px] mt-1">
+                      Optional — appears on the dispense transaction record
+                    </FormDescription>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* ── Form-level error ───────────────────────────────────────── */}
+          {errors.root?.message && (
+            <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-100 rounded-md">
+              <AlertTriangle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
+              <p className="text-[10px] text-red-700">
+                {errors.root.message}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer actions ───────────────────────────────────────────── */}
+        <div className="sticky bottom-0 left-0 right-0 pt-3 mt-3 border-t bg-white flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+            className="h-8 px-3 text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            className="h-8 px-3 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Send className="h-3 w-3" />
+                Confirm Dispense
+              </>
+            )}
+          </Button>
         </div>
       </Form>
     </div>

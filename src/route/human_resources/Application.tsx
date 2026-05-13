@@ -143,6 +143,9 @@ const Application = () => {
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   const tags = useFieldArray({

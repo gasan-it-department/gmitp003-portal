@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useEffect, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,7 +46,6 @@ import {
   Calendar,
   MessageSquare,
   Boxes,
-  ChevronRight,
 } from "lucide-react";
 import Suppliers from "../Suppliers";
 
@@ -54,7 +53,7 @@ import Suppliers from "../Suppliers";
 const formSchema = z.object({
   brandName: z.string().optional(),
   noBrand: z.boolean().default(true),
-  quality: z.string(),
+  quality: z.string().min(1, "Quality is required"),
   quantity: z.string().min(1, "Quantity is required"),
   perQuantity: z.string(),
   condition: z.string().min(1, "Condition is required"),
@@ -92,6 +91,25 @@ const OrderCompletionItem = ({
   const { containerId } = useParams();
   const queryClient = useQueryClient();
 
+  // The Select renders the placeholder when value doesn't match any SelectItem,
+  // so coerce the DB value into one of the known options. Anything unknown → "new".
+  const VALID_CONDITIONS = ["new", "good", "damaged", "expired", "missing"] as const;
+  const rawCondition =
+    typeof item.condition === "string" ? item.condition.trim().toLowerCase() : "";
+  const defaultCondition = (VALID_CONDITIONS as readonly string[]).includes(rawCondition)
+    ? rawCondition
+    : "new";
+
+  // resolved/remark: "0" = To Return, "1" = OK, "2" = Considered.
+  const VALID_RESOLVED = ["0", "1", "2"] as const;
+  const rawResolved =
+    item.remark !== null && item.remark !== undefined
+      ? String(item.remark).trim()
+      : "";
+  const defaultResolved = (VALID_RESOLVED as readonly string[]).includes(rawResolved)
+    ? rawResolved
+    : "1"; // "1" = OK
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -99,9 +117,9 @@ const OrderCompletionItem = ({
       noBrand: true,
       quantity: item.quantity.toString() || "1",
       perQuantity: item.perQuantity.toString() || "1",
-      condition: item.condition || "new",
+      condition: defaultCondition,
       comment: item.comment,
-      resolved: item.remark || "1",
+      resolved: defaultResolved,
       price: item.price.toString(),
       supplier: item.id || "",
       expiration: item.expiration || "",
@@ -109,10 +127,30 @@ const OrderCompletionItem = ({
     },
   });
 
-  const { watch, setValue } = form;
+  const { watch, setValue, reset } = form;
   const noBrand = watch("noBrand");
   const quanlity = watch("quantity");
   const perQuantity = watch("perQuantity");
+
+  // Re-sync the form whenever the modal opens (or the item changes) so the
+  // condition + status defaults always show, even after a previous edit.
+  useEffect(() => {
+    if (!onOpen) return;
+    reset({
+      brandName: "",
+      noBrand: true,
+      quantity: item.quantity.toString() || "1",
+      perQuantity: item.perQuantity.toString() || "1",
+      condition: defaultCondition,
+      comment: item.comment,
+      resolved: defaultResolved,
+      price: item.price.toString(),
+      supplier: item.id || "",
+      expiration: item.expiration || "",
+      quality: item.quality || "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onOpen, item.id]);
 
   const handleResetSupplier = () => {
     setValue("supplier", "");
@@ -208,82 +246,75 @@ const OrderCompletionItem = ({
   return (
     <>
       <TableRow
-        className="group hover:bg-accent/50 transition-colors cursor-pointer border-b"
+        className="group hover:bg-gray-50 transition-colors cursor-pointer border-b"
         onClick={() => {
           if (disabled) return;
           setOnOpen(true);
         }}
       >
-        <TableCell className="p-2 sm:p-3 font-medium text-xs sm:text-sm">
+        <TableCell className="py-2 px-3 text-xs font-medium text-gray-500">
           {index + 1}
         </TableCell>
-        <TableCell className="p-2 sm:p-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
-            <div className="min-w-0 max-w-[120px] xs:max-w-[150px] sm:max-w-none">
-              <p className="text-xs sm:text-sm font-medium truncate">
+        <TableCell className="py-2 px-3">
+          <div className="flex items-center gap-1.5">
+            <Package className="h-3 w-3 text-gray-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-800 truncate">
                 {item.supply.item}
               </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+              <p className="text-[10px] text-gray-400 truncate">
                 {item.supply.description || "No description"}
               </p>
             </div>
           </div>
         </TableCell>
-        <TableCell className="p-2 sm:p-3">
-          <code className="text-[10px] sm:text-xs bg-muted px-1 sm:px-2 py-0.5 sm:py-1 rounded font-mono truncate block max-w-[60px] xs:max-w-[80px] sm:max-w-none">
+        <TableCell className="py-2 px-3">
+          <code className="text-[10px] font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
             {item.refNumber}
           </code>
         </TableCell>
-        <TableCell className="p-2 sm:p-3 max-w-[80px] xs:max-w-[100px] sm:max-w-xs">
-          <p className="text-xs sm:text-sm truncate">{item.desc}</p>
+        <TableCell className="py-2 px-3 max-w-[180px]">
+          <p className="text-xs text-gray-600 truncate">{item.desc}</p>
         </TableCell>
-        <TableCell className="p-2 sm:p-3 text-right">
+        <TableCell className="py-2 px-3 text-right">
           <div className="flex flex-col items-end">
-            <span className="text-xs sm:text-sm font-medium">
+            <span className="text-xs font-semibold text-gray-800">
               {item.quantity}
             </span>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">
-              ordered
-            </span>
+            <span className="text-[10px] text-gray-400">ordered</span>
           </div>
         </TableCell>
-        <TableCell className="p-2 sm:p-3 text-right">
+        <TableCell className="py-2 px-3 text-right">
           <div className="flex flex-col items-end">
-            <span className="text-xs sm:text-sm font-medium">
+            <span className="text-xs font-semibold text-gray-800">
               {item.receivedQuantity}
             </span>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">
-              received
-            </span>
+            <span className="text-[10px] text-gray-400">received</span>
           </div>
         </TableCell>
-        <TableCell className="p-2 sm:p-3">
+        <TableCell className="py-2 px-3">
           {item.condition ? (
             <Badge
               variant="outline"
-              className={`text-[10px] sm:text-xs capitalize px-1.5 sm:px-2 py-0 sm:py-0.5 ${getConditionBadge(
+              className={`text-[10px] capitalize px-1.5 py-0 leading-none ${getConditionBadge(
                 item.condition,
               )}`}
             >
-              <span className="hidden xs:inline">{item.condition}</span>
-              <span className="xs:hidden">{item.condition.charAt(0)}</span>
+              {item.condition}
             </Badge>
           ) : (
-            <span className="text-[10px] sm:text-xs text-muted-foreground">
-              N/A
-            </span>
+            <span className="text-[10px] text-gray-400">N/A</span>
           )}
         </TableCell>
-        <TableCell className="p-2 sm:p-3 text-right">
+        <TableCell className="py-2 px-3 text-right">
           <div className="flex items-center justify-end gap-1">
             {item.price > 0 ? (
-              <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-600 flex-shrink-0" />
+              <DollarSign className="h-3 w-3 text-green-600 flex-shrink-0" />
             ) : (
-              <AlertCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-600 flex-shrink-0" />
+              <AlertCircle className="h-3 w-3 text-amber-600 flex-shrink-0" />
             )}
             <span
-              className={`text-[10px] sm:text-xs font-medium whitespace-nowrap ${
+              className={`text-[10px] font-medium whitespace-nowrap ${
                 item.price > 0 ? "text-green-700" : "text-amber-700"
               }`}
             >
@@ -291,16 +322,15 @@ const OrderCompletionItem = ({
             </span>
           </div>
         </TableCell>
-        <TableCell className="p-2 sm:p-3">
+        <TableCell className="py-2 px-3">
           <Badge
             variant={resolveInfo.variant}
-            className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0 sm:py-0.5"
+            className="text-[10px] px-1.5 py-0 leading-none"
           >
-            <span className="hidden xs:inline">{resolveInfo.label}</span>
-            <span className="xs:hidden">{resolveInfo.label.charAt(0)}</span>
+            {resolveInfo.label}
           </Badge>
         </TableCell>
-        <TableCell className="">
+        <TableCell className="py-2 px-3 text-[10px] text-gray-500">
           {item.supplieRecieveHistories?.timestamp
             .toISOString()
             .split("T")[0] || "N/A"}
@@ -309,75 +339,83 @@ const OrderCompletionItem = ({
 
       <Modal
         title={
-          <div className="flex items-start sm:items-center gap-2 sm:gap-3">
-            <PackageOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-50 rounded-md flex-shrink-0">
+              <PackageOpen className="h-3.5 w-3.5 text-blue-600" />
+            </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-sm sm:text-base font-semibold truncate pr-4">
+              <h3 className="text-sm font-semibold text-gray-900 truncate">
                 {item.supply.item}
               </h3>
-              <p className="text-xs text-muted-foreground truncate">
-                Ref: {item.refNumber} • Order item details
+              <p className="text-[10px] text-gray-500 truncate">
+                Ref: {item.refNumber} · Order item details
               </p>
             </div>
           </div>
         }
         onOpen={onOpen}
-        className="w-[95%] sm:w-[90%] md:w-[85%] lg:min-w-4xl max-w-4xl max-h-[90vh] overflow-auto mx-auto"
+        className="max-w-3xl w-[95vw] max-h-[90vh] overflow-auto"
         setOnOpen={() => setOnOpen(false)}
         footer={true}
         onFunction={form.handleSubmit(onSubmit)}
         yesTitle="Update Item"
       >
-        <div className="space-y-4 sm:space-y-6 px-1 sm:px-0">
-          {/* Mobile scroll indicator for long forms */}
-          <div className="sm:hidden flex items-center justify-end">
-            <div className="bg-primary/10 rounded-full px-2 py-1 text-[10px] text-primary flex items-center gap-1">
-              <ChevronRight className="h-3 w-3" />
-              <span>Scroll for more</span>
-            </div>
-          </div>
+        <div className="space-y-3 p-1">
 
-          {/* Item Summary */}
-          <div className="bg-muted/30 p-3 sm:p-4 rounded-lg space-y-2 sm:space-y-3">
-            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
-              <div className="min-w-0">
-                <span className="text-muted-foreground">Ordered Quantity:</span>
-                <p className="font-medium">{item.quantity} units</p>
+          {/* ── Item Summary ── */}
+          <div className="border rounded-lg bg-gray-50 overflow-hidden">
+            <div className="px-3 py-2 border-b bg-white">
+              <h4 className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                Item Summary
+              </h4>
+            </div>
+            <div className="p-3 grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] text-gray-500">Ordered Quantity</p>
+                <p className="text-xs font-medium text-gray-900 mt-0.5">
+                  {item.quantity} units
+                </p>
               </div>
-              <div className="min-w-0">
-                <span className="text-muted-foreground">Current Status:</span>
+              <div>
+                <p className="text-[10px] text-gray-500">Current Status</p>
                 <Badge
                   variant="outline"
-                  className="ml-2 capitalize text-[10px] sm:text-xs"
+                  className="text-[10px] px-1.5 py-0 mt-0.5 capitalize"
                 >
                   {item.status || "Pending"}
                 </Badge>
               </div>
-              <div className="col-span-1 xs:col-span-2">
-                <span className="text-muted-foreground">Description:</span>
-                <p className="font-medium break-words">
+              <div className="col-span-2">
+                <p className="text-[10px] text-gray-500">Description</p>
+                <p className="text-xs text-gray-700 mt-0.5 break-words">
                   {item.desc || "No description provided"}
                 </p>
               </div>
             </div>
           </div>
 
+          {/* ── Form ── */}
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4 sm:space-y-6"
+              className="space-y-3"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                {/* Left Column */}
-                <div className="space-y-3 sm:space-y-4">
+              {/* Receipt details card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                  <Package className="h-3 w-3 text-blue-500" />
+                  <h4 className="text-xs font-semibold text-gray-800">
+                    Receipt Details
+                  </h4>
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
                     name="quality"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                          Quality
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
+                          Quality *
                         </FormLabel>
                         <FormControl>
                           <SelectUnitOfMeasure
@@ -386,7 +424,7 @@ const OrderCompletionItem = ({
                             defaultValue="piece"
                           />
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -395,8 +433,7 @@ const OrderCompletionItem = ({
                     name="quantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
                           Received Quantity
                         </FormLabel>
                         <FormControl>
@@ -404,41 +441,40 @@ const OrderCompletionItem = ({
                             type="number"
                             min="0"
                             max={item.quantity}
-                            placeholder="Enter received quantity"
+                            placeholder="0"
+                            className="h-8 text-xs"
                             {...field}
-                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="perQuantity"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Boxes className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                          Per Quantity
+                      <FormItem className="col-span-2">
+                        <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+                          <Boxes className="h-2.5 w-2.5" /> Per Quantity
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="number"
                             min="0"
-                            max={item.quantity}
-                            placeholder="Enter received per quantity"
+                            placeholder="0"
+                            className="h-8 text-xs"
                             {...field}
-                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
-                        <FormDescription className="text-[10px] sm:text-xs">
-                          Actual Stock to be record:{" "}
-                          {parseInt(perQuantity, 10) * parseInt(quanlity, 10) ||
-                            0}
+                        <FormDescription className="text-[10px] text-gray-500">
+                          Actual stock to record:{" "}
+                          <span className="font-semibold text-gray-700">
+                            {parseInt(perQuantity, 10) *
+                              parseInt(quanlity, 10) || 0}
+                          </span>
                         </FormDescription>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -448,52 +484,27 @@ const OrderCompletionItem = ({
                     name="condition"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs sm:text-sm">
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
                           Item Condition
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value || "new"}
                         >
                           <FormControl>
-                            <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
+                            <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Select condition" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem
-                              value="new"
-                              className="text-xs sm:text-sm"
-                            >
-                              New
-                            </SelectItem>
-                            <SelectItem
-                              value="good"
-                              className="text-xs sm:text-sm"
-                            >
-                              Good
-                            </SelectItem>
-                            <SelectItem
-                              value="damaged"
-                              className="text-xs sm:text-sm"
-                            >
-                              Damaged
-                            </SelectItem>
-                            <SelectItem
-                              value="expired"
-                              className="text-xs sm:text-sm"
-                            >
-                              Expired
-                            </SelectItem>
-                            <SelectItem
-                              value="missing"
-                              className="text-xs sm:text-sm"
-                            >
-                              Missing Parts
-                            </SelectItem>
+                            <SelectItem value="new" className="text-xs">New</SelectItem>
+                            <SelectItem value="good" className="text-xs">Good</SelectItem>
+                            <SelectItem value="damaged" className="text-xs">Damaged</SelectItem>
+                            <SelectItem value="expired" className="text-xs">Expired</SelectItem>
+                            <SelectItem value="missing" className="text-xs">Missing Parts</SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -503,70 +514,65 @@ const OrderCompletionItem = ({
                     name="expiration"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                          Expiration Date (Optional)
+                        <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5" /> Expiration
+                          <span className="font-normal text-gray-400">
+                            (optional)
+                          </span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="date"
+                            className="h-8 text-xs"
                             {...field}
-                            className="text-xs sm:text-sm h-8 sm:h-10"
                           />
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
                 </div>
+              </div>
 
-                {/* Right Column */}
-                <div className="space-y-3 sm:space-y-4">
+              {/* Pricing & status card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                  <DollarSign className="h-3 w-3 text-blue-500" />
+                  <h4 className="text-xs font-semibold text-gray-800">
+                    Pricing & Status
+                  </h4>
+                </div>
+                <div className="p-3 grid grid-cols-2 gap-3">
                   <FormField
                     control={form.control}
                     name="resolved"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs sm:text-sm">
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
                           Status
                         </FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value || "1"}
                         >
                           <FormControl>
-                            <SelectTrigger
-                              className="text-xs sm:text-sm h-8 sm:h-10"
-                              value={field.value}
-                            >
-                              <SelectValue
-                                placeholder="Select resolution"
-                                defaultValue={field.value}
-                              />
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem
-                              value="1"
-                              className="text-xs sm:text-sm"
-                            >
-                              OK - Accept Item
+                            <SelectItem value="1" className="text-xs">
+                              OK — Accept item
                             </SelectItem>
-                            <SelectItem
-                              value="2"
-                              className="text-xs sm:text-sm"
-                            >
-                              Consider - Review Needed
+                            <SelectItem value="2" className="text-xs">
+                              Consider — Review needed
                             </SelectItem>
-                            <SelectItem
-                              value="0"
-                              className="text-xs sm:text-sm"
-                            >
-                              Return - Reject Item
+                            <SelectItem value="0" className="text-xs">
+                              Return — Reject item
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -576,26 +582,25 @@ const OrderCompletionItem = ({
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
                           Unit Price
                         </FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <span className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs sm:text-sm">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                               $
                             </span>
                             <Input
                               type="number"
                               min="0"
                               step="0.01"
-                              className="pl-6 sm:pl-8 text-xs sm:text-sm h-8 sm:h-10"
+                              className="pl-5 h-8 text-xs"
                               placeholder="0.00"
                               {...field}
                             />
                           </div>
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -604,9 +609,12 @@ const OrderCompletionItem = ({
                     control={form.control}
                     name="supplier"
                     render={({ field: { onChange } }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs sm:text-sm">
-                          Supplier (Optional)
+                      <FormItem className="col-span-2">
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
+                          Supplier
+                          <span className="font-normal text-gray-400 ml-1">
+                            (optional)
+                          </span>
                         </FormLabel>
                         <Suppliers
                           auth={auth}
@@ -614,90 +622,94 @@ const OrderCompletionItem = ({
                           onChange={onChange}
                           handleResetSupplier={handleResetSupplier}
                         />
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
                 </div>
               </div>
 
-              {/* Brand Section */}
-              <div className="space-y-3 sm:space-y-4 border rounded-lg p-3 sm:p-4">
-                <FormField
-                  control={form.control}
-                  name="noBrand"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-2 sm:space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 sm:mt-0"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none flex-1">
-                        <FormLabel className="font-normal cursor-pointer text-xs sm:text-sm">
-                          Use object name as brand
-                        </FormLabel>
-                        <FormDescription className="text-[10px] sm:text-xs">
-                          When checked, the system will use the default brand
-                          for this item type
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                {!noBrand && (
+              {/* Brand card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50">
+                  <h4 className="text-xs font-semibold text-gray-800">Brand</h4>
+                </div>
+                <div className="p-3 space-y-2">
                   <FormField
                     control={form.control}
-                    name="brandName"
+                    name="noBrand"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs sm:text-sm">
-                          Custom Brand/Product Name
-                        </FormLabel>
+                      <FormItem className="flex flex-row items-start gap-2 p-2 bg-gray-50 rounded-md">
                         <FormControl>
-                          <Input
-                            placeholder="Enter specific brand or product name"
-                            {...field}
-                            className="text-xs sm:text-sm h-8 sm:h-10"
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="h-3.5 w-3.5 mt-0.5"
                           />
                         </FormControl>
-                        <FormDescription className="text-[10px] sm:text-xs">
-                          Override the default brand for this specific item
-                        </FormDescription>
-                        <FormMessage className="text-xs" />
+                        <div className="leading-tight">
+                          <FormLabel className="text-xs font-medium cursor-pointer">
+                            Use object name as brand
+                          </FormLabel>
+                          <p className="text-[10px] text-gray-500">
+                            Uses the default brand for this item type
+                          </p>
+                        </div>
                       </FormItem>
                     )}
                   />
-                )}
+
+                  {!noBrand && (
+                    <FormField
+                      control={form.control}
+                      name="brandName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700">
+                            Custom Brand / Product Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="e.g. Acme Co."
+                              className="h-8 text-xs"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
 
-              {/* Comments */}
-              <FormField
-                control={form.control}
-                name="comment"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                      <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                      Additional Comments
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add notes, observations, or special instructions..."
-                        className="min-h-[60px] sm:min-h-[80px] resize-none text-xs sm:text-sm"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-[10px] sm:text-xs">
-                      Optional: Any additional information about this item
-                    </FormDescription>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
+              {/* Comments card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-blue-500" />
+                  <h4 className="text-xs font-semibold text-gray-800">
+                    Comments
+                  </h4>
+                </div>
+                <div className="p-3">
+                  <FormField
+                    control={form.control}
+                    name="comment"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Notes, observations, or special instructions..."
+                            className="min-h-[60px] resize-none text-xs"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             </form>
           </Form>
         </div>

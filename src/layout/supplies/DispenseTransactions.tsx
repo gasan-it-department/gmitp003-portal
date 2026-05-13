@@ -22,7 +22,9 @@ import {
 import DispenseTransactionItem from "./items/DispenseTransactionItem";
 import SWWItem from "../item/SWWItem";
 //
-import { Search } from "lucide-react";
+import { Search, Calendar, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 //
 import type { SupplyDispenseRecordProps } from "@/interface/data";
 
@@ -40,6 +42,8 @@ interface ListProps {
 const DispenseTransactions = ({ listId, token }: Props) => {
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 1000);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const {
     data,
     isFetching,
@@ -50,7 +54,7 @@ const DispenseTransactions = ({ listId, token }: Props) => {
     error,
     refetch,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["supply-dispense-transaction", listId],
+    queryKey: ["supply-dispense-transaction", listId, query, dateFrom, dateTo],
     queryFn: ({ pageParam }) =>
       supplyDispenseTransaction(
         token,
@@ -58,11 +62,19 @@ const DispenseTransactions = ({ listId, token }: Props) => {
         pageParam as string | null,
         "20",
         query,
+        dateFrom,
+        dateTo,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
   });
+
+  const clearDates = () => {
+    setDateFrom("");
+    setDateTo("");
+  };
+  const hasDateFilter = dateFrom || dateTo;
 
   const { ref, inView } = useInView({
     threshold: 0.1,
@@ -144,30 +156,77 @@ const DispenseTransactions = ({ listId, token }: Props) => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="border-b bg-white p-3">
-        <div className="flex gap-2">
+      {/* Search + Date Range */}
+      <div className="border-b bg-white p-3 space-y-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <InputGroup className="flex-1">
             <InputGroupAddon>
               <Search className="h-3.5 w-3.5" />
             </InputGroupAddon>
             <InputGroupInput
               placeholder="Search transaction..."
+              value={text}
               onChange={(e) => setText(e.target.value)}
               className="h-8 text-xs"
             />
           </InputGroup>
-          <InputGroup className="w-32">
-            <InputGroupAddon>
-              <Search className="h-3.5 w-3.5" />
-            </InputGroupAddon>
-            <InputGroupInput
-              placeholder="Date"
-              type="date"
-              className="h-8 text-xs"
-            />
-          </InputGroup>
+
+          <div className="flex items-center gap-1.5">
+            <div className="flex flex-col">
+              <label className="text-[9px] text-gray-500 uppercase tracking-wide ml-0.5">From</label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                onClick={(e) =>
+                  (e.currentTarget as HTMLInputElement).showPicker?.()
+                }
+                max={dateTo || undefined}
+                className="h-8 text-xs w-36 cursor-pointer"
+                aria-label="From date"
+              />
+            </div>
+            <span className="text-[10px] text-gray-400 mt-3">→</span>
+            <div className="flex flex-col">
+              <label className="text-[9px] text-gray-500 uppercase tracking-wide ml-0.5">To</label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                onClick={(e) =>
+                  (e.currentTarget as HTMLInputElement).showPicker?.()
+                }
+                min={dateFrom || undefined}
+                className="h-8 text-xs w-36 cursor-pointer"
+                aria-label="To date"
+              />
+            </div>
+            {hasDateFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 mt-3 text-[10px] text-gray-500 hover:text-gray-700"
+                onClick={clearDates}
+                title="Clear date filter"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
+
+        {hasDateFilter && (
+          <div className="flex items-center gap-1.5 text-[10px] text-blue-700">
+            <Calendar className="h-2.5 w-2.5" />
+            <span>
+              {dateFrom && dateTo
+                ? `Filtering ${dateFrom} → ${dateTo}`
+                : dateFrom
+                  ? `From ${dateFrom}`
+                  : `Up to ${dateTo}`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Loading state for initial fetch */}

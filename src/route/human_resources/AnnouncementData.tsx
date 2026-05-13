@@ -1,35 +1,25 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import axios from "@/db/axios";
 import {
   announcementData,
   announcementStatusUpdate,
   removeAnnouncement,
 } from "@/db/statements/announcement";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "@/db/axios";
-
 import { useAuth } from "@/provider/ProtectedRoute";
-//
+
 import { Button } from "@/components/ui/button";
-// import {
-//   ButtonGroup,
-//   ButtonGroupSeparator,
-//   ButtonGroupText,
-// } from "@/components/ui/button-group";
-import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
 import UserSelection from "@/layout/UserSelection";
-// import {
-//   InputGroup,
-//   InputGroupAddon,
-//   InputGroupInput,
-// } from "@/components/ui/input-group";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -39,13 +29,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-//
-import { AtSign, BookOpenCheck, ClipboardX, PauseCircle } from "lucide-react";
-//inteface/schema/props
+
+import {
+  AtSign,
+  BookOpenCheck,
+  ClipboardX,
+  PauseCircle,
+  PlayCircle,
+  Loader2,
+  Megaphone,
+  X,
+  Users as UsersIcon,
+} from "lucide-react";
+
 import { AnnouncementFormSchema } from "@/interface/zod";
 import type {
   Announcement,
@@ -53,12 +49,21 @@ import type {
   User,
 } from "@/interface/data";
 
+const statusMeta: Record<
+  number,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  0: { label: "Draft",     variant: "secondary"   },
+  1: { label: "Published", variant: "default"     },
+  2: { label: "Paused",    variant: "outline"     },
+  3: { label: "Archived",  variant: "destructive" },
+};
+
 const AnnouncementData = () => {
   const [onOpen, setOnOpen] = useState(0);
   const auth = useAuth();
   const nav = useNavigate();
   const { announcementId, lineId } = useParams();
-
   const queryClient = useQueryClient();
 
   const { data, isFetching } = useQuery<Announcement>({
@@ -69,17 +74,13 @@ const AnnouncementData = () => {
         announcementId as string,
         auth.userId as string,
       ),
-    enabled: !!auth.token || !!auth.userId,
+    enabled: !!auth.token && !!announcementId,
+    refetchOnWindowFocus: false,
   });
 
   const form = useForm<AnnouncementFormProps>({
     resolver: zodResolver(AnnouncementFormSchema),
-    defaultValues: {
-      title: data ? data.title : "N/A",
-      content: data ? data.content : "N/A",
-      //files: [],
-      mentions: [],
-    },
+    defaultValues: { title: "", content: "", mentions: [] },
   });
 
   useEffect(() => {
@@ -87,7 +88,7 @@ const AnnouncementData = () => {
       form.reset({
         title: data.title || "",
         content: data.content || "",
-        //files: [],
+        mentions: [],
       });
     }
   }, [data, form]);
@@ -96,46 +97,35 @@ const AnnouncementData = () => {
     formState: { isSubmitting, errors },
     handleSubmit,
     control,
-    // watch,
-    // setValue,
+    watch,
   } = form;
 
-  //const files = watch("files");
-
-  // const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const selectedFiles = e.target.files;
-  //   if (selectedFiles) {
-  //     const newFiles = Array.from(selectedFiles);
-  //     setValue("files", [...(files || []), ...newFiles]);
-  //   }
-  // };
-
-  // const removeFile = (index: number) => {
-  //   const updatedFiles = files ? [...files] : [];
-  //   updatedFiles.splice(index, 1);
-  //   setValue("files", updatedFiles);
-  // };
+  const contentValue = watch("content");
+  const isPublished = data?.status === 1;
+  const isLocked = isPublished; // can't edit title/content while published
 
   const onSubmit = async (formData: AnnouncementFormProps) => {
-    if (!announcementId) throw new Error("INVALID REQUIRED DATA");
-
-    if (!lineId || !auth.userId) throw new Error("INVALID REQUIRED ID");
-
-    if (!data) throw new Error("INVALID DATA");
+    if (!announcementId || !lineId || !auth.userId) {
+      toast.error("Missing required data");
+      return;
+    }
+    if (!data) {
+      toast.error("Announcement not loaded");
+      return;
+    }
     try {
-      //const formDatas = new FormData();
-
       const response = await axios.patch(
         "/announcement/publish",
         {
           title: formData.title,
           content: formData.content,
           authorId: auth.userId,
-          lineId: lineId,
+          lineId,
           id: announcementId,
+          // Toggle: from draft → published, from published → draft
           status: data.status === 1 ? 0 : 1,
           mentions: formData.mentions
-            ? formData.mentions.map((item) => item.id)
+            ? formData.mentions.map((m) => m.id)
             : [],
         },
         {
@@ -147,39 +137,51 @@ const AnnouncementData = () => {
           },
         },
       );
+
       if (response.status !== 200) {
-        throw new Error(response.data.message);
+        throw new Error(response.data?.message ?? "Failed");
       }
+
       await queryClient.invalidateQueries({
         queryKey: ["announcement-data", announcementId],
         refetchType: "active",
       });
+      toast.success(
+        data.status === 1
+          ? "Announcement withdrawn"
+          : "Announcement published",
+      );
       setOnOpen(0);
-    } catch (error) {
-      toast.error("FAILED TO SUBMIT");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        (err instanceof Error ? err.message : "Failed to submit");
+      toast.error(msg);
     }
   };
 
-  const handleUpdateStatus = async (status: number) => {
-    if (!auth.token || !auth.userId || !lineId)
-      throw new Error("UNAUTHORIZED ACTION");
-    if (!announcementId) throw new Error("INVALID REQUIRED");
-    await announcementStatusUpdate(
-      auth.token,
-      announcementId,
-      auth.userId,
-      status,
-      lineId as string,
-    );
-  };
-
   const updateStatus = useMutation({
-    mutationFn: (status: number) => handleUpdateStatus(status),
+    mutationFn: async (status: number) => {
+      if (!auth.token || !auth.userId || !lineId || !announcementId) {
+        throw new Error("Unauthorized");
+      }
+      return announcementStatusUpdate(
+        auth.token,
+        announcementId,
+        auth.userId,
+        status,
+        lineId,
+      );
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["announcement-data", announcementId],
         refetchType: "active",
       });
+      toast.success("Status updated");
+    },
+    onError: (err) => {
+      toast.error("Failed to update status", { description: err.message });
     },
   });
 
@@ -191,409 +193,325 @@ const AnnouncementData = () => {
         lineId as string,
         auth.userId as string,
       ),
-    onSuccess: (error) => {
-      console.log(error);
-
+    onSuccess: () => {
+      toast.success("Announcement discarded");
       nav(-1);
     },
     onError: () => {
-      toast.error("TRANSACTION FAILED", {
-        description: `Please try again`,
-      });
+      toast.error("Failed to discard", { description: "Please try again" });
     },
   });
 
-  const mentions = useFieldArray({
-    control,
-    name: "mentions",
-  });
+  const mentions = useFieldArray({ control, name: "mentions" });
 
   const handleAddMention = (user: User) => {
-    const check = mentions.fields.find((item) => item.id === user.id);
-
-    if (check) {
-      return;
-    }
-
+    if (mentions.fields.find((m) => m.id === user.id)) return;
     mentions.append({
       id: user.id,
       username: user.username,
       firstname: user.firstName,
       lastname: user.lastName,
     });
-    toast.success(`Added @${user.username}`);
+    toast.success(`Mentioned @${user.username}`);
   };
 
-  const handleRemoveMention = (index: number) => {
-    mentions.remove(index);
-  };
-
-  // const statusButtons = [
-  //   <Button
-  //     onClick={() => setOnOpen(1)}
-  //     disabled={isSubmitting}
-  //     size="sm"
-  //     className="gap-2"
-  //   >
-  //     {isSubmitting ? (
-  //       <Spinner className="w-4 h-4" />
-  //     ) : (
-  //       <BookOpenCheck className="w-4 h-4" />
-  //     )}
-  //     Publish Announcement
-  //   </Button>,
-  //   <div className=" w-auto flex gap-2">
-  //     <Button
-  //       size="sm"
-  //       variant="destructive"
-  //       disabled={updateStatus.isPending}
-  //       onClick={() => {
-  //         updateStatus.mutateAsync(2);
-  //       }}
-  //     >
-  //       <PauseCircle /> Pause
-  //     </Button>
-
-  //     {data && data.status === 3 ? (
-  //       <Button
-  //         size="sm"
-  //         variant="outline"
-  //         disabled={updateStatus.isPending || (data && data.status === 3)}
-  //         onClick={() => updateStatus.mutateAsync(3)}
-  //       >
-  //         <Archive /> Archive
-  //       </Button>
-  //     ) : (
-  //       <Button
-  //         size="sm"
-  //         variant="outline"
-  //         disabled={updateStatus.isPending || (data && data.status === 3)}
-  //         onClick={() => updateStatus.mutateAsync(3)}
-  //       >
-  //         <Undo2 /> Restore
-  //       </Button>
-  //     )}
-  //   </div>,
-
-  //   <div className=" w-auto flex gap-2">
-  //     {data && (
-  //       <Button
-  //         size="sm"
-  //         variant="destructive"
-  //         disabled={updateStatus.isPending}
-  //         onClick={() => {
-  //           updateStatus.mutateAsync(1);
-  //         }}
-  //       >
-  //         <PresentationIcon /> Publish
-  //       </Button>
-  //     )}
-  //     {data && data.status === 3 && (
-  //       <Button
-  //         size="sm"
-  //         variant="outline"
-  //         disabled={updateStatus.isPending || (data && data.status === 3)}
-  //         onClick={() => updateStatus.mutateAsync(1)}
-  //       >
-  //         <Undo2 /> Restore
-  //       </Button>
-  //     )}
-  //   </div>,
-  // ];
-
-  if (isFetching) {
+  // ── Loading ──────────────────────────────────────────────────────────
+  if (isFetching && !data) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <Spinner className="w-8 h-8" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-2 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading announcement...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full p-4 md:p-6">
-      <Card className="h-full border shadow-sm">
-        <CardHeader className="pb-4 border-b">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-semibold">
-              {data ? "Edit Announcement" : "Create Announcement"}
-            </CardTitle>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="p-3 flex-1 flex flex-col min-h-0 max-w-4xl mx-auto w-full">
+
+        {/* Header card */}
+        <div className="border rounded-lg bg-white overflow-hidden mb-3">
+          <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Megaphone className="h-3 w-3 text-blue-500" />
+              <div className="min-w-0">
+                <h3 className="text-xs font-semibold text-gray-800">
+                  {data ? "Edit Announcement" : "Create Announcement"}
+                </h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {data && (
+                    <Badge
+                      variant={statusMeta[data.status]?.variant ?? "outline"}
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {statusMeta[data.status]?.label ?? "Unknown"}
+                    </Badge>
+                  )}
+                  <span className="text-[10px] text-gray-500 truncate">
+                    {data?.title ?? "Untitled"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {data && (
-              <div className=" w-auto flex gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
-                  disabled={removeAnnouncementMutation.isPending}
                   size="sm"
+                  variant="outline"
+                  disabled={removeAnnouncementMutation.isPending}
                   onClick={() => setOnOpen(2)}
+                  className="h-7 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
                 >
-                  <ClipboardX />
+                  <ClipboardX className="h-3 w-3" />
                   Discard
                 </Button>
+
                 {data.status === 0 && (
                   <Button
-                    onClick={() => setOnOpen(1)}
-                    disabled={isSubmitting}
                     size="sm"
-                    className="gap-2"
+                    disabled={isSubmitting}
+                    onClick={() => setOnOpen(1)}
+                    className="h-7 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
                   >
-                    {isSubmitting ? (
-                      <Spinner className="w-4 h-4" />
-                    ) : (
-                      <BookOpenCheck className="w-4 h-4" />
-                    )}
-                    Publish Announcement
+                    <BookOpenCheck className="h-3 w-3" />
+                    Publish
                   </Button>
                 )}
+
                 {data.status === 1 && (
                   <Button
                     size="sm"
-                    variant="destructive"
+                    variant="outline"
                     disabled={updateStatus.isPending}
-                    onClick={() => {
-                      const status = data.status === 2 ? 1 : 2;
-                      updateStatus.mutateAsync(status);
-                    }}
+                    onClick={() => updateStatus.mutateAsync(2)}
+                    className="h-7 text-xs gap-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 hover:border-amber-200"
                   >
-                    <PauseCircle /> {data.status === 1 ? "Withdraw" : "Publish"}
+                    <PauseCircle className="h-3 w-3" />
+                    Pause
+                  </Button>
+                )}
+
+                {data.status === 2 && (
+                  <Button
+                    size="sm"
+                    disabled={updateStatus.isPending}
+                    onClick={() => updateStatus.mutateAsync(1)}
+                    className="h-7 text-xs gap-1.5 bg-green-600 hover:bg-green-700"
+                  >
+                    <PlayCircle className="h-3 w-3" />
+                    Resume
                   </Button>
                 )}
               </div>
             )}
           </div>
-        </CardHeader>
+        </div>
 
-        <ScrollArea className="h-[calc(100%-80px)]">
-          <CardContent className="p-6">
-            <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                {/* Title Section */}
-                <div className="space-y-4">
+        {/* Form */}
+        <div className="flex-1 min-h-0 overflow-auto">
+          <Form {...form}>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+
+              {/* Title card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50">
+                  <h4 className="text-xs font-semibold text-gray-800">Title</h4>
+                </div>
+                <div className="p-3">
                   <FormField
-                    disabled={data?.status === 1}
+                    disabled={isLocked}
                     control={control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-medium">
-                          Title
-                        </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Enter announcement title"
-                            className="h-12 text-lg bg-white border-gray-300 focus:border-primary"
+                            placeholder="Announcement title"
+                            className="h-9 text-sm"
                             {...field}
                           />
                         </FormControl>
+                        <FormDescription className="text-[10px]">
+                          A clear, concise title for your announcement
+                        </FormDescription>
                         {errors.title && (
-                          <FormMessage className="text-red-500">
+                          <FormMessage className="text-[10px]">
                             {errors.title.message}
                           </FormMessage>
                         )}
-                        <FormDescription className="text-gray-500">
-                          A clear and concise title for your announcement
-                        </FormDescription>
                       </FormItem>
                     )}
                   />
                 </div>
+              </div>
 
-                <Separator />
-
-                {/* Content Section */}
-                <div className="space-y-4">
+              {/* Content card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-gray-800">
+                    Content
+                  </h4>
+                  <span className="text-[10px] text-gray-500">
+                    {contentValue?.length || 0} characters
+                  </span>
+                </div>
+                <div className="p-3">
                   <FormField
-                    disabled={data?.status === 1}
+                    disabled={isLocked}
                     control={control}
                     name="content"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center justify-between">
-                          <FormLabel className="text-base font-medium">
-                            Content
-                          </FormLabel>
-                          <span className="text-sm text-gray-500">
-                            {field.value?.length || 0} characters
-                          </span>
-                        </div>
                         <FormControl>
                           <Textarea
-                            placeholder="Write your announcement content here..."
-                            className="min-h-[400px] bg-white border-gray-300 resize-none focus:border-primary"
+                            placeholder="Write the body of your announcement..."
+                            className="min-h-[280px] text-xs resize-none"
                             {...field}
                           />
                         </FormControl>
                         {errors.content && (
-                          <FormMessage className="text-red-500">
+                          <FormMessage className="text-[10px]">
                             {errors.content.message}
                           </FormMessage>
                         )}
-                        <FormDescription className="text-gray-500">
-                          Include all relevant details for your announcement
-                        </FormDescription>
                       </FormItem>
                     )}
                   />
                 </div>
+              </div>
 
-                <Separator />
-
-                <div className=" space-y-4">
+              {/* Mentions card */}
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <UsersIcon className="h-3 w-3 text-blue-500" />
+                    <h4 className="text-xs font-semibold text-gray-800">
+                      Mentions
+                    </h4>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      {mentions.fields.length}
+                    </Badge>
+                  </div>
                   <Button
-                    disabled={data?.status === 1}
+                    type="button"
                     size="sm"
                     variant="outline"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setOnOpen(3);
-                    }}
+                    disabled={isLocked}
+                    onClick={() => setOnOpen(3)}
+                    className="h-7 text-xs gap-1.5"
                   >
-                    <AtSign />
-                    Mention
+                    <AtSign className="h-3 w-3" />
+                    Add mention
                   </Button>
-                  {mentions.fields.map((user, i) => (
-                    <div
-                      key={user.id}
-                      className="w-full border p-2 flex justify-between bg-white hover:bg-gray-100 rounded"
-                    >
-                      <div>
-                        <p>
-                          {user.lastname}, {user.firstname}
-                        </p>
-                        <p>{user.username}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRemoveMention(i)}
-                      >
-                        X
-                      </Button>
-                    </div>
-                  ))}
                 </div>
-                {/* File Upload Section */}
-                <div className="space-y-4">
-                  <div>
-                    {/* <FormLabel className="text-base font-medium">
-                      Attachments
-                    </FormLabel>
-                    <FormDescription className="text-gray-500 mb-4">
-                      Upload relevant files (PDF, DOC, images, etc.)
-                    </FormDescription> */}
-
-                    {/* File Upload Area */}
-                    <div className="space-y-4">
-                      {/* <div
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors"
-                        onClick={() =>
-                          document.getElementById("file-upload")?.click()
-                        }
-                      >
-                        <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-600 mb-2">
-                          Click to upload or drag and drop
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Maximum file size: 10MB
-                        </p>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          multiple
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                      </div> */}
-
-                      {/* File List */}
-                      {/* {files && files.length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Uploaded Files</h4>
-                          <div className="space-y-2">
-                            {files.map((file, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
-                              >
-                                {file && (
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
-                                      <BookOpenCheck className="w-4 h-4 text-blue-600" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">{file.name}</p>
-                                      <p className="text-sm text-gray-500">
-                                        {(file.size / 1024 / 1024).toFixed(2)}{" "}
-                                        MB
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeFile(index)}
-                                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
-                                >
-                                  <X className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            ))}
+                <div className="p-3">
+                  {mentions.fields.length === 0 ? (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No mentions yet. Add specific people to notify them.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {mentions.fields.map((user, i) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-gray-50 border rounded-md"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-800 truncate">
+                              {user.lastname}, {user.firstname}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              @{user.username}
+                            </p>
                           </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={isLocked}
+                            onClick={() => mentions.remove(i)}
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </div>
-                      )} */}
+                      ))}
                     </div>
-                  </div>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </ScrollArea>
-      </Card>
-      <Modal
-        title="Confirm Publish"
-        children={
-          <div className="space-y-4">
-            <p>Are you sure you want to publish this announcement?</p>
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-              <div className="flex">
-                <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    Once published, this announcement will be visible to all
-                    users.
-                  </p>
+                  )}
                 </div>
               </div>
+
+              {isLocked && (
+                <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-100 rounded-md">
+                  <PauseCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-700">
+                    This announcement is <strong>Published</strong>. Pause it
+                    first to make edits.
+                  </p>
+                </div>
+              )}
+            </form>
+          </Form>
+        </div>
+      </div>
+
+      {/* ── Publish Confirmation Modal ───────────────────────────────── */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-50 rounded-md">
+              <BookOpenCheck className="h-3.5 w-3.5 text-blue-600" />
             </div>
+            <span className="text-sm font-semibold">Publish Announcement</span>
           </div>
         }
         onOpen={onOpen === 1}
-        className="max-w-md"
+        className="max-w-sm"
         setOnOpen={() => {
+          if (isSubmitting) return;
           setOnOpen(0);
         }}
         footer={true}
+        yesTitle="Publish"
         loading={isSubmitting}
         onFunction={handleSubmit(onSubmit)}
-      />
+      >
+        <div className="space-y-3 p-1">
+          <p className="text-xs text-gray-700">
+            Once published, this announcement will be visible to all line
+            members. You can pause it afterwards if needed.
+          </p>
+          <div className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-100 rounded-md">
+            <BookOpenCheck className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] text-amber-700">
+              Make sure your title, content, and mentions are correct before
+              publishing.
+            </p>
+          </div>
+        </div>
+      </Modal>
 
+      {/* ── Discard Confirmation ─────────────────────────────────────── */}
       <Modal
         title={undefined}
         children={
           <ConfirmDelete
             confirmation={"confirm"}
             setOnOpen={setOnOpen}
-            onFunction={() => {
-              removeAnnouncementMutation.mutateAsync();
-            }}
+            onFunction={() => removeAnnouncementMutation.mutateAsync()}
             isLoading={removeAnnouncementMutation.isPending}
           />
         }
         onOpen={onOpen === 2}
-        className={""}
+        className=""
         footer={1}
         setOnOpen={() => setOnOpen(0)}
       />
 
+      {/* ── Mention picker ────────────────────────────────────────────── */}
       <Modal
         title={undefined}
         children={
@@ -604,7 +522,7 @@ const AnnouncementData = () => {
           />
         }
         onOpen={onOpen === 3}
-        className={" min-w-2xl max-h-11/12 overflow-auto"}
+        className="min-w-2xl max-h-11/12 overflow-auto"
         setOnOpen={() => setOnOpen(0)}
       />
     </div>

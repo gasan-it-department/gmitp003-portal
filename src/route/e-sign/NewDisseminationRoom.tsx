@@ -20,6 +20,9 @@ const NewDisseminationRoom = () => {
     queryKey: ["document", "rooms"],
     queryFn: () => documentRoute(auth.token as string, roomId as string),
     enabled: !!auth.token && !!roomId,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
   console.log({ error, data });
 

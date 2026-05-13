@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 //db and statements
 import { medicineLogs } from "@/db/statement";
 
@@ -18,7 +16,6 @@ import {
   TableBody,
 } from "@/components/ui/table";
 import MedicineLogsItems from "@/layout/medicine/item/MedicineLogsItems";
-import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -36,49 +33,50 @@ interface ListProps {
 const MedicineLogs = () => {
   const { lineId } = useParams();
   const auth = useAuth();
-  const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useInfiniteQuery<ListProps>({
-      queryKey: ["medicine-logs", lineId],
-      queryFn: ({ pageParam }) =>
-        medicineLogs(
-          auth.token as string,
-          lineId as string,
-          pageParam as string | null,
-          "20",
-          "",
-        ),
-      initialPageParam: null,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore ? lastPage.lastCursor : undefined,
-    });
+  const {
+    data,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    isError,
+  } = useInfiniteQuery<ListProps>({
+    queryKey: ["medicine-logs", lineId],
+    queryFn: ({ pageParam }) =>
+      medicineLogs(
+        auth.token as string,
+        lineId as string,
+        pageParam as string | null,
+        "20",
+        "",
+      ),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
+    refetchOnWindowFocus: false,
+  });
 
-  const { ref, inView } = useInView();
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
-      fetchNextPage().catch(() => {
-        toast.error("Failed to load more items");
-      });
-    }
-  }, [inView, hasNextPage, isFetching, isFetchingNextPage, fetchNextPage]);
-
-  const allMedicines = data?.pages.flatMap((page) => page.list) || [];
-  const totalCount = allMedicines.length;
+  const logs = data?.pages.flatMap((page) => page.list) ?? [];
+  const totalCount = logs.length;
   const isLoading = isFetching && !isFetchingNextPage && totalCount === 0;
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="px-4 py-3 sm:px-6 bg-white border-b">
+      <div className="px-1 py-1 sm:px-6 bg-white border-b">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex p-2 bg-blue-50 rounded-lg">
               <ClipboardList className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Medicine Logs
-              </h2>
               <p className="text-sm text-gray-500">
                 Audit trail of all medicine-related activities
               </p>
@@ -135,9 +133,15 @@ const MedicineLogs = () => {
                 </TableHeader>
 
                 <TableBody>
-                  {totalCount > 0 ? (
+                  {isError ? (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <SWWItem colSpan={5} />
+                      </TableCell>
+                    </TableRow>
+                  ) : totalCount > 0 ? (
                     <>
-                      {allMedicines.map((item, i) => (
+                      {logs.map((item, i) => (
                         <MedicineLogsItems key={item.id} item={item} no={i} />
                       ))}
 
@@ -155,15 +159,15 @@ const MedicineLogs = () => {
                         </TableRow>
                       )}
 
-                      {/* Infinite scroll trigger */}
-                      <TableRow ref={ref}>
-                        <TableCell colSpan={5} className="h-10">
-                          {/* Empty cell for trigger */}
-                        </TableCell>
-                      </TableRow>
+                      {/* Infinite scroll trigger — only rendered when more pages exist */}
+                      {hasNextPage && (
+                        <TableRow ref={ref}>
+                          <TableCell colSpan={5} className="h-10 p-0" />
+                        </TableRow>
+                      )}
 
                       {/* End of list */}
-                      {!hasNextPage && totalCount > 0 && (
+                      {!hasNextPage && (
                         <TableRow>
                           <TableCell
                             colSpan={5}
@@ -198,15 +202,6 @@ const MedicineLogs = () => {
                             </p>
                           </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-
-                  {/* Error state */}
-                  {!data && !isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={5}>
-                        <SWWItem colSpan={5} />
                       </TableCell>
                     </TableRow>
                   )}

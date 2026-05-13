@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 //
 import {
@@ -26,12 +26,20 @@ interface Props {
   value: string;
 }
 const PublicMunicipalSelect = ({ provinceId, onChange, value }: Props) => {
+  const mounted = useRef(false);
+
   const { data, isFetching, refetch } = useQuery<Municipal[]>({
     queryKey: ["municipalities", provinceId],
     queryFn: () => getPSGCMunicipalities(provinceId as string),
+    enabled: !!provinceId,
   });
 
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    onChange("");
     if (provinceId) refetch();
   }, [provinceId]);
 

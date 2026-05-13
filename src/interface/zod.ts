@@ -485,15 +485,23 @@ export const PrescribeMedRes = z.object({
 });
 
 export const DispensarySchema = z.object({
-  firstname: z.string().min(4, "Minimum of 4 characters"),
-  lastname: z.string().min(4, "Minimum of 4 characters"),
-  age: z.string(),
-  barangay: z.string().min(1, "Barangay is required"),
-  municipal: z.string().min(1, "Municipal is required"),
-  province: z.string().min(1, "Province is required"),
-  region: z.string().min(1, "Region is required"),
+  firstname: z.string().min(2, "Minimum of 2 characters"),
+  lastname: z.string().min(2, "Minimum of 2 characters"),
+  birthday: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  email: z
+    .string()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: "Invalid email format",
+    })
+    .optional(),
+  barangay: z.string().optional(),
+  municipal: z.string().optional(),
+  province: z.string().optional(),
+  region: z.string().optional(),
   street: z.string().optional(),
   desc: z.string().optional(),
+  patientId: z.string().optional(),
   prescribeMed: z
     .array(
       z.object({
@@ -504,7 +512,6 @@ export const DispensarySchema = z.object({
       }),
     )
     .min(1, "Prescribe at least one (1) medicine"),
-  //assets: z.file(),
 });
 
 export const PrecribeMedSchema = z.object({
@@ -787,4 +794,64 @@ export const UpdateTransactionSchema = z.object({
   toAccount: z.boolean(),
   forUnit: z.boolean(),
   address: z.string(),
+});
+
+export const AddDiagnoseSchema = z.object({
+  diagnose: z.string().min(1, "Diagnosis is required"),
+});
+
+export const NewPatientDiagnoseSchema = z.object({
+  firstname: z.string().min(2, "First name must be at least 2 characters"),
+  lastname: z.string().min(2, "Last name must be at least 2 characters"),
+  middlename: z.string().optional(),
+  birthday: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  email: z
+    .string()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: "Invalid email format",
+    })
+    .optional(),
+  region: z.string().optional(),
+  province: z.string().optional(),
+  municipal: z.string().optional(),
+  barangay: z.string().optional(),
+  diagnose: z.string().min(1, "Diagnosis is required"),
+});
+
+export const NewPatientSchema = z.object({
+  firstname: z.string().min(2, "First name must be at least 2 characters"),
+  lastname: z.string().min(2, "Last name must be at least 2 characters"),
+  middlename: z.string().optional(),
+  birthday: z.string().optional(),
+  email: z
+    .string()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: "Invalid email format",
+    })
+    .optional(),
+  phoneNumber: z.string().optional(),
+  region: z.string().optional(),
+  province: z.string().optional(),
+  municipal: z.string().optional(),
+  barangay: z.string().optional(),
+});
+
+export const UpdatePatientSchema = z.object({
+  firstname: z.string().min(2, "First name must be at least 2 characters").optional(),
+  lastname: z.string().min(2, "Last name must be at least 2 characters").optional(),
+  middlename: z.string().optional(),
+  birthday: z.string().optional(),
+  email: z
+    .string()
+    .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+      message: "Invalid email format",
+    })
+    .optional(),
+  phoneNumber: z.string().optional(),
+  illi: z.boolean().optional(),
+  region: z.string().optional(),
+  province: z.string().optional(),
+  municipal: z.string().optional(),
+  barangay: z.string().optional(),
 });

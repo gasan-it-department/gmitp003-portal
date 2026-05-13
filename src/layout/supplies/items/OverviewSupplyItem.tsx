@@ -63,23 +63,27 @@ const OverviewSupplyItem = ({
     };
   }, [isSelected]);
 
+  // Defensive: backend may omit these on some rows, default to safe values
+  const totalStock = item.totalStock ?? 0;
+  const stockTracks = item.SupplyStockTrack ?? [];
+
   const getStockStatus = () => {
-    if (item.totalStock === 0)
+    if (totalStock === 0)
       return {
         label: "Out of Stock",
         color: "bg-red-50 text-red-700 border-red-200",
       };
-    if (item.totalStock <= 5)
+    if (totalStock <= 5)
       return {
         label: "Very Low",
         color: "bg-red-50 text-red-700 border-red-200",
       };
-    if (item.totalStock <= 10)
+    if (totalStock <= 10)
       return {
         label: "Low",
         color: "bg-amber-50 text-amber-700 border-amber-200",
       };
-    if (item.totalStock <= 20)
+    if (totalStock <= 20)
       return {
         label: "Moderate",
         color: "bg-blue-50 text-blue-700 border-blue-200",
@@ -166,9 +170,7 @@ const OverviewSupplyItem = ({
 
         <TableCell className="py-2 text-center">
           <div className="flex items-baseline justify-center gap-0.5">
-            <span className="text-sm font-bold text-gray-800">
-              {item.totalStock}
-            </span>
+            <span className="text-sm font-bold text-gray-800">{totalStock}</span>
             <span className="text-[10px] text-gray-400">u</span>
           </div>
         </TableCell>
@@ -207,7 +209,7 @@ const OverviewSupplyItem = ({
       >
         <div className="space-y-3">
           {/* Stock Warning - Compact */}
-          {item.totalStock <= 10 && (
+          {totalStock <= 10 && (
             <div className="bg-red-50 border border-red-200 rounded-md p-2">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
@@ -216,8 +218,8 @@ const OverviewSupplyItem = ({
                     Low Stock Alert
                   </p>
                   <p className="text-[10px] text-red-700 mt-0.5">
-                    Only <span className="font-bold">{item.totalStock}</span>{" "}
-                    units remaining
+                    Only <span className="font-bold">{totalStock}</span> units
+                    remaining
                   </p>
                 </div>
               </div>
@@ -240,24 +242,30 @@ const OverviewSupplyItem = ({
                   Current Stock
                 </p>
                 <p className="text-lg font-bold text-gray-800">
-                  {item.totalStock}{" "}
+                  {totalStock}{" "}
                   <span className="text-xs font-normal text-gray-400">
                     units
                   </span>
                 </p>
                 <div className="space-y-1 mt-2">
-                  {item.SupplyStockTrack.map((stock, i) => (
-                    <div
-                      key={stock.id}
-                      className="flex items-center gap-2 text-xs"
-                    >
-                      <span className="text-gray-400 w-5">{i + 1}.</span>
-                      <span className="text-gray-600">
-                        Qty: {stock.quantity} ({stock.perQuantity}/
-                        {stock.quality})
-                      </span>
-                    </div>
-                  ))}
+                  {stockTracks.length > 0 ? (
+                    stockTracks.map((stock, i) => (
+                      <div
+                        key={stock.id}
+                        className="flex items-center gap-2 text-xs"
+                      >
+                        <span className="text-gray-400 w-5">{i + 1}.</span>
+                        <span className="text-gray-600">
+                          Qty: {stock.quantity} ({stock.perQuantity}/
+                          {stock.quality ?? "—"})
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No stock entries recorded.
+                    </p>
+                  )}
                 </div>
               </div>
 

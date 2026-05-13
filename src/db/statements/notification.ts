@@ -25,7 +25,7 @@ export const viewUserNotification = async (
   return response.data;
 };
 
-export const masrkNotificationsAsRead = async (
+export const markNotificationAsRead = async (
   token: string,
   userId: string,
   id: string,

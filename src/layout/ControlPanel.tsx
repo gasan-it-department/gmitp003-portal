@@ -21,6 +21,8 @@ import {
   // Megaphone,
   Pill,
   HandHelping,
+  ClipboardList,
+  Stethoscope,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
@@ -155,10 +157,10 @@ export const panels = [
     notifications: 5,
   },
   {
-    title: "Pharmaceuticals",
+    title: "Pharmacy",
     path: "medicine",
     Icon: Pill,
-    desc: "Manage medicine inventory and prescriptions",
+    desc: "Manage medicine inventory, storage, and dispensing",
     notifications: 3,
   },
   {
@@ -181,6 +183,20 @@ export const panels = [
     Icon: Scroll,
     desc: "Access and manage important documents",
     notifications: 8,
+  },
+  {
+    title: "Patients",
+    path: "patients-record",
+    Icon: ClipboardList,
+    desc: "Manage patient records and medical history",
+    notifications: 0,
+  },
+  {
+    title: "Diagnose",
+    path: "patient-diagnose",
+    Icon: Stethoscope,
+    desc: "Record patient diagnoses and register new patients",
+    notifications: 0,
   },
   // {
   //   title: "Announcement",

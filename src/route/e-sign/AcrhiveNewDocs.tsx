@@ -99,7 +99,6 @@ const ArchiveNewDocs = () => {
     alert("Document archived successfully");
     console.log({ data });
   };
-  console.log({ errors });
 
   const file = getValues("file");
   const handleGenerateAbstract = async () => {

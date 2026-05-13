@@ -1,6 +1,8 @@
 import type { LucideProps } from "lucide-react";
 import React, { memo } from "react";
 import { useNavigate } from "react-router";
+import { Users, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   item: {
@@ -17,21 +19,31 @@ interface Props {
 const ModuleItem = ({ item }: Props) => {
   const nav = useNavigate();
   return (
-    <div
-      key={item.index}
+    <button
+      type="button"
       onClick={() => nav(`${item.path}/users`)}
-      className="border rounded-lg p-4 bg-white hover:border-neutral-300 cursor-pointer"
+      className="group border rounded-lg bg-white overflow-hidden hover:border-blue-300 hover:shadow-sm transition-all text-left"
     >
-      <div className="flex items-center justify-between mb-2">
-        <item.Icon className="w-5 h-5" />
-        <span className="text-sm text-gray-500">#{item.index}</span>
+      <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <item.Icon className="h-3 w-3 text-blue-500" />
+          <span className="text-xs font-semibold text-gray-800">
+            {item.module}
+          </span>
+        </div>
+        <span className="text-[10px] text-gray-400 font-mono">#{item.index}</span>
       </div>
-      <h3 className="font-medium text-sm mb-2">{item.module}</h3>
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-gray-600">Users</span>
-        <span className="font-semibold">{item.users}</span>
+      <div className="p-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3 w-3 text-gray-400" />
+          <span className="text-[10px] text-gray-500">Users</span>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            {item.users}
+          </Badge>
+        </div>
+        <ChevronRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
       </div>
-    </div>
+    </button>
   );
 };
 

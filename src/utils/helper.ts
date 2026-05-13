@@ -92,7 +92,31 @@ export const supplyOrderStatusTextColor = [
   "red",
 ];
 
-export const medicineLogsMessage = ["Dispensed", "Added", "Update", "Deleted"];
+// Index = action code recorded by the API
+// 0 = item/stock/storage removal
+// 1 = item/stock/storage added, or prescription submitted
+// 2 = stock transferred between storages
+// 3 = stock quantity updated
+// 4 = medicine dispensed to a patient
+export const medicineLogsMessage = [
+  "Removed",
+  "Added",
+  "Transferred",
+  "Adjusted",
+  "Dispensed",
+];
+
+// Tailwind colour classes per action for badges
+export const medicineLogsActionStyle: Record<
+  number,
+  { bg: string; text: string }
+> = {
+  0: { bg: "bg-red-100",    text: "text-red-700"    }, // Removed
+  1: { bg: "bg-green-100",  text: "text-green-700"  }, // Added
+  2: { bg: "bg-blue-100",   text: "text-blue-700"   }, // Transferred
+  3: { bg: "bg-amber-100",  text: "text-amber-700"  }, // Updated
+  4: { bg: "bg-purple-100", text: "text-purple-700" }, // Dispensed
+};
 
 export const invitationErrorMessage = [
   "Application link Not found",

@@ -1,65 +1,113 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { useAuth } from "@/provider/ProtectedRoute";
-import useLine from "@/hooks/useLine";
-import { useParams } from "react-router";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray } from "react-hook-form";
-import axios from "@/db/axios";
-
+import { useParams } from "react-router";
+import { useAuth } from "@/provider/ProtectedRoute";
+import { useQuery } from "@tanstack/react-query";
+import { useDebounce } from "use-debounce";
+import { toast } from "sonner";
 //
-import DispensaryPrescribe from "@/layout/medicine/DispensaryPrescribe";
 import {
   Form,
   FormControl,
   FormField,
-  //FormDescription,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import RegionSelect from "@/layout/RegionSelect";
-import ProvinceSelect from "@/layout/ProvinceSelect";
-import MunicipalitySelect from "@/layout/MunicipalitySelect";
-import BarangaySelect from "@/layout/BarangaySelect";
-import { Button } from "@/components/ui/button";
-import Modal from "@/components/custom/Modal";
-import {
-  ResizableHandle,
-  ResizablePanelGroup,
-  ResizablePanel,
-} from "@/components/ui/resizable";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-//icons
-import { Send, Trash, User, MapPin, FileText, Pill } from "lucide-react";
-//props/interface/schema
-import { DispensarySchema } from "@/interface/zod";
-import type { DispensaryProps, Prescription } from "@/interface/data";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
-import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import PsgcRegion from "@/layout/PsgcRegion";
+import PublicProvinceSelect from "@/layout/PublicProvinceSelect";
+import PublicMunicipalSelect from "@/layout/PublicMunicipalSelect";
+import PublicBarangaySelect from "@/layout/PublicBarangaySelect";
+import DispensaryPrescribe from "@/layout/medicine/DispensaryPrescribe";
+//icons
+import {
+  UserRound,
+  Search,
+  X,
+  Loader2,
+  Plus,
+  Pill,
+  Send,
+  Trash2,
+  CalendarDays,
+  Phone,
+  MapPin,
+  ClipboardCheck,
+  AlertCircle,
+  AlertTriangle,
+  UserCheck,
+} from "lucide-react";
+//
+import { DispensarySchema } from "@/interface/zod";
+import type { DispensaryProps, Patient } from "@/interface/data";
+import { patientList } from "@/db/statements/patient";
+import { createPrescription } from "@/db/statements/prescription";
+
+type DispensaryFormProps = DispensaryProps;
+
+interface ListProps {
+  list: Patient[];
+  hasMore: boolean;
+  lastCursor: string | null;
+}
+
+const calculateAge = (birthday: string): number => {
+  const birth = new Date(birthday);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+};
 
 const DispensaryOut = () => {
+  const { lineId } = useParams();
   const auth = useAuth();
-  const line = useLine();
-  const [onOpen, setOnOpen] = useState(0);
-  const [data, setData] = useState<Prescription | undefined>(undefined);
-  const form = useForm<DispensaryProps>({
+
+  // Patient panel state
+  const [patientMode, setPatientMode] = useState<"search" | "manual">("search");
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch] = useDebounce(searchText, 400);
+
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingData, setPendingData] = useState<DispensaryFormProps | null>(null);
+  const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
+
+  // Duplicate-patient detection state (manual mode only)
+  const [duplicateMatches, setDuplicateMatches] = useState<Patient[]>([]);
+  const [isSavingDuplicate, setIsSavingDuplicate] = useState(false);
+
+  // Success state
+  const [successInfo, setSuccessInfo] = useState<{
+    refNumber: string;
+    firstname: string;
+    lastname: string;
+  } | null>(null);
+
+  // Form
+  const form = useForm<DispensaryFormProps>({
     resolver: zodResolver(DispensarySchema),
     defaultValues: {
       firstname: "",
       lastname: "",
-      age: "",
-      desc: "",
-      region: line.line?.region.id || "",
-      province: line.line?.province.id || "",
-      municipal: line.line?.municipal.id || "",
+      birthday: "",
+      phoneNumber: "",
+      email: "",
+      region: "",
+      province: "",
+      municipal: "",
       barangay: "",
+      street: "",
+      desc: "",
+      patientId: "",
       prescribeMed: [],
     },
   });
@@ -68,319 +116,885 @@ const DispensaryOut = () => {
     control,
     handleSubmit,
     watch,
-    resetField,
-    formState: { isSubmitting },
+    setValue,
+    reset,
+    formState: { errors },
   } = form;
-  const { lineId } = useParams();
 
   const regionId = watch("region");
   const provinceId = watch("province");
   const municipalId = watch("municipal");
 
-  const prescribeMeds = useFieldArray({
-    control,
-    name: "prescribeMed",
-  });
+  const prescribeMeds = useFieldArray({ control, name: "prescribeMed" });
 
+  // Patient search
+  const { data: searchData, isFetching: isSearching } = useQuery<ListProps>({
+    queryKey: ["patient-search-prescribe", lineId, debouncedSearch],
+    queryFn: () =>
+      patientList(auth.token as string, lineId as string, null, "8", debouncedSearch),
+    enabled: !!debouncedSearch && patientMode === "search" && !selectedPatient,
+    refetchOnWindowFocus: false,
+  });
+  const searchResults = searchData?.list ?? [];
+
+  // Select patient from search
+  const handleSelectPatient = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setSearchText("");
+    setValue("firstname", patient.firstname);
+    setValue("lastname", patient.lastname);
+    setValue("patientId", patient.id);
+    setValue("birthday", patient.birthday ? new Date(patient.birthday).toISOString().substring(0, 10) : "");
+  };
+
+  // Switch patient mode
+  const switchMode = (next: "search" | "manual") => {
+    setPatientMode(next);
+    setSelectedPatient(null);
+    setSearchText("");
+    setValue("firstname", "");
+    setValue("lastname", "");
+    setValue("birthday", "");
+    setValue("phoneNumber", "");
+    setValue("email", "");
+    setValue("patientId", "");
+  };
+
+  // Add medicine
   const handleAddPresMed = (
     medId: string,
     comment: string,
     quantity: string,
     medName: string,
   ) => {
-    const existed = prescribeMeds.fields.findIndex(
-      (item) => item.medId === medId,
-    );
+    const existed = prescribeMeds.fields.findIndex((item) => item.medId === medId);
     if (existed !== -1) return;
     if (quantity === "0") {
-      toast.warning("Invalid Quantity");
+      toast.warning("Invalid quantity");
       return;
     }
     prescribeMeds.append({ medId, comment, quantity, medName });
-    toast.success("Added Successfully", {
-      closeButton: false,
+    toast.success(`${medName} added`);
+  };
+
+  // Open confirm dialog after validation
+  const onValidSubmit = (data: DispensaryFormProps) => {
+    setPendingData(data);
+    setConfirmOpen(true);
+  };
+
+  // Core save logic — runs the actual prescription API call
+  const performSubmit = async (data: DispensaryFormProps) => {
+    const barangayId =
+      patientMode === "search" ? selectedPatient?.barangayId ?? undefined : data.barangay || undefined;
+    const municipalId =
+      patientMode === "search" ? selectedPatient?.municipalId ?? undefined : data.municipal || undefined;
+    const provinceId =
+      patientMode === "search" ? selectedPatient?.provinceId ?? undefined : data.province || undefined;
+
+    const result = await createPrescription(auth.token as string, {
+      lineId: lineId as string,
+      userId: auth.userId as string,
+      firstname: data.firstname,
+      lastname: data.lastname,
+      birthday: data.birthday || undefined,
+      phoneNumber: patientMode === "manual" ? data.phoneNumber || undefined : undefined,
+      email: patientMode === "manual" ? data.email || undefined : undefined,
+      barangayId,
+      municipalId,
+      provinceId,
+      street: data.street || undefined,
+      desc: data.desc || undefined,
+      patientId: data.patientId || undefined,
+      prescribeMed: data.prescribeMed.map((m) => ({
+        medId: m.medId,
+        comment: m.comment,
+        quantity: m.quantity,
+      })),
     });
+
+    setSuccessInfo({
+      refNumber: result.refNumber,
+      firstname: data.firstname,
+      lastname: data.lastname,
+    });
+
+    reset();
+    setSelectedPatient(null);
+    setSearchText("");
+    setPatientMode("search");
+    setConfirmOpen(false);
+    setPendingData(null);
+    setDuplicateMatches([]);
   };
 
-  const handleRemovePresMed = (index: number) => {
-    prescribeMeds.remove(index);
-  };
-
-  const onSubmit = async (data: DispensaryProps) => {
-    console.log(auth);
-
-    if (!auth.token || !auth.userId)
-      return toast.warning("Unauthorized user", { closeButton: false });
+  // Submit button inside the confirmation dialog
+  const doSubmit = async () => {
+    if (!pendingData) return;
+    const data = pendingData;
+    setIsConfirmSubmitting(true);
 
     try {
-      const response = await axios.post(
-        "/prescription/new",
-        {
-          lineId,
-          userId: auth.userId,
-          barangayId: data.barangay,
-          municipalId: data.municipal,
-          provinceId: data.province,
-          ...data,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        },
-      );
-
-      if (response.status !== 200) {
-        toast.error("Failed to submit", {
-          description: response.data.message,
-          closeButton: false,
+      // In manual mode (no patientId selected), check for similar existing patients
+      // by first+last name and (if provided) birthday.
+      if (patientMode === "manual" && !data.patientId) {
+        const result = await patientList(
+          auth.token as string,
+          lineId as string,
+          null,
+          "20",
+          `${data.firstname} ${data.lastname}`,
+        );
+        const matches = result.list.filter((p: Patient) => {
+          const nameMatch =
+            p.firstname?.toLowerCase() === data.firstname.toLowerCase() &&
+            p.lastname?.toLowerCase() === data.lastname.toLowerCase();
+          if (!nameMatch) return false;
+          if (data.birthday && p.birthday) {
+            return p.birthday.startsWith(data.birthday.substring(0, 10));
+          }
+          return true;
         });
-        return;
+
+        if (matches.length > 0) {
+          // Pause and ask user whether this is truly a different person
+          setDuplicateMatches(matches);
+          setConfirmOpen(false);
+          return; // keep pendingData; the duplicate dialog handles the next step
+        }
       }
-      setData(response.data.response);
-      setOnOpen(2);
-      resetField("prescribeMed");
-      resetField("firstname");
-      resetField("lastname");
-      resetField("desc");
-      resetField("age");
-      resetField("region");
-      resetField("province");
-      resetField("municipal");
-      resetField("barangay");
+
+      await performSubmit(data);
     } catch (error) {
-      toast.error("Failed to submit", {
-        closeButton: false,
-        description: `${error}`,
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to submit prescription.");
+      setConfirmOpen(false);
+    } finally {
+      setIsConfirmSubmitting(false);
     }
   };
 
+  // User clicked "Save as New Person" from the duplicate-patient dialog
+  const confirmSaveNew = async () => {
+    if (!pendingData) return;
+    setIsSavingDuplicate(true);
+    try {
+      await performSubmit(pendingData);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit prescription.");
+    } finally {
+      setIsSavingDuplicate(false);
+    }
+  };
+
+  // Cancel the duplicate dialog and drop the pending submission
+  const cancelDuplicate = () => {
+    setDuplicateMatches([]);
+    setPendingData(null);
+  };
+
   return (
-    <div className="w-full h-full flex flex-col lg:flex-row bg-gray-50/50">
-      {/* Mobile: Stack vertically, Desktop: Use resizable panels */}
-      <div className="lg:hidden w-full h-full overflow-auto">
-        <div className="w-full p-4 space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-blue-50 rounded-md">
-              <User className="h-4 w-4 text-blue-600" />
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+
+      {/* ── Confirmation Dialog ── */}
+      {confirmOpen && pendingData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 border-b bg-blue-50 flex items-start gap-2.5">
+              <div className="p-1.5 bg-blue-100 rounded-md flex-shrink-0">
+                <ClipboardCheck className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Confirm Prescription</h3>
+                <p className="text-[10px] text-blue-700 mt-0.5">
+                  Review details before submitting
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ml-auto text-gray-400 hover:text-gray-600 flex-shrink-0"
+                onClick={() => setConfirmOpen(false)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-800">
-                Patient Information
-              </h2>
-              <p className="text-xs text-gray-500">
-                Enter patient details and location
+            <div className="px-4 py-3 space-y-2.5">
+              <div className="flex items-center gap-2 p-2 bg-gray-50 border border-gray-100 rounded-lg">
+                <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <UserRound className="h-3.5 w-3.5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-900">
+                    {pendingData.lastname}, {pendingData.firstname}
+                  </p>
+                  {pendingData.birthday && (
+                    <p className="text-[10px] text-gray-400">
+                      {calculateAge(pendingData.birthday)} yrs old · {new Date(pendingData.birthday).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                  Medicines ({pendingData.prescribeMed.length})
+                </p>
+                {pendingData.prescribeMed.map((m, i) => (
+                  <div key={i} className="flex items-center justify-between px-2 py-1 bg-gray-50 rounded border border-gray-100">
+                    <p className="text-[10px] font-medium text-gray-700 truncate">{m.medName}</p>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0 ml-2">
+                      ×{m.quantity}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {pendingData.desc && (
+                <div className="p-2 bg-gray-50 border border-gray-100 rounded-lg">
+                  <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mb-0.5">Notes</p>
+                  <p className="text-[10px] text-gray-700">{pendingData.desc}</p>
+                </div>
+              )}
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50 flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                onClick={doSubmit}
+                disabled={isConfirmSubmitting}
+              >
+                {isConfirmSubmitting ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Submitting...</>
+                ) : (
+                  <><Send className="h-3.5 w-3.5" />Submit</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Duplicate Patient Warning Dialog ── */}
+      {duplicateMatches.length > 0 && pendingData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            {/* Header */}
+            <div className="px-4 py-3 border-b bg-amber-50 flex items-start gap-2.5">
+              <div className="p-1.5 bg-amber-100 rounded-md flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Similar Patient Found
+                </h3>
+                <p className="text-[10px] text-amber-700 mt-0.5">
+                  A patient with the same name{pendingData.birthday ? " and birthday" : ""} already exists.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ml-auto text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                onClick={cancelDuplicate}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Matches list */}
+            <div className="px-4 py-3 space-y-2 max-h-52 overflow-y-auto">
+              <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
+                Existing Record{duplicateMatches.length > 1 ? "s" : ""}
               </p>
+              {duplicateMatches.map((p) => {
+                const fullName = [p.firstname, p.middlename, p.lastname]
+                  .filter((s) => s && s !== "N/A")
+                  .join(" ");
+                const age = p.birthday ? calculateAge(p.birthday) : null;
+                return (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-2.5 p-2 bg-gray-50 border border-gray-100 rounded-lg"
+                  >
+                    <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-900 truncate">{fullName}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {age !== null && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                            <CalendarDays className="h-2.5 w-2.5" />{age} yrs
+                          </span>
+                        )}
+                        {p.phoneNumber && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                            <Phone className="h-2.5 w-2.5" />{p.phoneNumber}
+                          </span>
+                        )}
+                        {(p.barangay || p.municipal) && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                            <MapPin className="h-2.5 w-2.5" />
+                            {[p.barangay?.name, p.municipal?.name].filter(Boolean).join(", ")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-gray-500 mt-1">
+                If this is the <strong>same</strong> person, cancel and use{" "}
+                <span className="font-medium text-blue-600">Search</span> mode to link to their record.
+                Otherwise continue to save as a new person.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={cancelDuplicate}
+                disabled={isSavingDuplicate}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
+                onClick={confirmSaveNew}
+                disabled={isSavingDuplicate}
+              >
+                {isSavingDuplicate ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-3.5 w-3.5" />
+                    Save as New Person
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Success Dialog ── */}
+      {successInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 border-b bg-green-50 flex items-start gap-2.5">
+              <div className="p-1.5 bg-green-100 rounded-md flex-shrink-0">
+                <ClipboardCheck className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Prescription Submitted</h3>
+                <p className="text-[10px] text-green-700 mt-0.5">
+                  Record has been saved successfully
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-4 space-y-3">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <span className="text-xs font-medium text-gray-600">Reference #</span>
+                <code className="font-mono font-bold text-blue-700 text-sm">{successInfo.refNumber}</code>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                  <p className="text-[10px] text-gray-500">Patient</p>
+                  <p className="text-xs font-medium text-gray-800 mt-0.5">
+                    {successInfo.lastname}, {successInfo.firstname}
+                  </p>
+                </div>
+                <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                  <p className="text-[10px] text-gray-500">Status</p>
+                  <Badge variant="default" className="mt-0.5 text-[10px] px-1.5 py-0">
+                    Pending
+                  </Badge>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 text-center">
+                You can view this in the Transactions tab
+              </p>
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50">
+              <Button
+                size="sm"
+                className="w-full h-8 text-xs"
+                variant="outline"
+                onClick={() => setSuccessInfo(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Main Layout ── */}
+      <Form {...form}>
+      <div className="p-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+
+          {/* ── Patient Panel ── */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <UserRound className="h-3 w-3 text-blue-500" />
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-800">Patient</h3>
+                    <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                      Search existing or fill manually
+                    </p>
+                  </div>
+                </div>
+                {/* Mode toggle */}
+                <div className="flex items-center gap-0.5 bg-gray-100 rounded-md p-0.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => switchMode("search")}
+                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                      patientMode === "search"
+                        ? "bg-white text-blue-600 font-medium shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    Search
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchMode("manual")}
+                    className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                      patientMode === "manual"
+                        ? "bg-white text-blue-600 font-medium shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    Manual
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 space-y-3">
+              {/* ── Search Mode ── */}
+              {patientMode === "search" && (
+                <div className="space-y-2">
+                  {!selectedPatient ? (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                        {isSearching && (
+                          <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 animate-spin" />
+                        )}
+                        <Input
+                          placeholder="Search by name..."
+                          value={searchText}
+                          onChange={(e) => setSearchText(e.target.value)}
+                          className="pl-7 h-8 text-xs"
+                        />
+                      </div>
+                      {debouncedSearch && searchResults.length > 0 && (
+                        <div className="border rounded-lg overflow-hidden divide-y divide-gray-100">
+                          {searchResults.map((patient) => {
+                            const fullName = [patient.firstname, patient.middlename, patient.lastname]
+                              .filter((s) => s && s !== "N/A")
+                              .join(" ");
+                            const age = patient.birthday ? calculateAge(patient.birthday) : null;
+                            return (
+                              <button
+                                key={patient.id}
+                                type="button"
+                                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50 transition-colors text-left group"
+                                onClick={() => handleSelectPatient(patient)}
+                              >
+                                <div className="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100">
+                                  <UserRound className="h-3 w-3 text-gray-500 group-hover:text-blue-600" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium text-gray-900 truncate">{fullName}</p>
+                                  <p className="text-[10px] text-gray-400">
+                                    {age ? `${age} yrs` : ""}
+                                    {age && patient.phoneNumber ? " · " : ""}
+                                    {patient.phoneNumber ?? ""}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={patient.illi ? "destructive" : "default"}
+                                  className="text-[10px] px-1.5 py-0 flex-shrink-0"
+                                >
+                                  {patient.illi ? "Ill" : "Active"}
+                                </Badge>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {debouncedSearch && !isSearching && searchResults.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed rounded-lg text-center">
+                          <UserRound className="h-6 w-6 text-gray-300 mb-1.5" />
+                          <p className="text-xs text-gray-500">No patients found</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">Try a different name or switch to Manual</p>
+                        </div>
+                      )}
+                      {!debouncedSearch && (
+                        <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed rounded-lg text-center">
+                          <Search className="h-6 w-6 text-gray-300 mb-1.5" />
+                          <p className="text-xs text-gray-500">Search a patient</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">Type to find existing records</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center flex-shrink-0">
+                            <UserRound className="h-3.5 w-3.5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-gray-900">
+                              {[selectedPatient.firstname, selectedPatient.middlename, selectedPatient.lastname]
+                                .filter((s) => s && s !== "N/A")
+                                .join(" ")}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <Badge
+                                variant={selectedPatient.illi ? "destructive" : "default"}
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {selectedPatient.illi ? "Ill" : "Active"}
+                              </Badge>
+                              {selectedPatient.birthday && (
+                                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                  <CalendarDays className="h-2.5 w-2.5" />
+                                  {calculateAge(selectedPatient.birthday)} yrs
+                                </span>
+                              )}
+                              {selectedPatient.phoneNumber && (
+                                <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5" />
+                                  {selectedPatient.phoneNumber}
+                                </span>
+                              )}
+                            </div>
+                            {(selectedPatient.barangay || selectedPatient.municipal) && (
+                              <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                                <MapPin className="h-2.5 w-2.5" />
+                                {[selectedPatient.barangay?.name, selectedPatient.municipal?.name]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          type="button"
+                          className="h-5 w-5 p-0 text-gray-400 hover:text-gray-700 flex-shrink-0"
+                          onClick={() => {
+                            setSelectedPatient(null);
+                            setValue("firstname", "");
+                            setValue("lastname", "");
+                            setValue("birthday", "");
+                            setValue("patientId", "");
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Name + Birthday fields (search mode) */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={control}
+                        name="firstname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">First Name *</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Juan"
+                                className="h-8 text-xs"
+                                disabled={!!selectedPatient}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="lastname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">Last Name *</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="dela Cruz"
+                                className="h-8 text-xs"
+                                disabled={!!selectedPatient}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={control}
+                      name="birthday"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700">
+                            Birthday
+                            {field.value && (
+                              <span className="ml-1.5 font-normal text-gray-400">
+                                ({calculateAge(field.value)} yrs old)
+                              </span>
+                            )}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              className="h-8 text-xs w-44"
+                              disabled={!!selectedPatient}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Manual Mode ── */}
+              {patientMode === "manual" && (
+                <div>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={control}
+                        name="firstname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">First Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Juan" className="h-8 text-xs" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="lastname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">Last Name *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="dela Cruz" className="h-8 text-xs" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={control}
+                        name="birthday"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">
+                              Birthday
+                              {field.value && (
+                                <span className="ml-1.5 font-normal text-gray-400">
+                                  ({calculateAge(field.value)} yrs old)
+                                </span>
+                              )}
+                            </FormLabel>
+                            <FormControl>
+                              <Input type="date" className="h-8 text-xs" {...field} />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">Phone</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="09XX XXX XXXX"
+                                className="h-8 text-xs"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700">Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="patient@email.com"
+                              className="h-8 text-xs"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Separator className="my-1" />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-gray-500" />
+                        <p className="text-[10px] font-semibold text-gray-700">Location (Optional)</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <FormField
+                          control={control}
+                          name="region"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] font-semibold text-gray-700">Region</FormLabel>
+                              <FormControl>
+                                <PsgcRegion onChange={field.onChange} value={field.value ?? ""} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name="province"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] font-semibold text-gray-700">Province</FormLabel>
+                              <FormControl>
+                                <PublicProvinceSelect
+                                  onChange={field.onChange}
+                                  regionId={regionId}
+                                  value={field.value ?? ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name="municipal"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] font-semibold text-gray-700">Municipality</FormLabel>
+                              <FormControl>
+                                <PublicMunicipalSelect
+                                  provinceId={provinceId}
+                                  onChange={field.onChange}
+                                  value={field.value ?? ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name="barangay"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-[10px] font-semibold text-gray-700">Barangay</FormLabel>
+                              <FormControl>
+                                <PublicBarangaySelect
+                                  municipalityId={municipalId}
+                                  onChange={field.onChange}
+                                  value={field.value ?? ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Description (both modes) ── */}
+              <div>
+                <Separator className="my-1" />
+                <FormField
+                  control={control}
+                  name="desc"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px] font-semibold text-gray-700">
+                        Notes / Condition (Optional)
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter patient condition, diagnosis, or additional notes..."
+                          className="text-xs min-h-[80px] resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </div>
 
-          <Form {...form}>
-            <div className="space-y-4">
-              <Card className="border shadow-sm">
-                <CardContent className="p-3">
-                  <div className="space-y-3">
-                    <FormField
-                      rules={{ required: true }}
-                      control={control}
-                      name="firstname"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-medium">
-                            First Name
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              className="h-9 text-sm"
-                              placeholder="First name"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      rules={{ required: true }}
-                      control={control}
-                      name="lastname"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-medium">
-                            Last Name
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              className="h-9 text-sm"
-                              placeholder="Last name"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      rules={{ required: true }}
-                      control={control}
-                      name="age"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-medium">
-                            Age
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              className="h-9 text-sm w-32"
-                              placeholder="Age"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border shadow-sm">
-                <CardHeader className="pb-2 px-3 pt-2">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-gray-500" />
-                    <CardTitle className="text-sm font-medium">
-                      Location Details
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 px-3 pb-3">
-                  <FormField
-                    rules={{ required: true }}
-                    control={control}
-                    name="region"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Region</FormLabel>
-                        <FormControl>
-                          <RegionSelect
-                            onChange={field.onChange}
-                            value={field.value}
-                            defaultValue={line.line?.region.id}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="province"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Province</FormLabel>
-                        <FormControl>
-                          <ProvinceSelect
-                            onChange={field.onChange}
-                            regionId={regionId}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="municipal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Municipality</FormLabel>
-                        <FormControl>
-                          <MunicipalitySelect
-                            token={auth.token}
-                            onChange={field.onChange}
-                            provinceId={provinceId}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="barangay"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Barangay</FormLabel>
-                        <FormControl>
-                          <BarangaySelect
-                            token={auth.token}
-                            onChange={field.onChange}
-                            municipalityId={municipalId}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card className="border shadow-sm">
-                <CardHeader className="pb-2 px-3 pt-2">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="h-3.5 w-3.5 text-gray-500" />
-                    <CardTitle className="text-sm font-medium">
-                      Additional Information
-                    </CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-3 pb-3">
-                  <FormField
-                    control={control}
-                    name="desc"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">
-                          Description (Optional)
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea
-                            className="text-sm"
-                            placeholder="Enter any additional notes"
-                            rows={3}
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </Form>
-        </div>
-
-        <Separator className="my-2" />
-
-        <div className="w-full p-4">
-          <div className="border rounded-lg shadow-sm bg-white">
-            <div className="p-3 border-b bg-gray-50">
-              <div className="flex items-center gap-2">
-                <Pill className="h-4 w-4 text-blue-600" />
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Available Medicines
-                </h3>
+          {/* ── Medicines Panel ── */}
+          <div className="border rounded-lg bg-white overflow-hidden flex flex-col">
+            {/* Available medicines picker */}
+            <div className="border-b bg-gray-50 px-3 py-2">
+              <div className="flex items-center gap-1.5">
+                <Pill className="h-3 w-3 text-blue-500" />
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-800">Available Medicines</h3>
+                  <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                    Click a medicine to add to prescription
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="p-2 max-h-[300px] overflow-auto">
+            <div className="h-80 overflow-hidden border-b">
               <DispensaryPrescribe
                 handleAddPresMed={handleAddPresMed}
                 lineId={lineId}
@@ -388,521 +1002,95 @@ const DispensaryOut = () => {
                 token={auth.token}
               />
             </div>
-          </div>
-        </div>
 
-        <div className="w-full p-4 pt-0">
-          <div className="border rounded-lg shadow-sm bg-white">
-            <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Pill className="h-4 w-4 text-green-600" />
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Selected ({prescribeMeds.fields.length})
+            {/* Selected medicines */}
+            <div className="border-b bg-gray-50 px-3 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <ClipboardCheck className="h-3 w-3 text-green-500" />
+                <h3 className="text-xs font-semibold text-gray-800">
+                  Selected
                 </h3>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {prescribeMeds.fields.length}
+                </Badge>
               </div>
+              {errors.prescribeMed && (
+                <div className="flex items-center gap-1 text-red-500">
+                  <AlertCircle className="h-3 w-3" />
+                  <p className="text-[10px]">{errors.prescribeMed.message}</p>
+                </div>
+              )}
             </div>
-            <div className="p-2 max-h-[250px] overflow-auto">
+
+            <div className="min-h-[100px] max-h-48 overflow-auto">
               {prescribeMeds.fields.length > 0 ? (
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {prescribeMeds.fields.map((item, i) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
+                      className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-medium text-gray-800">
-                            {item.medName}
-                          </p>
-                          <Badge variant="secondary" className="text-[10px]">
-                            Qty: {item.quantity}
-                          </Badge>
-                        </div>
+                      <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-green-600">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 truncate">{item.medName}</p>
                         {item.comment && (
-                          <p className="text-[10px] text-gray-500 mt-1">
-                            {item.comment}
-                          </p>
+                          <p className="text-[10px] text-gray-400 truncate">{item.comment}</p>
                         )}
                       </div>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 flex-shrink-0">
+                        ×{item.quantity}
+                      </Badge>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 w-7 p-0 hover:bg-red-50"
-                        onClick={() => handleRemovePresMed(i)}
+                        type="button"
+                        className="h-5 w-5 p-0 text-gray-300 hover:text-red-500 flex-shrink-0"
+                        onClick={() => prescribeMeds.remove(i)}
                       >
-                        <Trash className="h-3.5 w-3.5 text-gray-400" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-6">
-                  <Pill className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-xs text-gray-400">No medications added</p>
-                  <p className="text-xs text-gray-400">Select from above</p>
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Pill className="h-6 w-6 text-gray-300 mb-1.5" />
+                  <p className="text-xs text-gray-400">No medicines added</p>
+                  <p className="text-[10px] text-gray-300 mt-0.5">Select from the list above</p>
                 </div>
               )}
             </div>
-            <div className="p-3 border-t bg-gray-50">
+
+            {/* Submit */}
+            <div className="px-3 py-2.5 border-t bg-gray-50">
+              {patientMode === "search" && !selectedPatient && (
+                <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-100 rounded-md mb-2">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-700">
+                    Search and select a patient first, or switch to Manual mode.
+                  </p>
+                </div>
+              )}
               <Button
-                onClick={() => setOnOpen(1)}
-                className="w-full gap-2"
-                disabled={prescribeMeds.fields.length === 0 || isSubmitting}
+                className="w-full h-8 gap-1.5 text-xs bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                disabled={
+                  prescribeMeds.fields.length === 0 ||
+                  (patientMode === "search" && !selectedPatient)
+                }
+                onClick={handleSubmit(onValidSubmit)}
+                type="button"
               >
-                <Send className="h-4 w-4" />
-                {isSubmitting
-                  ? "Submitting..."
-                  : `Submit Prescription (${prescribeMeds.fields.length})`}
+                <Send className="h-3.5 w-3.5" />
+                Submit Prescription ({prescribeMeds.fields.length} medicine{prescribeMeds.fields.length !== 1 ? "s" : ""})
               </Button>
             </div>
           </div>
+
         </div>
       </div>
-
-      {/* Desktop Layout - Original resizable panels */}
-      <div className="hidden lg:flex w-full h-full">
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="border rounded-lg bg-white shadow-sm"
-        >
-          <ResizablePanel className="min-w-[30%]">
-            <div className="w-full h-full p-4 overflow-auto">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 bg-blue-50 rounded-md">
-                  <User className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-gray-800">
-                    Patient Information
-                  </h2>
-                  <p className="text-xs text-gray-500">
-                    Enter patient details and location
-                  </p>
-                </div>
-              </div>
-
-              <Form {...form}>
-                <div className="space-y-4">
-                  <Card className="border shadow-sm">
-                    <CardContent className="p-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <FormField
-                          rules={{ required: true }}
-                          control={control}
-                          name="firstname"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs font-medium">
-                                First Name
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  className="h-8 text-sm"
-                                  placeholder="First name"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          rules={{ required: true }}
-                          control={control}
-                          name="lastname"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs font-medium">
-                                Last Name
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  className="h-8 text-sm"
-                                  placeholder="Last name"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                      <FormField
-                        rules={{ required: true }}
-                        control={control}
-                        name="age"
-                        render={({ field }) => (
-                          <FormItem className="mt-2">
-                            <FormLabel className="text-xs font-medium">
-                              Age
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                className="h-8 text-sm w-24"
-                                placeholder="Age"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 px-3 pt-2">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-gray-500" />
-                        <CardTitle className="text-sm font-medium">
-                          Location Details
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3 px-3 pb-3">
-                      <FormField
-                        rules={{ required: true }}
-                        control={control}
-                        name="region"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Region</FormLabel>
-                            <FormControl>
-                              <RegionSelect
-                                onChange={field.onChange}
-                                value={field.value}
-                                defaultValue={line.line?.region.id}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={control}
-                        name="province"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Province</FormLabel>
-                            <FormControl>
-                              <ProvinceSelect
-                                onChange={field.onChange}
-                                regionId={regionId}
-                                value={field.value}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={control}
-                        name="municipal"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">
-                              Municipality
-                            </FormLabel>
-                            <FormControl>
-                              <MunicipalitySelect
-                                token={auth.token}
-                                onChange={field.onChange}
-                                provinceId={provinceId}
-                                value={field.value}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={control}
-                        name="barangay"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Barangay</FormLabel>
-                            <FormControl>
-                              <BarangaySelect
-                                token={auth.token}
-                                onChange={field.onChange}
-                                municipalityId={municipalId}
-                                value={field.value}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 px-3 pt-2">
-                      <div className="flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5 text-gray-500" />
-                        <CardTitle className="text-sm font-medium">
-                          Additional Information
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-3 pb-3">
-                      <FormField
-                        control={control}
-                        name="desc"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">
-                              Description (Optional)
-                            </FormLabel>
-                            <FormControl>
-                              <Textarea
-                                className="text-sm"
-                                placeholder="Enter any additional notes"
-                                rows={2}
-                                {...field}
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border shadow-sm">
-                    <CardHeader className="pb-2 px-3 pt-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Pill className="h-3.5 w-3.5 text-gray-500" />
-                          <CardTitle className="text-sm font-medium">
-                            Prescribed Medications
-                          </CardTitle>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {prescribeMeds.fields.length} items
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="px-3 pb-3">
-                      <ScrollArea className="h-40 border rounded-md p-2">
-                        {prescribeMeds.fields.length > 0 ? (
-                          <div className="space-y-2">
-                            {prescribeMeds.fields.map((item, i) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center justify-between p-2 bg-gray-50 rounded-md border"
-                              >
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-medium text-xs">
-                                      {item.medName}
-                                    </p>
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-[10px]"
-                                    >
-                                      Qty: {item.quantity}
-                                    </Badge>
-                                  </div>
-                                  {item.comment && (
-                                    <p className="text-[10px] text-gray-600 mt-1 truncate">
-                                      {item.comment}
-                                    </p>
-                                  )}
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handleRemovePresMed(i);
-                                  }}
-                                >
-                                  <Trash className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-32">
-                            <Pill className="h-5 w-5 text-gray-300 mb-2" />
-                            <p className="text-xs text-gray-400 text-center">
-                              No medications added
-                            </p>
-                          </div>
-                        )}
-                        <ScrollBar />
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-              </Form>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle
-            withHandle={true}
-            className="bg-gray-200 hover:bg-blue-500 transition-colors"
-          />
-
-          <ResizablePanel className="min-w-[30%]">
-            <div className="w-full h-full flex flex-col">
-              <div className="flex-1 overflow-auto p-2">
-                <div className="border rounded-lg shadow-sm bg-white h-full">
-                  <DispensaryPrescribe
-                    handleAddPresMed={handleAddPresMed}
-                    lineId={lineId}
-                    storageId={undefined}
-                    token={auth.token}
-                  />
-                </div>
-              </div>
-              <div className="p-3 border-t bg-white">
-                <Separator className="mb-3" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Total:{" "}
-                      <span className="text-blue-600">
-                        {prescribeMeds.fields.length}
-                      </span>{" "}
-                      items
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Review before submission
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setOnOpen(1)}
-                    className="gap-2 h-9"
-                    disabled={prescribeMeds.fields.length === 0 || isSubmitting}
-                  >
-                    <Send className="h-4 w-4" />
-                    {isSubmitting ? "Submitting..." : "Submit"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-
-      {/* Modals - unchanged */}
-      <Modal
-        title={"Submit Prescription"}
-        children={undefined}
-        onOpen={onOpen === 1}
-        className={"min-w-md"}
-        setOnOpen={() => {
-          if (isSubmitting) return;
-          setOnOpen(0);
-        }}
-        footer={true}
-        loading={isSubmitting}
-        onFunction={handleSubmit(onSubmit)}
-      />
-
-      <Modal
-        title={
-          data ? "Prescription Submitted Successfully!" : "Submission Error"
-        }
-        children={
-          data ? (
-            <div className="space-y-4">
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-green-700">
-                  <div className="p-1 bg-green-100 rounded">
-                    <Send className="h-4 w-4" />
-                  </div>
-                  <p className="font-medium">Prescription has been recorded</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700">
-                  Please save this reference information:
-                </p>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <span className="text-sm font-medium text-gray-700">
-                      Reference #
-                    </span>
-                    <code className="font-mono font-bold text-blue-700">
-                      {data.refNumber}
-                    </code>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500">Patient Name</p>
-                      <p className="font-medium">
-                        {data.lastname}, {data.firstname}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-gray-500">Date Filed</p>
-                      <p className="font-medium">{data.timestamp}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Note:</span> You can check
-                    this prescription later in the Transactions section.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-center gap-2 text-red-700">
-                  <div className="p-1 bg-red-100 rounded">
-                    <Trash className="h-4 w-4" />
-                  </div>
-                  <p className="font-medium">Unable to submit prescription</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700">
-                  Possible reasons:
-                </p>
-                <ul className="space-y-2 pl-5 list-disc">
-                  <li className="text-sm text-gray-600">
-                    Server transaction error
-                  </li>
-                  <li className="text-sm text-gray-600">
-                    Network connection issue
-                  </li>
-                  <li className="text-sm text-gray-600">
-                    Authentication error
-                  </li>
-                </ul>
-
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-gray-600">
-                    Please try again or check your internet connection. You can
-                    also review the transaction logs.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        }
-        onOpen={onOpen === 2}
-        className={"min-w-2xl"}
-        setOnOpen={() => {
-          if (isSubmitting) return;
-          setOnOpen(0);
-        }}
-        loading={isSubmitting}
-        cancelTitle="Close"
-        onFunction={handleSubmit(onSubmit)}
-      />
+      </Form>
     </div>
   );
 };

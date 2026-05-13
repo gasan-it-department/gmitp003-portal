@@ -54,6 +54,8 @@ import {
   ArchiveNewDocsSchema,
   VacantPositionSchema,
   UpdateTransactionSchema,
+  AddDiagnoseSchema,
+  NewPatientDiagnoseSchema,
 } from "./zod";
 import z from "zod";
 export type LoginProps = z.infer<typeof LoginSchema>;
@@ -122,6 +124,8 @@ export type FillPositionProps = z.infer<typeof FillPositionSchema>;
 export type ArchiveNewDocsProps = z.infer<typeof ArchiveNewDocsSchema>;
 export type VacantPositionProps = z.infer<typeof VacantPositionSchema>;
 export type UpdateTransactionProps = z.infer<typeof UpdateTransactionSchema>;
+export type AddDiagnoseProps = z.infer<typeof AddDiagnoseSchema>;
+export type NewPatientDiagnoseProps = z.infer<typeof NewPatientDiagnoseSchema>;
 // Department Interface
 export interface Department {
   id: string;
@@ -788,26 +792,30 @@ export type Prescription = {
   condtion?: string | null;
   firstname?: string | null;
   lastname?: string | null;
+  age?: string | null;
   street?: string | null;
-  barangay: Barangay;
-  barangayId: string;
-  municipal: Municipal;
-  municipalId: string;
-  province: Province;
-  provinceId: string;
-  processBy: User;
-  respondedBy: User;
+  barangay?: Barangay | null;
+  barangayId?: string | null;
+  municipal?: Municipal | null;
+  municipalId?: string | null;
+  province?: Province | null;
+  provinceId?: string | null;
+  processBy?: User | null;
+  respondedBy?: User | null;
   userId: string;
   lineId: string;
-  respondedByUserId: string;
+  respondedByUserId?: string | null;
   status: number;
-  comment: PrescriptionComment[];
+  comment?: PrescriptionComment[];
   remark: number;
-  progress: PrescriptionProgress[];
-  dateConcluded?: string;
+  progress?: PrescriptionProgress[];
+  dateConcluded?: string | null;
   timestamp: string;
-  assets: PrescriptionAsset[];
-  MedicineTransaction: MedicineTransaction[];
+  assets?: PrescriptionAsset[];
+  MedicineTransaction?: MedicineTransaction[];
+  patientId?: string | null;
+  patient?: Patient | null;
+  _count?: { presMed: number };
 };
 
 export type PrescriptionAsset = {
@@ -1125,10 +1133,13 @@ export interface SupplyDispenseRecordProps {
   supplyStockTrackId: string;
   timestamp: string;
   remarks: string;
+  /** Free-form descriptor. Adjustment records use "ADJ:<parentId>" as a marker. */
+  desc?: string | null;
   suppliesId: string | null;
   dispensaryId: string | null;
   supplyBatchId: string | null;
   inventoryBoxId: string | null;
+  updatedAt?: string | null;
 
   // Relations (optional depending on how you query)
   supplyItem?: SuppliesProps;
@@ -1569,4 +1580,88 @@ export interface MedicineOverviewProps {
   storage: number;
   nearExpiration: number;
   expired: number;
+}
+
+export interface Patient {
+  id: string;
+  firstname: string;
+  lastname: string;
+  middlename?: string | null;
+  email?: string | null;
+  phoneNumber?: string | null;
+  birthday?: string | null;
+  illi: boolean;
+  barangay?: Barangay | null;
+  barangayId?: string | null;
+  municipal?: Municipal | null;
+  municipalId?: string | null;
+  province?: Province | null;
+  provinceId?: string | null;
+  region?: Region | null;
+  regionId?: string | null;
+  record?: PatientRecord[];
+  _count?: { record: number };
+  lineId: string;
+  timestamp: string;
+}
+
+export interface PatientRecordListProps {
+  list: PatientRecord[];
+  hasMore: boolean;
+  lastCursor: string | null;
+}
+
+export interface PatientRecord {
+  id: string;
+  patientId?: string | null;
+  patient?: Patient | null;
+  diagnose?: string | null;
+  /** 0 = Diagnose | 1 = Prescribed | 2 = Medicine Dispensed */
+  type: number;
+  medicineTransactionId?: string | null;
+  medicineTransaction?: MedicineTransaction | null;
+  timestamp: string;
+}
+
+export type NewPatientProps = {
+  firstname: string;
+  lastname: string;
+  middlename?: string;
+  birthday?: string;
+  email?: string;
+  phoneNumber?: string;
+  regionId?: string;
+  provinceId?: string;
+  municipalId?: string;
+  barangayId?: string;
+};
+
+export type UpdatePatientProps = {
+  id: string;
+  firstname?: string;
+  lastname?: string;
+  middlename?: string;
+  birthday?: string;
+  email?: string;
+  phoneNumber?: string;
+  illi?: boolean;
+  regionId?: string;
+  provinceId?: string;
+  municipalId?: string;
+  barangayId?: string;
+};
+
+export interface TimebasereportProps {
+  firstHalfCost: number;
+  firstHalfRecieved: number;
+  firstHalfdispense: number;
+  id: string;
+  name: string;
+  secondHalfDispense: number;
+  secondhalfCost: number;
+  secondhalfRecieved: number;
+  supplyDataSetId: string;
+  totalBalanceQuantity: number;
+  totalInsuance: number;
+  totalQuantity: number;
 }

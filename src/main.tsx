@@ -72,6 +72,14 @@ import AcrhiveNewDocs from "./route/e-sign/AcrhiveNewDocs.tsx";
 import RoomDetails from "./layout/human_resources/document/RoomDetails.tsx";
 import ManageSignature from "./route/e-sign/ManageSignature.tsx";
 import ArchiveDetail from "./route/e-sign/ArchiveDetail.tsx";
+//Patients
+import PatientsIndex from "./route/patients/Index.tsx";
+import PatientList from "./route/patients/PatientList.tsx";
+import PatientDetail from "./route/patients/PatientDetail.tsx";
+import PatientRecordDetail from "./route/patients/PatientRecordDetail.tsx";
+//Diagnose
+import DiagnoseIndex from "./route/diagnose/Index.tsx";
+import DiagnoseHome from "./route/diagnose/DiagnoseHome.tsx";
 //Medicine
 import MedicineIndex from "./route/medicine/Index.tsx";
 import StorageList from "./route/medicine/StorageList.tsx";
@@ -224,6 +232,14 @@ createRoot(document.getElementById("root")!).render(
                   path="container/:containerId/list/:listId/item/:itemId"
                   element={<SupplyItem />}
                 />
+              </Route>
+              <Route path="/:lineId/patients-record" element={<PatientsIndex />}>
+                <Route index={true} element={<PatientList />} />
+                <Route path=":patientId" element={<PatientDetail />} />
+                <Route path=":patientId/record/:recordId" element={<PatientRecordDetail />} />
+              </Route>
+              <Route path="/:lineId/patient-diagnose" element={<DiagnoseIndex />}>
+                <Route index={true} element={<DiagnoseHome />} />
               </Route>
               <Route
                 path="/:lineId/prescribe-medicine"

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Select,
@@ -20,6 +20,8 @@ interface Props {
 }
 
 const PublicProvinceSelect = ({ onChange, regionId, value }: Props) => {
+  const mounted = useRef(false);
+
   const { data, isFetching, refetch } = useQuery<Province[]>({
     queryKey: ["province", regionId],
     queryFn: () => getPSGSProvince(regionId as string),
@@ -27,6 +29,11 @@ const PublicProvinceSelect = ({ onChange, regionId, value }: Props) => {
   });
 
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    onChange("");
     if (regionId) refetch();
   }, [regionId]);
 

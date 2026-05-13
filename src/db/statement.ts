@@ -87,9 +87,7 @@ export const getEmployees = async (
   }
 };
 
-export const getPublicRegions = async()=>{
-  
-}
+export const getPublicRegions = async () => {};
 
 export const getRegions = async () => {
   const response = await axios.get("/all-regions");
@@ -2483,7 +2481,7 @@ export const supplyTimeBaseReport = async (
   id: string,
   lastCursor: string | null,
   limit: string,
-  yearRange: string,
+  quarter: string,
 ) => {
   const response = await axios.get("/supply/timebase", {
     headers: {
@@ -2496,7 +2494,7 @@ export const supplyTimeBaseReport = async (
       id,
       lastCursor,
       limit,
-      yearRange,
+      quarter,
     },
   });
 

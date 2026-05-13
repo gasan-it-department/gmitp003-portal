@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 //hooks/libs/db
 import { getPSGCbarangays } from "@/db/statement";
@@ -22,6 +22,8 @@ interface Props {
 }
 
 const PublicBarangaySelect = ({ municipalityId, onChange, value }: Props) => {
+  const mounted = useRef(false);
+
   const { data, isFetching, refetch } = useQuery<Barangay[]>({
     queryKey: ["barangays", municipalityId],
     queryFn: () => getPSGCbarangays(municipalityId as string),
@@ -29,6 +31,11 @@ const PublicBarangaySelect = ({ municipalityId, onChange, value }: Props) => {
   });
 
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    onChange("");
     if (municipalityId) refetch();
   }, [municipalityId]);
   return (

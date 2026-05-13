@@ -1,16 +1,14 @@
 import { memo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "@/db/axios";
-//
-import {
-  Item,
-  ItemTitle,
-  ItemHeader,
-  //ItemFooter,
-} from "@/components/ui/item";
+import { useParams } from "react-router";
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
-import { Mail, Building, Shield, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Form,
   FormControl,
@@ -28,16 +26,21 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-//
+import {
+  Mail,
+  Building,
+  Shield,
+  UserPlus,
+  AtSign,
+  Loader2,
+} from "lucide-react";
+
 import { addModuleUserPrevilege, getInitials } from "@/utils/helper";
 import { searchedChar } from "@/utils/element";
-//
-//
+
 import { AddModuleUserSchema } from "@/interface/zod";
 import type { User as UserProps, AddModuleUserProps } from "@/interface/data";
+
 interface Props {
   item: UserProps;
   module: string;
@@ -56,12 +59,12 @@ const EmployeeItem = ({
   currUserId,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const queryClient = useQueryClient();
+  const { moduleId } = useParams();
 
   const form = useForm<AddModuleUserProps>({
     resolver: zodResolver(AddModuleUserSchema),
-    defaultValues: {
-      previlege: "",
-    },
+    defaultValues: { previlege: "" },
   });
   const {
     handleSubmit,
@@ -93,184 +96,183 @@ const EmployeeItem = ({
       );
 
       if (response.status !== 200) {
-        toast.error("Failed", {
-          description: response.data.message,
-        });
+        toast.error("Failed", { description: response.data.message });
         return;
       }
-      toast.success("Successfully granted module access.");
+      toast.success("Module access granted");
       reset();
-    } catch (error) {
-      console.log(error);
-      toast.error("Failed to submit");
-    } finally {
       setOnOpen(0);
+
+      // Refresh the module-users list so the new user shows up immediately
+      await queryClient.invalidateQueries({
+        queryKey: ["module-users", moduleId, lineId],
+      });
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ??
+        (err instanceof Error ? err.message : "Failed to submit");
+      toast.error(msg);
     }
   };
 
+  const fullName = `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim();
+
   return (
     <>
-      <Item className="p-3 hover:bg-gray-50 transition-all duration-200 cursor-pointer border rounded-md bg-white">
-        <ItemHeader className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-              {item.userProfilePictures && (
-                <AvatarImage src={item.userProfilePictures.file_url} />
-              )}
-              <AvatarFallback className="text-xs font-medium bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                {getInitials(item.firstName)}
-                {getInitials(item.lastName)}
-              </AvatarFallback>
-            </Avatar>
+      <div className="border rounded-lg bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-all px-3 py-2.5 flex items-center gap-2.5">
+        <Avatar className="h-8 w-8 flex-shrink-0">
+          {item.userProfilePictures && (
+            <AvatarImage src={item.userProfilePictures.file_url} />
+          )}
+          <AvatarFallback className="text-[10px] font-medium bg-blue-100 text-blue-700">
+            {getInitials(item.firstName)}
+            {getInitials(item.lastName)}
+          </AvatarFallback>
+        </Avatar>
 
-            <div className="flex-1 min-w-0">
-              <ItemTitle className="text-sm font-semibold text-gray-900 truncate">
-                {searchedChar(query, item.firstName)}{" "}
-                {searchedChar(query, item.lastName)}
-                {item.middleName && ` ${searchedChar(query, item.middleName)}`}
-                {item.suffix && `, ${item.suffix}`}
-              </ItemTitle>
-
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Mail className="h-3 w-3" />
-                  <span className="truncate">
-                    {searchedChar(query, item.email)}
-                  </span>
-                </div>
-                {item.department && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Building className="h-3 w-3" />
-                    <span className="truncate">{item.department.name}</span>
-                  </div>
-                )}
-                <div className="text-xs text-gray-400">
-                  @{searchedChar(query, item.username)}
-                </div>
-              </div>
-            </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-gray-900 truncate">
+            {searchedChar(query, item.firstName)}{" "}
+            {searchedChar(query, item.lastName)}
+            {item.middleName && ` ${searchedChar(query, item.middleName)}`}
+            {item.suffix && `, ${item.suffix}`}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+            <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+              <AtSign className="h-2.5 w-2.5" />
+              {searchedChar(query, item.username)}
+            </span>
+            {item.email && (
+              <span className="text-[10px] text-gray-500 flex items-center gap-0.5 truncate max-w-[180px]">
+                <Mail className="h-2.5 w-2.5" />
+                {searchedChar(query, item.email)}
+              </span>
+            )}
+            {item.department && (
+              <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                <Building className="h-2.5 w-2.5" />
+                {item.department.name}
+              </span>
+            )}
           </div>
+        </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setOnOpen(1)}
-            className="gap-1.5 text-xs h-8 px-3 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            Add
-          </Button>
-        </ItemHeader>
-      </Item>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setOnOpen(1)}
+          className="h-7 px-2.5 text-[10px] gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 flex-shrink-0"
+        >
+          <UserPlus className="h-3 w-3" />
+          Add
+        </Button>
+      </div>
 
+      {/* Grant Access Modal */}
       <Modal
-        title="Grant Module Access"
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-50 rounded-md">
+              <Shield className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <span className="text-sm font-semibold">Grant Module Access</span>
+          </div>
+        }
         onOpen={onOpen === 1}
         setOnOpen={() => {
           if (isSubmitting) return;
           setOnOpen(0);
           reset();
         }}
-        className="max-w-md"
+        className="max-w-sm"
         footer={true}
         onFunction={handleSubmit(onSubmit)}
         loading={isSubmitting}
+        yesTitle="Grant Access"
       >
-        <div className="space-y-5 p-1">
-          {/* User Info Section */}
-          <div className="flex flex-col items-center text-center space-y-3 pb-3 border-b">
-            <Avatar className="h-16 w-16 ring-4 ring-blue-50">
+        <div className="space-y-3 p-1">
+
+          {/* User card */}
+          <div className="border rounded-lg bg-gray-50 p-3 flex items-center gap-2.5">
+            <Avatar className="h-10 w-10">
               {item.userProfilePictures && (
                 <AvatarImage src={item.userProfilePictures.file_url} />
               )}
-              <AvatarFallback className="text-base font-medium bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+              <AvatarFallback className="text-xs font-medium bg-blue-100 text-blue-700">
                 {getInitials(item.firstName)}
                 {getInitials(item.lastName)}
               </AvatarFallback>
             </Avatar>
-
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                {item.firstName} {item.lastName}
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">{item.email}</p>
-              <div className="mt-2">
-                <Badge
-                  variant="outline"
-                  className="text-xs bg-blue-50 text-blue-700 border-blue-200"
-                >
-                  Module: {module}
-                </Badge>
-              </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-gray-900 truncate">
+                {fullName}
+              </p>
+              {item.email && (
+                <p className="text-[10px] text-gray-500 truncate flex items-center gap-1">
+                  <Mail className="h-2.5 w-2.5" />
+                  {item.email}
+                </p>
+              )}
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 mt-1 bg-blue-50 text-blue-700 border-blue-200 capitalize"
+              >
+                {module}
+              </Badge>
             </div>
           </div>
 
-          {/* Permission Form */}
+          {/* Privilege select */}
           <Form {...form}>
             <FormField
               control={control}
               name="previlege"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-blue-500" />
-                    Privilege Level
+                  <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+                    <Shield className="h-2.5 w-2.5 text-blue-500" />
+                    Privilege Level *
                   </FormLabel>
-                  <FormDescription className="text-xs text-gray-500">
-                    Select the permission level for this user
-                  </FormDescription>
                   <FormControl>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="mt-1 h-9 text-sm">
-                        <SelectValue placeholder="Select permission level" />
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select privilege" />
                       </SelectTrigger>
                       <SelectContent>
-                        {addModuleUserPrevilege.map((item, i) => (
+                        {addModuleUserPrevilege.map((opt, i) => (
                           <SelectItem
                             key={i}
                             value={i.toString()}
-                            className="text-sm"
+                            className="text-xs"
                           >
                             <div className="flex items-center gap-2">
                               <div
-                                className={`h-2 w-2 rounded-full ${
-                                  i === 0
-                                    ? "bg-green-500"
-                                    : i === 1
-                                      ? "bg-blue-500"
-                                      : i === 2
-                                        ? "bg-amber-500"
-                                        : "bg-gray-500"
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  i === 0 ? "bg-blue-500" : "bg-amber-500"
                                 }`}
                               />
-                              {item}
+                              {opt}
                             </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </FormControl>
-                  <FormMessage />
+                  <FormDescription className="text-[10px] text-gray-500">
+                    Higher privilege levels grant more access to module features
+                  </FormDescription>
+                  <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
             />
           </Form>
 
-          {/* Info Alert */}
-          <div className="rounded-md bg-blue-50 p-3 border border-blue-100">
-            <div className="flex gap-2">
-              <Shield className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-blue-900 mb-0.5">
-                  About Privilege Levels
-                </p>
-                <p className="text-xs text-blue-700">
-                  Higher privilege levels grant more access to module features.
-                  Choose appropriately based on user's role.
-                </p>
-              </div>
+          {isSubmitting && (
+            <div className="flex items-center justify-center gap-1.5 py-1 text-gray-400">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-[10px]">Granting access...</span>
             </div>
-          </div>
+          )}
         </div>
       </Modal>
     </>

@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { formatDate } from "@/utils/date";
 
@@ -24,8 +24,10 @@ import UpdateTransaction from "./UpdateTransaction";
 import type { SupplyDispenseRecordProps } from "@/interface/data";
 
 const DispenseRecordData = () => {
-  const { transactionId } = useParams();
-  const { token } = useAuth();
+  const { transactionId, lineId } = useParams();
+  const auth = useAuth();
+  const { token, userId } = auth;
+  const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<SupplyDispenseRecordProps>({
     queryKey: ["supply-dispense-transaction-info", transactionId],
@@ -94,7 +96,32 @@ const DispenseRecordData = () => {
             <Badge variant="outline" className="text-xs px-3 py-1">
               {data.quantity} units dispensed
             </Badge>
-            <UpdateTransaction item={data} userId={""} token={""} lineId="" />
+            {data.desc && data.desc.startsWith("ADJ:") ? (
+              <Badge
+                variant="secondary"
+                className="text-[10px] px-2 py-1 bg-amber-50 text-amber-700 border-amber-200"
+              >
+                Adjustment record · read-only
+              </Badge>
+            ) : (
+              <UpdateTransaction
+                item={data}
+                userId={userId as string}
+                token={token as string}
+                lineId={lineId as string}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({
+                    queryKey: [
+                      "supply-dispense-transaction-info",
+                      transactionId,
+                    ],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["supply-dispense-transaction"],
+                  });
+                }}
+              />
+            )}
           </div>
         </div>
 
