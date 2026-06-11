@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useDebounce } from "use-debounce";
 import { useSearchParams } from "react-router";
 
 import { roomDocumentRequest } from "@/db/statements/document";
-//
+
 import {
   Table,
   TableBody,
@@ -19,10 +19,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-
-import RoomRequestItem from "../item/RoomRequestItem";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -30,15 +27,18 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
-//
+
+import RoomRequestItem from "../item/RoomRequestItem";
+
 import {
   Search,
   Clock,
   CheckCircle,
   AlertCircle,
   FileText,
+  Loader2,
 } from "lucide-react";
-//
+
 import type { RoomRegistration } from "@/interface/data";
 
 interface Props {
@@ -55,12 +55,9 @@ interface ListProps {
 
 const Request = ({ token, userId, lineId }: Props) => {
   const [text, setText] = useState("");
-  const [query] = useDebounce(text, 1000);
-
+  const [query] = useDebounce(text, 400);
   const [params, setParams] = useSearchParams({ status: "all" });
-
   const queryClient = useQueryClient();
-
   const currentStatus = params.get("status") || "all";
 
   const {
@@ -69,8 +66,10 @@ const Request = ({ token, userId, lineId }: Props) => {
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-    refetch,
+    isError,
+    error,
   } = useInfiniteQuery<ListProps>({
+    queryKey: ["room-request", lineId, query, currentStatus],
     queryFn: ({ pageParam }) =>
       roomDocumentRequest(
         token,
@@ -80,29 +79,21 @@ const Request = ({ token, userId, lineId }: Props) => {
         query,
         currentStatus,
       ),
-    queryKey: ["room-request", lineId],
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    enabled: !!token && !!lineId,
     refetchOnWindowFocus: false,
   });
 
-  // Infinite scroll observer
-  const { ref, inView } = useInView({
-    threshold: 0,
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
   });
-
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  useEffect(() => {
-    refetch();
-  }, [query, currentStatus]);
 
   const handleChangeParams = (key: string, value: string) => {
     setParams(
@@ -114,228 +105,219 @@ const Request = ({ token, userId, lineId }: Props) => {
     );
   };
 
-  // Get status badge based on status
-
-  // Format date
-
-  // Calculate total items
-  const allItems = data?.pages.flatMap((page) => page.list) || [];
-  const totalItems = allItems.length;
-
-  // Get stats
+  const items = data?.pages.flatMap((page) => page.list) || [];
   const stats = {
-    pending: allItems.filter((item) => item.status === 0).length,
-    approved: allItems.filter((item) => item.status === 1).length,
-    rejected: allItems.filter((item) => item.status === 2).length,
+    pending: items.filter((it) => it.status === 0).length,
+    approved: items.filter((it) => it.status === 1).length,
+    rejected: items.filter((it) => it.status === 2).length,
   };
 
+  const statTiles: { label: string; value: number; icon: React.ReactNode; cls: string }[] = [
+    {
+      label: "Pending",
+      value: stats.pending,
+      icon: <Clock className="h-3 w-3 text-white" />,
+      cls: "from-amber-500 to-amber-600",
+    },
+    {
+      label: "Approved",
+      value: stats.approved,
+      icon: <CheckCircle className="h-3 w-3 text-white" />,
+      cls: "from-emerald-500 to-emerald-600",
+    },
+    {
+      label: "Rejected",
+      value: stats.rejected,
+      icon: <AlertCircle className="h-3 w-3 text-white" />,
+      cls: "from-red-500 to-red-600",
+    },
+  ];
+
   return (
-    <div className="w-full h-full flex flex-col p-4 md:p-6">
-      {/* Header Section */}
-      <div className="mb-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Room Requests</h1>
-            <p className="text-gray-500 text-sm">
-              Manage and review room registration requests
-            </p>
-          </div>
+    <div className="w-full h-full flex flex-col overflow-hidden">
+
+      {/* Stats + toolbar */}
+      <div className="bg-white border-b px-3 py-2 flex-shrink-0 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          {statTiles.map((t) => (
+            <div
+              key={t.label}
+              className="border rounded-md bg-white p-2 overflow-hidden"
+            >
+              <div
+                className={`h-0.5 bg-gradient-to-r ${t.cls} rounded-full mb-1.5`}
+              />
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-medium text-gray-600">
+                  {t.label}
+                </p>
+                <div className={`p-1 rounded bg-gradient-to-br ${t.cls}`}>
+                  {t.icon}
+                </div>
+              </div>
+              <p className="text-base font-bold text-gray-900 leading-none">
+                {t.value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-2 bg-yellow-50 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Approved</p>
-                <p className="text-2xl font-bold">{stats.approved}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="p-2 bg-red-50 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Rejected</p>
-                <p className="text-2xl font-bold">{stats.rejected}</p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-1.5">
+          <InputGroup className="bg-white flex-1 max-w-sm">
+            <InputGroupAddon>
+              <Search className="h-3 w-3 text-gray-400" />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Search by name, email, or address..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="h-7 text-[11px]"
+            />
+          </InputGroup>
+          <Select
+            value={currentStatus}
+            onValueChange={(e) => handleChangeParams("status", e)}
+          >
+            <SelectTrigger className="h-7 w-36 text-[11px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-xs">
+                All statuses
+              </SelectItem>
+              <SelectItem value="0" className="text-xs">
+                Pending
+              </SelectItem>
+              <SelectItem value="1" className="text-xs">
+                Approved
+              </SelectItem>
+              <SelectItem value="2" className="text-xs">
+                Rejected
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="ml-auto text-[10px] text-gray-500">
+            {items.length} request{items.length !== 1 ? "s" : ""}
+          </span>
         </div>
       </div>
 
-      {/* Search and Filter Section */}
-      <Card className="mb-6 border shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4 md:items-center">
-            <div className="flex-1">
-              <InputGroup>
-                <InputGroupAddon>
-                  <Search className="w-4 h-4 text-gray-500" />
-                </InputGroupAddon>
-                <InputGroupInput
-                  placeholder="Search by address, user name, or ID..."
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="pl-10"
-                />
-              </InputGroup>
-            </div>
-            <div className="">
-              <Select
-                defaultValue={currentStatus}
-                onValueChange={(e) => handleChangeParams("status", e)}
-              >
-                <SelectTrigger defaultValue={currentStatus}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {["Pending", "Approved", "Rejected"].map((stat, index) => (
-                    <SelectItem value={index.toString()}>{stat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Main Content */}
-      <Card className="flex-1 overflow-hidden border shadow-sm">
-        <div className="h-full overflow-auto">
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
           <Table>
-            <TableHeader className="sticky top-0 bg-white z-10">
+            <TableHeader className="bg-gray-50 sticky top-0 z-10">
               <TableRow>
-                <TableHead className="w-[180px]">Request ID</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Line</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 w-24">
+                  Request ID
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[160px]">
+                  User
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[180px]">
+                  Address
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[100px]">
+                  Line
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-24">
+                  Status
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[120px]">
+                  Submitted
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-right w-20">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* Loading State */}
-              {isFetching && !allItems.length ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={`skeleton-${index}`}>
-                    <TableCell>
-                      <Skeleton className="h-4 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-40" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-16" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-8 w-8 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : allItems.length === 0 ? (
+              {isError ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
-                    <div className="flex flex-col items-center justify-center gap-2 text-gray-500">
-                      <FileText className="w-12 h-12" />
-                      <p>No room requests found</p>
-                      {query && (
-                        <p className="text-sm">
-                          No results for "{query}". Try a different search term.
-                        </p>
-                      )}
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <p className="text-[10px] font-medium text-red-600">
+                        Failed to load requests
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {(error as any)?.message ?? "Try again later."}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : isFetching && items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span className="text-[10px]">Loading requests...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-10">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-gray-300" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700">
+                        No room requests found
+                      </p>
+                      <p className="text-[10px] text-gray-500 max-w-[260px]">
+                        {query
+                          ? `Nothing matches "${query}".`
+                          : "Pending registrations from users will appear here."}
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                <>
-                  {/* Data Rows */}
-                  {allItems.map((item) => (
-                    <RoomRequestItem
-                      key={item.id}
-                      item={item}
-                      token={token}
-                      lineId={lineId}
-                      userId={userId}
-                      queryClient={queryClient}
-                    />
-                  ))}
+                items.map((item) => (
+                  <RoomRequestItem
+                    key={item.id}
+                    item={item}
+                    token={token}
+                    lineId={lineId}
+                    userId={userId}
+                    queryClient={queryClient}
+                  />
+                ))
+              )}
 
-                  {/* Loading More Rows */}
-                  {isFetchingNextPage && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="h-2 w-2 bg-gray-300 rounded-full animate-pulse"></div>
-                          <div
-                            className="h-2 w-2 bg-gray-400 rounded-full animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="h-2 w-2 bg-gray-500 rounded-full animate-pulse"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                          <span className="text-sm text-gray-500 ml-2">
-                            Loading more requests...
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-
-                  {/* Infinite Scroll Trigger */}
-                  {hasNextPage && (
-                    <TableRow ref={ref}>
-                      <TableCell colSpan={8} className="p-4 text-center">
-                        <div className="invisible h-1" />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+              {hasNextPage && (
+                <TableRow ref={ref}>
+                  <TableCell colSpan={7} className="text-center py-2">
+                    {isFetchingNextPage ? (
+                      <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-[10px]">Loading more...</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">
+                        Scroll to load more
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
+              {!hasNextPage && items.length > 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-2 border-t">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      Showing all {items.length}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-
-        {/* Footer Stats */}
-        <div className="border-t px-6 py-3 bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-500">
-            <span>
-              Showing {totalItems} request{totalItems !== 1 ? "s" : ""}
-            </span>
-            {query && <span>Search: "{query}"</span>}
-          </div>
-        </div>
-      </Card>
+      </div>
     </div>
   );
 };

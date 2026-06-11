@@ -1,21 +1,46 @@
 import axios from "@/db/axios";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
+import { toast } from "sonner";
 
-//
 import { archiveDetail } from "@/db/statements/document";
 
-//
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Calendar, Hash, ArchiveIcon } from "lucide-react";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import RemoveFromAcrhive from "@/layout/e-sign/RemoveFromAcrhive";
-//
+
+import {
+  Download,
+  FileText,
+  Calendar,
+  Hash,
+  ArchiveIcon,
+  ArrowLeft,
+  Loader2,
+  Building2,
+  Network,
+} from "lucide-react";
+
 import type { ArchiveDocument } from "@/interface/data";
+import { archiveDocType } from "@/utils/helper";
+
+const formatDateTime = (iso?: Date | string | null) => {
+  if (!iso) return "—";
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 const ArchiveDetail = () => {
   const auth = useAuth();
+  const nav = useNavigate();
   const { archiveId, lineId } = useParams();
 
   const { data, isFetching } = useQuery<ArchiveDocument>({
@@ -24,240 +49,250 @@ const ArchiveDetail = () => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
+    enabled: !!archiveId && !!auth.token,
   });
-
-  console.log({ data });
 
   const handleDownloadFile = async () => {
-    try {
-      const response = await axios.get("/document/download/file", {
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-          "X-Requested-With": "XMLHttpRequest",
-        },
-        responseType: "blob",
-        params: {
-          id: archiveId,
-        },
-      });
+    const response = await axios.get("/document/download/file", {
+      headers: {
+        Authorization: `Bearer ${auth.token}`,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      responseType: "blob",
+      params: { id: archiveId },
+    });
 
-      // Extract filename from Content-Disposition header
-      const contentDisposition = response.headers["content-disposition"];
-      let filename = `document_${archiveId}`;
-
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      // Use the actual content type from the response
-      const url = window.URL.createObjectURL(response.data);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-
-      // Clean up
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success("Download started!", {
-        description: "Your file is being downloaded.",
-      });
-    } catch (error) {
-      console.error("Download error:", error);
-      toast.error("Download Failed", {
-        description: "Failed to download the file. Please try again.",
-      });
+    const contentDisposition = response.headers["content-disposition"];
+    let filename = `document_${archiveId}`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match?.[1]) filename = match[1];
     }
+
+    const url = window.URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   };
 
-  const { mutateAsync, isPending } = useMutation({
+  const { mutateAsync: download, isPending: isDownloading } = useMutation({
     mutationFn: handleDownloadFile,
+    onSuccess: () =>
+      toast.success("Download started", {
+        description: "The file is being saved to your downloads.",
+      }),
+    onError: (err) =>
+      toast.error("Download failed", {
+        description: err.message,
+      }),
   });
 
-  if (isFetching) {
+  // ── Loading ──────────────────────────────────────────────────────────
+  if (isFetching && !data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-            <ArchiveIcon className="h-6 w-6 text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-gray-600 font-medium">
-            Loading archive details...
-          </p>
-          <p className="text-sm text-gray-400 mt-1">Please wait</p>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-2 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading archive details...</p>
         </div>
       </div>
     );
   }
 
+  // ── Not Found ────────────────────────────────────────────────────────
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="bg-red-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <ArchiveIcon className="h-10 w-10 text-red-400" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <ArchiveIcon className="h-6 w-6 text-red-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">
             Archive Not Found
           </h3>
-          <p className="text-gray-500 mb-4">
-            The archived document you're looking for doesn't exist or you don't
-            have permission to view it.
+          <p className="text-xs text-gray-500 mb-3">
+            This archived document doesn't exist or you don't have permission to
+            view it.
           </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1.5"
+            onClick={() => nav(-1)}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Archive Document
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  Document ID: {data.id}
+    <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+      <div className="p-3 max-w-6xl mx-auto space-y-3">
+
+        {/* Header */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <ArchiveIcon className="h-3 w-3 text-blue-500" />
+              <div className="min-w-0">
+                <h3 className="text-xs font-semibold text-gray-800 truncate">
+                  {data.document?.title ?? "Untitled"}
+                </h3>
+                <p className="text-[10px] text-gray-500 leading-none mt-0.5 font-mono">
+                  ID: {data.id}
                 </p>
               </div>
             </div>
-            <Button
-              disabled={isPending}
-              onClick={() => {
-                mutateAsync();
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5"
+                onClick={() => nav(-1)}
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Back
+              </Button>
+              <Button
+                size="sm"
+                disabled={isDownloading}
+                onClick={() => download()}
+                className="h-7 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+                Download
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Left Column (2/3 on desktop) */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Document Content Card */}
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-500" />
-                  Document Content
-                </h2>
+        {/* Main grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+          {/* Left column — content (2/3) */}
+          <div className="lg:col-span-2 space-y-3">
+
+            {/* Document content */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                <FileText className="h-3 w-3 text-blue-500" />
+                <h4 className="text-xs font-semibold text-gray-800">
+                  Document
+                </h4>
               </div>
-              <div className="p-6">
+              <div className="p-3">
                 {data.document ? (
-                  <div className="prose max-w-none">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  <>
+                    <p className="text-sm font-semibold text-gray-900">
                       {data.document.title || "Untitled Document"}
-                    </h3>
-                    <div className="text-gray-700 whitespace-pre-wrap">
-                      {"No content available"}
-                    </div>
+                    </p>
                     {data.document.timestamp && (
-                      <div className="mt-4 pt-4 border-t text-sm text-gray-500 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Last updated:{" "}
-                        {new Date(data.document.timestamp).toLocaleString()}
-                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-1">
+                        <Calendar className="h-2.5 w-2.5" />
+                        Last updated {formatDateTime(data.document.timestamp)}
+                      </p>
                     )}
-                  </div>
+                    <div className="mt-3 p-3 bg-gray-50 border rounded-md">
+                      <p className="text-xs text-gray-500 italic">
+                        Click <strong>Download</strong> above to view the
+                        original file.
+                      </p>
+                    </div>
+                  </>
                 ) : (
-                  <div className="text-center py-12">
-                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">
-                      No document content available
+                  <div className="text-center py-6">
+                    <FileText className="h-7 w-7 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">
+                      No document attached
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Abstract Section */}
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-800">
+            {/* Abstract */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50">
+                <h4 className="text-xs font-semibold text-gray-800">
                   Abstract
-                </h2>
+                </h4>
               </div>
-              <div className="p-6">
+              <div className="p-3">
                 {data.abstract ? (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {data.abstract.title && (
-                      <div>
-                        <h3 className="text-md font-semibold text-gray-700 mb-2">
-                          {data.abstract.title}
-                        </h3>
-                      </div>
+                      <p className="text-xs font-semibold text-gray-800">
+                        {data.abstract.title}
+                      </p>
                     )}
-                    <div className="text-gray-600 leading-relaxed">
-                      {data.abstract.content || "No abstract content available"}
-                    </div>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                      {data.abstract.content || "No abstract content."}
+                    </p>
                     {data.abstract.timestamp && (
-                      <div className="pt-4 border-t text-sm text-gray-500">
-                        Created:{" "}
-                        {new Date(data.abstract.timestamp).toLocaleString()}
-                      </div>
+                      <p className="text-[10px] text-gray-400 pt-2 border-t">
+                        Created {formatDateTime(data.abstract.timestamp)}
+                      </p>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">
-                      No abstract available for this document
-                    </p>
-                  </div>
+                  <p className="text-xs text-gray-400 italic">
+                    No abstract recorded for this document.
+                  </p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Sidebar - Right Column (1/3 on desktop) */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Document Information Card */}
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Document Information
-                </h2>
+          {/* Right column — metadata (1/3) */}
+          <div className="space-y-3">
+
+            {/* Document info */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50">
+                <h4 className="text-xs font-semibold text-gray-800">
+                  Information
+                </h4>
               </div>
-              <div className="p-6 space-y-4">
+              <div className="p-3 space-y-2.5">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide">
                     Status
-                  </label>
-                  <div className="mt-1">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        data.status === 1
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {data.status === 1 ? "Active" : "Inactive"}
-                    </span>
-                  </div>
+                  </p>
+                  <Badge
+                    variant={data.status === 1 ? "default" : "secondary"}
+                    className="text-[10px] px-1.5 py-0 mt-1"
+                  >
+                    {data.status === 1 ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                    Type
+                  </p>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 mt-1">
+                    {archiveDocType[data.docType ?? 0] ?? "Other"}
+                  </Badge>
                 </div>
 
                 {data.documentId && (
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                      <Hash className="h-3 w-3" />
-                      Document ID
-                    </label>
-                    <p className="mt-1 text-sm font-mono text-gray-700 break-all">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Hash className="h-2.5 w-2.5" /> Document ID
+                    </p>
+                    <p className="text-[10px] font-mono text-gray-700 break-all mt-1">
                       {data.documentId}
                     </p>
                   </div>
@@ -265,38 +300,59 @@ const ArchiveDetail = () => {
 
                 {data.timestamp && (
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      Archive Date
-                    </label>
-                    <p className="mt-1 text-sm text-gray-700">
-                      {new Date(data.timestamp).toLocaleString()}
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Calendar className="h-2.5 w-2.5" /> Archived
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      {formatDateTime(data.timestamp)}
+                    </p>
+                  </div>
+                )}
+
+                {data.retentionDate && (
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                      Retention Date
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      {formatDateTime(data.retentionDate)}
+                    </p>
+                  </div>
+                )}
+
+                {data.safeDate && (
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                      Safe Date
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      {formatDateTime(data.safeDate)}
                     </p>
                   </div>
                 )}
 
                 {data.receivingRoom && (
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Receiving Room
-                    </label>
-                    <div className="mt-1 space-y-1">
-                      <p className="text-sm text-gray-700">
-                        {data.receivingRoom.address}
-                      </p>
-                      <p className="text-xs text-gray-500">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Building2 className="h-2.5 w-2.5" /> Receiving Room
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      {data.receivingRoom.address}
+                    </p>
+                    {data.receivingRoom.code && (
+                      <p className="text-[10px] text-gray-400">
                         Code: {data.receivingRoom.code}
                       </p>
-                    </div>
+                    )}
                   </div>
                 )}
 
                 {data.line && (
                   <div>
-                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Line
-                    </label>
-                    <p className="mt-1 text-sm text-gray-700">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+                      <Network className="h-2.5 w-2.5" /> Line
+                    </p>
+                    <p className="text-xs text-gray-700 mt-1">
                       {data.line.name || data.lineId || "N/A"}
                     </p>
                   </div>
@@ -304,24 +360,12 @@ const ArchiveDetail = () => {
               </div>
             </div>
 
-            {/* Quick Actions Card */}
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Quick Actions
-                </h2>
+            {/* Actions */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50">
+                <h4 className="text-xs font-semibold text-gray-800">Actions</h4>
               </div>
-              <div className="p-6 space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    /* Handle restore */
-                  }}
-                >
-                  <ArchiveIcon className="h-4 w-4 mr-2" />
-                  Restore Document
-                </Button>
+              <div className="p-3 space-y-2">
                 <RemoveFromAcrhive
                   token={auth.token as string}
                   userId={auth.userId as string}

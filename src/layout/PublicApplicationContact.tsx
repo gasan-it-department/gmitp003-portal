@@ -1,27 +1,34 @@
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { isAxiosError } from "axios";
+import { toast } from "sonner";
+
 import axios from "@/db/axios";
-//
 import { applicationPublicConversation } from "@/db/statement";
-//
+import { joinChatRoom, type ChatMessagePayload } from "@/db/socketClient";
+import { formatDateToday } from "@/utils/date";
+
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-//
-import { MessageSquare, Send, User, Clock, ChevronDown } from "lucide-react";
-//
-import { formatDate } from "@/utils/date";
 
-//props/interface/schema
+import {
+  MessageSquare,
+  Send,
+  X,
+  Loader2,
+  Calendar,
+} from "lucide-react";
+
 import type { ApplicationConversationProps } from "@/interface/data";
-import { toast } from "sonner";
+
 interface Props {
   applicationId: string;
   token: string;
@@ -33,11 +40,19 @@ interface ListProps {
   lastCursor: string | null;
 }
 
+const fmtTime = (date: string) =>
+  new Date(date).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 const PublicApplicationContact = ({ applicationId, token }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isFirstLoadRef = useRef(true);
+  const previousCountRef = useRef(0);
 
   const queryClient = useQueryClient();
 
@@ -52,40 +67,107 @@ const PublicApplicationContact = ({ applicationId, token }: Props) => {
           "20",
         ),
       initialPageParam: null,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore ? lastPage.lastCursor : undefined,
-      enabled: !!applicationId && isOpen,
+      getNextPageParam: (last) =>
+        last.hasMore ? last.lastCursor : undefined,
+      enabled: !!applicationId && !!token && isOpen,
+      refetchOnWindowFocus: false,
     });
 
-  // Scroll to bottom when new messages are added
-  useEffect(() => {
-    if (messagesEndRef.current && isOpen) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [data, isOpen]);
-
-  // Load more messages when scrolling to top
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop } = e.currentTarget;
-    if (scrollTop === 0 && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  };
-
-  const allMessages = data?.pages.flatMap((page) => page.list) || [];
+  const allMessages = data?.pages.flatMap((p) => p.list) ?? [];
   const totalMessages = allMessages.length;
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    if (!applicationId || !token) return toast.warning("INVALID REQUIRED ID");
-    try {
-      console.log("Sending message:", newMessage);
-      const response = await axios.post(
+  // Auto-scroll bookkeeping — jump to bottom on first open, smooth-scroll
+  // for subsequent new messages.
+  useEffect(() => {
+    if (!isOpen) {
+      isFirstLoadRef.current = true;
+      previousCountRef.current = 0;
+      return;
+    }
+    if (isFirstLoadRef.current && totalMessages > 0) {
+      setTimeout(
+        () =>
+          messagesEndRef.current?.scrollIntoView({
+            behavior: "auto",
+            block: "end",
+          }),
+        50,
+      );
+      isFirstLoadRef.current = false;
+      previousCountRef.current = totalMessages;
+    } else if (totalMessages > previousCountRef.current) {
+      setTimeout(
+        () =>
+          messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          }),
+        50,
+      );
+      previousCountRef.current = totalMessages;
+    } else {
+      previousCountRef.current = totalMessages;
+    }
+  }, [totalMessages, isOpen]);
+
+  // ── Real-time subscription ───────────────────────────────────────
+  // Active while the popover is open (we don't bother holding a socket
+  // for a chat the user can't see). Newly received messages are appended
+  // to the first cached page; the auto-scroll effect above will sweep
+  // them into view.
+  useEffect(() => {
+    if (!isOpen || !applicationId) return;
+    const unsubscribe = joinChatRoom(applicationId, (msg: ChatMessagePayload) => {
+      queryClient.setQueryData<{
+        pages: ListProps[];
+        pageParams: unknown[];
+      }>(["application-conversation", applicationId], (prev) => {
+        if (!prev) return prev;
+        const exists = prev.pages.some((p) =>
+          p.list.some((m) => m.id === msg.id),
+        );
+        if (exists) return prev;
+        const [first, ...rest] = prev.pages;
+        if (!first) return prev;
+        return {
+          ...prev,
+          pages: [
+            {
+              ...first,
+              list: [
+                ...first.list,
+                {
+                  id: msg.id,
+                  messageContent: msg.messageContent,
+                  fromHr: msg.fromHr,
+                  timestamp: msg.timestamp,
+                  hrAdmin: msg.hrAdmin ?? null,
+                } as unknown as ApplicationConversationProps,
+              ],
+            },
+            ...rest,
+          ],
+        };
+      });
+    });
+    return unsubscribe;
+  }, [isOpen, applicationId, queryClient]);
+
+  // Top sentinel for "load earlier" infinite scroll.
+  const { ref: topRef } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+  });
+
+  const sendMut = useMutation({
+    mutationFn: async (msg: string) => {
+      const res = await axios.post(
         "/application/send/applicant-conversation",
-        {
-          applicationId,
-          message: newMessage,
-        },
+        { applicationId, message: msg },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -95,245 +177,240 @@ const PublicApplicationContact = ({ applicationId, token }: Props) => {
           },
         },
       );
-      if (response.status !== 200) {
-        throw new Error(response.data.message);
-      }
+      return res.data;
+    },
+    onSuccess: async () => {
       setNewMessage("");
       await queryClient.invalidateQueries({
         queryKey: ["application-conversation", applicationId],
         refetchType: "active",
       });
-    } catch (error) {
-      console.log(error);
-    }
+      setTimeout(
+        () =>
+          messagesEndRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          }),
+        100,
+      );
+    },
+    onError: (err) => {
+      const msg = isAxiosError(err)
+        ? err.response?.data?.message ?? err.message
+        : err instanceof Error
+          ? err.message
+          : "Failed to send";
+      toast.error(msg);
+    },
+  });
 
-    // TODO: Implement send message API call
+  const handleSend = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newMessage.trim() || sendMut.isPending) return;
+    if (!applicationId || !token) {
+      toast.warning("Session expired — please re-verify.");
+      return;
+    }
+    sendMut.mutateAsync(newMessage);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+  // Group messages by date for sticky separators.
+  const grouped = allMessages.reduce(
+    (acc, m) => {
+      const date = formatDateToday(m.timestamp);
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(m);
+      return acc;
+    },
+    {} as Record<string, ApplicationConversationProps[]>,
+  );
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Button
-            className="rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-blue-600 hover:bg-blue-700 h-14 w-14 relative"
             size="icon"
+            className="h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-shadow bg-blue-600 hover:bg-blue-700 relative"
           >
-            <MessageSquare className="h-6 w-6" />
+            <MessageSquare className="h-5 w-5" />
             {totalMessages > 0 && (
               <Badge
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500"
                 variant="destructive"
+                className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[9px] leading-none rounded-full"
               >
-                {totalMessages > 9 ? "9+" : totalMessages}
+                {totalMessages > 99 ? "99+" : totalMessages}
               </Badge>
             )}
           </Button>
         </PopoverTrigger>
+
         <PopoverContent
-          className="w-96 h-[500px] p-0 flex flex-col"
+          className="w-80 sm:w-96 h-[480px] p-0 flex flex-col overflow-hidden"
           align="end"
-          sideOffset={10}
+          sideOffset={8}
         >
           {/* Header */}
-          <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-full">
-                  <MessageSquare className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-sm">
-                    Application Conversation
-                  </h3>
-                  <p className="text-blue-100 text-xs">
-                    {totalMessages > 0
-                      ? `${totalMessages} messages`
-                      : "No messages yet"}
-                  </p>
-                </div>
+          <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="p-1 bg-blue-600 rounded">
+                <MessageSquare className="h-3 w-3 text-white" />
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-white/20 text-white"
-                onClick={() => setIsOpen(false)}
-              >
-                ×
-              </Button>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-800 truncate">
+                  Application Inbox
+                </p>
+                <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                  {totalMessages > 0
+                    ? `${totalMessages} message${totalMessages === 1 ? "" : "s"}`
+                    : "No messages yet"}
+                </p>
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => setIsOpen(false)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Messages Container - This will scroll */}
-            <div
-              ref={scrollAreaRef}
-              onScroll={handleScroll}
-              className="flex-1 overflow-y-auto"
-            >
-              <div className="p-4 space-y-4 min-h-full">
-                {/* Load more indicator */}
-                {hasNextPage && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                      className="text-xs"
-                    >
-                      {isFetchingNextPage ? (
-                        <Spinner className="h-3 w-3 mr-2" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3 mr-2" />
-                      )}
-                      Load older messages
-                    </Button>
-                  </div>
-                )}
+          {/* Messages */}
+          <div className="flex-1 min-h-0 overflow-auto bg-gray-50 px-3 py-2">
+            {hasNextPage && <div ref={topRef} className="h-2" />}
 
-                {/* Loading state */}
-                {isFetching &&
-                  !isFetchingNextPage &&
-                  allMessages.length === 0 && (
-                    <div className="flex justify-center py-8">
-                      <Spinner className="h-6 w-6" />
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-2">
+                <div className="flex items-center gap-1.5 bg-white border rounded-full px-2.5 py-1">
+                  <Loader2 className="h-2.5 w-2.5 animate-spin text-blue-500" />
+                  <span className="text-[10px] text-gray-600">
+                    Loading earlier...
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {isFetching && allMessages.length === 0 ? (
+              <div className="flex items-center justify-center py-10 text-gray-400">
+                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                <span className="text-[10px]">Loading messages...</span>
+              </div>
+            ) : allMessages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1.5">
+                  <MessageSquare className="h-5 w-5 text-gray-300" />
+                </div>
+                <p className="text-xs font-semibold text-gray-700">
+                  No messages yet
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5 max-w-[220px]">
+                  Send a message to start a conversation with HR.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {Object.entries(grouped).map(([date, msgs]) => (
+                  <div key={date} className="space-y-2">
+                    <div className="flex justify-center sticky top-0 z-10">
+                      <div className="bg-white border rounded-full px-2 py-0.5">
+                        <span className="text-[10px] font-medium text-gray-600 flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5" />
+                          {date}
+                        </span>
+                      </div>
                     </div>
-                  )}
 
-                {/* No messages state */}
-                {!isFetching && allMessages.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm">No messages yet</p>
-                    <p className="text-xs mt-1">
-                      Start a conversation with the applicant
-                    </p>
-                  </div>
-                )}
+                    {msgs.map((m) => {
+                      // `fromHr === true` → message authored by HR side.
+                      // The applicant viewing this chat sees THEIR OWN messages
+                      // on the right, HR's messages on the left.
+                      const isOwn = !m.fromHr;
+                      return (
+                        <div
+                          key={m.id}
+                          className={`flex gap-1.5 ${
+                            isOwn ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          {!isOwn && (
+                            <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
+                              <AvatarFallback className="bg-blue-100 text-blue-700 text-[9px]">
+                                HR
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
 
-                {/* Messages list */}
-                {allMessages.map((message, index) => {
-                  const isHR = !message.fromHr; // Applicant messages have no hrAdmin
-                  const isFirstInGroup =
-                    index === 0 ||
-                    allMessages[index - 1].hrAdmin?.id !== message.hrAdmin?.id;
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${
-                        isHR ? "justify-end" : "justify-start"
-                      }`}
-                    >
-                      {/* Applicant Avatar (LEFT) */}
-                      {isHR && isFirstInGroup && (
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                            <User className="h-4 w-4" />
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-
-                      {/* HR Avatar (RIGHT) */}
-                      {!isHR && isFirstInGroup && (
-                        <Avatar className="h-8 w-8 flex-shrink-0 order-2">
-                          <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-                            HR
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-
-                      <div
-                        className={`flex flex-col max-w-[80%] ${
-                          isHR ? "items-end" : "items-start"
-                        }`}
-                      >
-                        {isFirstInGroup && (
                           <div
-                            className={`flex items-center gap-2 mb-1 ${
-                              isHR ? "flex-row-reverse" : ""
+                            className={`max-w-[78%] rounded-xl px-2.5 py-1.5 ${
+                              isOwn
+                                ? "bg-blue-600 text-white rounded-br-sm"
+                                : "bg-white text-gray-800 border rounded-bl-sm"
                             }`}
                           >
-                            <Badge
-                              variant="outline"
-                              className={`text-xs px-1 py-0 h-4 ${
-                                isHR
-                                  ? "bg-gray-100 text-gray-700"
-                                  : "bg-blue-100 text-blue-700"
+                            <p className="text-[11px] leading-relaxed whitespace-pre-wrap break-words">
+                              {m.messageContent}
+                            </p>
+                            <p
+                              className={`mt-1 text-[9px] ${
+                                isOwn ? "text-blue-100" : "text-gray-500"
                               }`}
                             >
-                              {isHR ? "Applicant" : "HR"}
-                            </Badge>
+                              {fmtTime(m.timestamp)}
+                            </p>
                           </div>
-                        )}
 
-                        {/* Message Bubble */}
-                        <div
-                          className={`rounded-2xl px-4 py-2 ${
-                            isHR
-                              ? "bg-white text-gray-900 border border-gray-200 rounded-br-md" // HR - White background
-                              : "bg-blue-600 text-white rounded-bl-md" // Applicant - Blue background
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap">
-                            {message.messageContent}
-                          </p>
+                          {isOwn && (
+                            <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
+                              <AvatarFallback className="bg-gray-100 text-gray-700 text-[9px]">
+                                You
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
                         </div>
-
-                        {/* Timestamp */}
-                        <div
-                          className={`flex items-center gap-1 mt-1 ${
-                            isHR ? "flex-row-reverse" : ""
-                          }`}
-                        >
-                          <Clock className="h-3 w-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">
-                            {formatDate(message.timestamp)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Spacer for alignment */}
-                      {!isHR && <div className="w-8 flex-shrink-0" />}
-                    </div>
-                  );
-                })}
-
-                <div ref={messagesEndRef} />
+                      );
+                    })}
+                  </div>
+                ))}
+                <div ref={messagesEndRef} style={{ height: 1 }} />
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Input Area */}
-            <div className="p-4 border-t bg-gray-50 flex-shrink-0">
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message..."
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                  size="icon"
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Press Enter to send
-              </p>
-            </div>
+          {/* Composer */}
+          <div className="border-t bg-white p-2 flex-shrink-0">
+            <form onSubmit={handleSend} className="flex gap-1.5">
+              <Textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Type your message..."
+                className="min-h-[34px] max-h-32 resize-none text-xs flex-1"
+                rows={1}
+                disabled={sendMut.isPending}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!newMessage.trim() || sendMut.isPending}
+                className="h-8 w-8 p-0 flex-shrink-0 bg-blue-600 hover:bg-blue-700"
+              >
+                {sendMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </form>
+            <p className="text-[10px] text-gray-400 mt-1 text-center">
+              Enter to send · Shift+Enter for new line
+            </p>
           </div>
         </PopoverContent>
       </Popover>

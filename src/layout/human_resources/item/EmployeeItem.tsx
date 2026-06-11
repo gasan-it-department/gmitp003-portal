@@ -1,14 +1,11 @@
-import { memo } from "react";
-import { searchedChar } from "@/utils/element";
+import { memo, useState } from "react";
 import { useNavigate } from "react-router";
-import { useMutation } from "@tanstack/react-query";
-
-//
+import { searchedChar } from "@/utils/element";
 import { viewUserProfile } from "@/db/statement";
-//components and Layout
+
 import { TableRow, TableCell } from "@/components/ui/table";
-import { toast } from "sonner";
-//interfaces and props
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { type User } from "@/interface/data";
 
 interface Props {
@@ -19,37 +16,71 @@ interface Props {
   userId: string;
 }
 
+const initials = (u: User) =>
+  `${u.firstName?.[0] ?? ""}${u.lastName?.[0] ?? ""}`.toUpperCase() || "?";
+
 const EmployeeItem = ({ item, no, query, token, userId }: Props) => {
   const nav = useNavigate();
-  console.log({ item });
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const { mutateAsync, isPending } = useMutation({
-    mutationFn: () => viewUserProfile(token, item.id, userId),
-    onError: () => {
-      toast.error("FAILED TO NAVIGATE");
-    },
-    onSuccess: () => {
-      nav(`${item.id}`);
-    },
-  });
+  const goToProfile = async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    // Best-effort view tracking — never block navigation on it
+    try {
+      await viewUserProfile(token, item.id, userId);
+    } catch {
+      /* analytics-only call; ignore failure */
+    }
+    nav(`${item.id}`);
+  };
+
   return (
-    <>
-      <TableRow
-        onClick={() => {
-          if (isPending) return;
-          mutateAsync();
-        }}
-        className=" hover:bg-neutral-200 cursor-pointer"
-      >
-        <TableCell>{no}</TableCell>
-        <TableCell>{searchedChar(query, item.lastName)}</TableCell>
-        <TableCell>{searchedChar(query, item.firstName)}</TableCell>
-        <TableCell>{searchedChar(query, item.middleName) || "N/A"}</TableCell>
-        <TableCell>{searchedChar(query, item.username) || "N/A"}</TableCell>
-        <TableCell>{item.department?.name || "N/A"}</TableCell>
-        <TableCell>{item?.PositionSlot?.pos?.name || "N/A"}</TableCell>
-      </TableRow>
-    </>
+    <TableRow
+      onClick={goToProfile}
+      className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+        isNavigating ? "opacity-50" : ""
+      }`}
+    >
+      <TableCell className="px-3 py-2 text-xs text-gray-500 font-medium">
+        {no}
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-6 w-6">
+            {item.userProfilePictures && (
+              <AvatarImage src={item.userProfilePictures.file_url} />
+            )}
+            <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700">
+              {initials(item)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium text-gray-800 truncate">
+            {searchedChar(query, item.lastName) || "—"}
+          </span>
+        </div>
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs text-gray-800">
+        {searchedChar(query, item.firstName) || "—"}
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs text-gray-600">
+        {item.middleName ? searchedChar(query, item.middleName) : (
+          <span className="text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs text-blue-600">
+        {item.username ? `@${searchedChar(query, item.username)}` : (
+          <span className="text-gray-400">—</span>
+        )}
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs text-gray-700">
+        {item.department?.name || <span className="text-gray-400">—</span>}
+      </TableCell>
+      <TableCell className="px-3 py-2 text-xs text-gray-700">
+        {item?.PositionSlot?.pos?.name ||
+          item?.Position?.name || <span className="text-gray-400">—</span>}
+      </TableCell>
+    </TableRow>
   );
 };
 

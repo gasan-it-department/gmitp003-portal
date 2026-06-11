@@ -5,14 +5,12 @@ import { useAuth } from "@/provider/ProtectedRoute";
 import { useDebounce } from "use-debounce";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRoom } from "@/provider/DocumentRoomProvider";
-//
 
-//
 import { documents } from "@/db/statements/document";
-
 import { archiveDocType } from "@/utils/helper";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/custom/Modal";
 import {
   Table,
@@ -24,18 +22,16 @@ import {
 } from "@/components/ui/table";
 import SearchArchive from "@/layout/e-sign/SearchArchive";
 
-//
 import {
   CloudUpload,
   Search,
   Inbox,
   FileText,
-  Calendar,
-  ArchiveIcon,
   Loader2,
+  ChevronRight,
+  Archive as ArchiveIcon,
 } from "lucide-react";
 
-//
 import type { ArchiveDocument } from "@/interface/data";
 
 interface ListProps {
@@ -43,6 +39,17 @@ interface ListProps {
   hasMore: boolean;
   lastCursor: string | null;
 }
+
+const formatDate = (iso?: Date | string | null) => {
+  if (!iso) return "—";
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
 
 const Archive = () => {
   const [onOpen, setOnOpen] = useState(0);
@@ -52,260 +59,265 @@ const Archive = () => {
   const room = useRoom();
   const nav = useNavigate();
 
-  const [debouncedText] = useDebounce(text, 500);
+  const [query] = useDebounce(text, 500);
 
   const { data, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useInfiniteQuery<ListProps>({
+      queryKey: ["archived-documents", room.room?.id, query],
       queryFn: ({ pageParam }) =>
         documents(
           auth.token as string,
           lineId as string,
           pageParam as string | null,
           "20",
-          debouncedText,
+          query,
         ),
-      queryKey: ["archived-documents", room.room?.id],
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.lastCursor : undefined,
       initialPageParam: null,
-      refetchOnMount: false,
-      refetchOnReconnect: false,
       refetchOnWindowFocus: false,
     });
 
-  const list = data ? data.pages.flatMap((item) => item.list) : [];
-  const isEmpty = !isFetching && list.length === 0;
+  const list = data?.pages.flatMap((p) => p.list) ?? [];
+  const isLoading = isFetching && list.length === 0;
+  const isEmpty = !isLoading && list.length === 0;
 
-  // Infinite scroll observer
   const { ref } = useInView({
     threshold: 0.5,
     onChange: (inView) => {
-      if (inView && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
     },
   });
 
   return (
-    <div className="w-full h-full bg-gray-50">
-      {/* Header Section */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Archive</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Manage and search archived documents
-              </p>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="p-3 flex-1 flex flex-col min-h-0">
+
+        {/* Header */}
+        <div className="border rounded-lg bg-white overflow-hidden mb-3">
+          <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <ArchiveIcon className="h-3 w-3 text-blue-500" />
+              <div>
+                <h3 className="text-xs font-semibold text-gray-800">Archive</h3>
+                <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                  {list.length} document{list.length !== 1 ? "s" : ""} archived
+                </p>
+              </div>
             </div>
             <Button
+              size="sm"
+              className="h-7 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
               onClick={() => nav("new")}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
             >
-              <CloudUpload className="h-4 w-4 mr-2" strokeWidth={1.5} />
+              <CloudUpload className="h-3 w-3" />
               New Document
             </Button>
           </div>
-        </div>
-      </div>
 
-      {/* Search Section */}
-      <div className="sticky top-[73px] z-10 bg-gray-50 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="max-w-md">
-            {/* <InputGroup className="shadow-sm">
-              <InputGroupAddon className="bg-white border-r">
-                <Search className="h-4 w-4 text-gray-400" />
-              </InputGroupAddon>
-              <InputGroupInput
-                placeholder="Search by document title, ID, or content..."
+          {/* Search row */}
+          <div className="px-3 py-2 border-b">
+            <button
+              type="button"
+              onClick={() => setOnOpen(1)}
+              className="w-full h-8 px-2.5 flex items-center gap-2 border rounded-md text-left hover:border-blue-200 hover:bg-blue-50/40 transition-colors"
+            >
+              <Search className="h-3 w-3 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-500 flex-1">
+                Search by title, ID, or content...
+              </span>
+              <kbd className="hidden sm:inline-block text-[10px] px-1 py-0.5 border rounded text-gray-400 bg-gray-50">
+                Advanced
+              </kbd>
+            </button>
+
+            {/* Optional inline quick filter */}
+            <div className="mt-2">
+              <input
+                type="text"
+                placeholder="Quick filter by title..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                className="w-full h-8 px-2.5 border rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-            </InputGroup> */}
-            <button
-              onClick={() => setOnOpen(1)}
-              className=" w-full p-2 flex gap-2 items-center border border-gray-200 rounded hover:border-gray-300 cursor-pointer"
-            >
-              <Search className="h-4 w-4 text-gray-400" />
-              <p className=" text-sm text-gray-600">
-                Search by document title, ID, or content...
-              </p>
-            </button>
+              {query && (
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Filtering by <span className="font-medium">"{query}"</span>
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Table Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+        {/* Table */}
+        <div className="border rounded-lg bg-white overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 overflow-auto">
             <Table>
-              <TableHeader className="bg-gray-50">
-                <TableRow className="border-b border-gray-200">
-                  <TableHead className="w-16 font-semibold text-gray-700">
-                    No.
+              <TableHeader className="bg-gray-100 sticky top-0 z-10">
+                <TableRow className="hover:bg-gray-100 border-b">
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-12">
+                    #
                   </TableHead>
-                  <TableHead className="font-semibold text-gray-700">
-                    Document ID
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-28">
+                    Doc ID
                   </TableHead>
-                  <TableHead className="font-semibold text-gray-700">
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 min-w-[220px]">
                     Title
                   </TableHead>
-                  <TableHead className="font-semibold text-gray-700 w-32">
-                    Date Archived
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 w-24">
-                    Retention
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 w-24">
-                    Detention
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 w-24">
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-24">
                     Type
                   </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-28">
+                    Archived
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-28">
+                    Retention
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 w-8" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {/* Loading State */}
-                {isFetching && list.length === 0 ? (
+                {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="relative">
-                          <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
-                          <ArchiveIcon className="h-5 w-5 text-gray-400 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                        </div>
-                        <p className="mt-4 text-gray-500 font-medium">
-                          Loading archived documents...
-                        </p>
-                        <p className="text-sm text-gray-400">Please wait</p>
+                    <TableCell colSpan={7} className="py-12">
+                      <div className="flex items-center justify-center gap-2 text-gray-400">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span className="text-xs">Loading documents...</span>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : /* Empty State */
-                isEmpty ? (
+                ) : isEmpty ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64">
-                      <div className="flex flex-col items-center justify-center text-gray-400">
-                        <div className="bg-gray-50 rounded-full p-4 mb-4">
-                          <Inbox className="h-12 w-12" />
+                    <TableCell colSpan={7} className="py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                          <Inbox className="h-6 w-6 text-gray-300" />
                         </div>
-                        <p className="text-gray-500 font-medium">
-                          No archived documents found
+                        <p className="text-xs font-medium text-gray-500">
+                          {query
+                            ? "No documents match your filter"
+                            : "No archived documents yet"}
                         </p>
-                        <p className="text-sm text-gray-400 mt-1">
-                          {text
-                            ? "Try adjusting your search terms"
-                            : "Archive documents will appear here"}
+                        <p className="text-[10px] text-gray-400">
+                          {query
+                            ? "Try a different keyword"
+                            : "Click 'New Document' to archive your first one"}
                         </p>
-                        {text && (
+                        {query && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-4"
+                            className="h-7 text-[10px] mt-1"
                             onClick={() => setText("")}
                           >
-                            Clear search
+                            Clear filter
                           </Button>
                         )}
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : /* Document List */
-                list.length > 0 ? (
+                ) : (
                   <>
                     {list.map((item, i) => (
                       <TableRow
                         key={item.id}
-                        className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
                         onClick={() => nav(item.id)}
+                        className="border-b hover:bg-gray-50 cursor-pointer group transition-colors"
                       >
-                        <TableCell className="font-medium text-gray-500">
+                        <TableCell className="px-3 py-2 text-xs text-gray-500 font-medium">
                           {(i + 1).toString().padStart(2, "0")}
                         </TableCell>
-                        <TableCell>
-                          <span className="font-mono text-sm text-gray-600">
-                            {item.id.slice(0, 8)}...
-                          </span>
+                        <TableCell className="px-3 py-2">
+                          <code className="text-[10px] font-mono text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {item.id.slice(0, 8)}
+                          </code>
                         </TableCell>
-                        <TableCell className="font-medium text-gray-900">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-blue-500" />
-                            <span>{item.document?.title || "N/A"}</span>
+                        <TableCell className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                            <span className="text-xs font-medium text-gray-800 truncate">
+                              {item.document?.title || "Untitled"}
+                            </span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Calendar className="h-3 w-3 text-gray-400" />
-                            {new Date().toLocaleDateString()}
-                          </div>
+                        <TableCell className="px-3 py-2">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {archiveDocType[item.docType] ?? "Other"}
+                          </Badge>
                         </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                            Pending
-                          </span>
+                        <TableCell className="px-3 py-2 text-xs text-gray-600">
+                          {formatDate(item.timestamp)}
                         </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                            Active
-                          </span>
+                        <TableCell className="px-3 py-2">
+                          {item.retentionDate ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {formatDate(item.retentionDate)}
+                            </Badge>
+                          ) : (
+                            <span className="text-[10px] text-gray-400">
+                              Permanent
+                            </span>
+                          )}
                         </TableCell>
-                        <TableCell>{archiveDocType[item.docType]}</TableCell>
+                        <TableCell className="px-3 py-2 text-right">
+                          <ChevronRight className="h-3 w-3 text-gray-300 group-hover:text-blue-500 ml-auto transition-colors" />
+                        </TableCell>
                       </TableRow>
                     ))}
 
-                    {/* Infinite Scroll Trigger */}
                     {hasNextPage && (
                       <TableRow ref={ref}>
-                        <TableCell colSpan={6} className="py-4">
-                          <div className="flex items-center justify-center">
-                            {isFetchingNextPage ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin text-gray-400 mr-2" />
-                                <span className="text-sm text-gray-500">
-                                  Loading more documents...
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-sm text-gray-400">
-                                Scroll for more
-                              </span>
-                            )}
+                        <TableCell colSpan={7} className="h-10 p-0" />
+                      </TableRow>
+                    )}
+
+                    {isFetchingNextPage && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span className="text-[10px]">Loading more...</span>
                           </div>
                         </TableCell>
                       </TableRow>
                     )}
+
+                    {!hasNextPage && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-3 text-center border-t">
+                          <p className="text-[10px] text-gray-400">
+                            All {list.length} document{list.length !== 1 ? "s" : ""} loaded
+                          </p>
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </>
-                ) : null}
+                )}
               </TableBody>
             </Table>
           </div>
-
-          {/* Stats Footer */}
-          {list.length > 0 && !isFetching && (
-            <div className="px-6 py-3 bg-gray-50 border-t text-sm text-gray-500">
-              Showing {list.length} document{list.length !== 1 ? "s" : ""}
-              {debouncedText && ` matching "${debouncedText}"`}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Advanced search modal */}
       <Modal
         title={undefined}
         children={
           <SearchArchive
             full={false}
-            roomId={""}
-            lineId={""}
+            roomId={room.room?.id ?? ""}
+            lineId={lineId ?? ""}
             token={auth.token as string}
           />
         }
         onOpen={onOpen === 1}
-        className={"  min-w-2xl max-h-11/12 overflow-auto"}
+        className="min-w-2xl max-h-[90vh] overflow-auto"
         footer={1}
         setOnOpen={() => setOnOpen(0)}
       />

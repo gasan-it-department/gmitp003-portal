@@ -66,6 +66,14 @@ const OverviewSupplyItem = ({
   // Defensive: backend may omit these on some rows, default to safe values
   const totalStock = item.totalStock ?? 0;
   const stockTracks = item.SupplyStockTrack ?? [];
+  // Latest stock track holds the most recent brand + supplier captured at
+  // the time of fulfillment. Used for the inline summary cell below.
+  const latestTrack: any = stockTracks[0] ?? null;
+  const latestBrand: string | undefined =
+    latestTrack?.brand?.[0]?.brand && latestTrack.brand[0].brand !== "N/A"
+      ? latestTrack.brand[0].brand
+      : undefined;
+  const latestSupplier: string | undefined = latestTrack?.supplier?.name;
 
   const getStockStatus = () => {
     if (totalStock === 0)
@@ -150,22 +158,26 @@ const OverviewSupplyItem = ({
         </TableCell>
 
         <TableCell className="py-2">
-          {/* <div className="flex flex-wrap gap-1">
-            {item.brand.slice(0, 2).map((brand, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs">
-                <Building className="w-3 h-3 mr-1" />
-                {brand.brand}
+          <div className="flex flex-col gap-0.5">
+            {latestBrand ? (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 w-fit font-normal"
+              >
+                {latestBrand}
               </Badge>
-            ))}
-            {item.brand.length > 2 && (
-              <Badge variant="secondary" className="text-xs">
-                +{item.brand.length - 2} more
-              </Badge>
+            ) : (
+              <span className="text-[10px] text-gray-400">—</span>
             )}
-            {item.brand.length === 0 && (
-              <span className="text-sm text-gray-400">No brands</span>
+            {latestSupplier && (
+              <span
+                className="text-[10px] text-gray-500 truncate max-w-[12rem]"
+                title={latestSupplier}
+              >
+                {latestSupplier}
+              </span>
             )}
-          </div> */}
+          </div>
         </TableCell>
 
         <TableCell className="py-2 text-center">
@@ -322,7 +334,7 @@ const OverviewSupplyItem = ({
         onOpen={onOpen === 2}
         className="max-w-lg w-[95vw] overflow-auto max-h-[90vh]"
         setOnOpen={() => setOnOpen(0)}
-        footer={false}
+        footer={1}
       />
     </>
   );

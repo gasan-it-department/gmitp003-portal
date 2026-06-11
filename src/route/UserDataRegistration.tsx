@@ -250,8 +250,17 @@ const UserDataRegistration = () => {
         handleRefetch();
       }, 1000);
       return response.data;
-    } catch (error) {
-      toast.error("Submission failed. Please try again.", {
+    } catch (error: any) {
+      // Surface the actual backend message (e.g. validation, schema
+      // constraint hit, encryption failure) instead of a generic
+      // "Submission failed" so the user — or the HR admin reading
+      // their screenshot — can act on it.
+      const serverMsg =
+        error?.response?.data?.error ??
+        error?.response?.data?.message ??
+        (error instanceof Error ? error.message : null);
+      toast.error("Submission failed", {
+        description: serverMsg ?? "Please try again.",
         position: "top-center",
       });
       throw error;
@@ -2728,7 +2737,7 @@ const UserDataRegistration = () => {
                     size="lg"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Submit
+                    Accept Invitation
                   </Button>
                 </div>
               </div>
@@ -2753,15 +2762,17 @@ const UserDataRegistration = () => {
       />
       <Modal
         className="max-w-md"
-        title="Submit Application"
+        title="Accept Invitation"
         children={
           <div className="space-y-4">
             <p className="text-gray-700">
-              Are you sure you want to submit your application?
+              Ready to accept this invitation and create your account?
             </p>
             <p className="text-sm text-gray-600">
-              Please review all information carefully before submitting. You
-              won't be able to make changes after submission.
+              Once you confirm, the information you supplied will be sent to
+              HR and your registration will be locked in. Double-check the
+              details before continuing — they can&apos;t be edited from this
+              link afterwards.
             </p>
 
             {/* Data Security Message */}
@@ -2781,9 +2792,9 @@ const UserDataRegistration = () => {
                   />
                 </svg>
                 <p className="text-xs text-blue-700">
-                  <strong>Your data is secure:</strong> All information you've
-                  provided will be encrypted and stored safely in accordance
-                  with data protection regulations.
+                  <strong>Your data is secure:</strong> The information you
+                  provided is encrypted before it&apos;s stored, in line with
+                  the Data Privacy Act.
                 </p>
               </div>
             </div>
@@ -2791,7 +2802,8 @@ const UserDataRegistration = () => {
         }
         onOpen={onOpen === 2}
         setOnOpen={() => setOnOpen(0)}
-        cancelTitle="Review Again"
+        yesTitle="Accept & submit"
+        cancelTitle="Review again"
         onFunction={handleSubmit(handleOnSubmit)}
         footer={true}
         loading={isSubmitting}

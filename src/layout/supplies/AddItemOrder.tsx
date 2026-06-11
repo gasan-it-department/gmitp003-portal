@@ -120,7 +120,7 @@ const AddItemOrder = ({ setSelected, selected }: Props) => {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="border-b p-4">
+      <div className="sticky top-0 z-10 bg-white border-b p-4">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ const AddItemOrder = ({ setSelected, selected }: Props) => {
       </div>
 
       {/* Footer Actions */}
-      <div className="border-t p-4">
+      <div className="sticky bottom-0 z-10 bg-white border-t p-4">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"

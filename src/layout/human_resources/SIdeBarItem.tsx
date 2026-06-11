@@ -1,108 +1,170 @@
 import type { LucideProps } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate, NavLink } from "react-router";
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation, NavLink } from "react-router";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { ChevronRight } from "lucide-react";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ChevronDown } from "lucide-react";
 
-interface Props {
+interface ChildItem {
   title: string;
   path: string;
   Icon: React.ForwardRefExoticComponent<
     Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
   >;
-  children: Props[];
+  children: ChildItem[];
   accord: boolean;
-  lineId?: string;
 }
 
-const SIdeBarItem = ({ ...props }: Props) => {
-  const location = useLocation();
-  const [onView, setOnView] = useState("");
-  const { pathname } = location;
-  const nav = useNavigate();
+interface Props extends ChildItem {
+  lineId?: string;
+  collapsed?: boolean;
+}
 
+// Strict path matching: match on URL **segments**, not substrings.
+// e.g. `/abc/employee` is active for "employee" but not "ploye".
+const matchesPath = (pathname: string, target: string) => {
+  if (!target) return false;
+  const cleaned = target.replace(/^\/+|\/+$/g, "");
+  const segments = pathname.split("/").filter(Boolean);
+  const targetSegments = cleaned.split("/").filter(Boolean);
+  if (targetSegments.length === 0) return false;
+
+  // Find target segments as a contiguous subsequence
+  for (let i = 0; i <= segments.length - targetSegments.length; i++) {
+    let matched = true;
+    for (let j = 0; j < targetSegments.length; j++) {
+      if (segments[i + j] !== targetSegments[j]) {
+        matched = false;
+        break;
+      }
+    }
+    if (matched) return true;
+  }
+  return false;
+};
+
+const SIdeBarItem = (props: Props) => {
+  const { pathname } = useLocation();
+
+  const isChildActive = useMemo(
+    () => props.children.some((c) => matchesPath(pathname, c.path)),
+    [pathname, props.children],
+  );
+  const isSelfActive = useMemo(
+    () => matchesPath(pathname, props.path),
+    [pathname, props.path],
+  );
+
+  // Accordion open state — auto-opens when a child is active
+  const [open, setOpen] = useState(isChildActive);
   useEffect(() => {
-    setOnView(pathname);
-  }, [pathname]);
+    if (isChildActive) setOpen(true);
+  }, [isChildActive]);
 
-  const isActive = (path: string) => onView.includes(path);
-  const isParentActive = props.children.some((child) => isActive(child.path));
+  const Icon = props.Icon;
 
-  const handleNav = (path: string) => {
-    nav(`${path}`);
-  };
+  // ── Accordion (parent with children) ────────────────────────────────
+  if (props.accord && props.children.length > 0) {
+    const trigger = (
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors ${
+          isChildActive
+            ? "bg-blue-50 text-blue-700"
+            : "text-gray-700 hover:bg-gray-100"
+        } ${props.collapsed ? "justify-center" : ""}`}
+      >
+        <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+        {!props.collapsed && (
+          <>
+            <span className="text-xs font-medium flex-1 truncate">
+              {props.title}
+            </span>
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${
+                open ? "rotate-0" : "-rotate-90"
+              } text-gray-400`}
+            />
+          </>
+        )}
+      </button>
+    );
 
-  if (props.accord) {
     return (
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value={props.path} className="border-none">
-          <AccordionTrigger
-            className={`
-            flex items-center w-full p-3 rounded-lg text-left transition-all duration-200
-            hover:bg-blue-50 hover:text-blue-700
-            ${
-              isParentActive
-                ? "bg-blue-50 text-blue-700"
-                : "text-gray-700 hover:text-gray-900"
-            }
-          `}
-          >
-            <div className="flex items-center gap-3 flex-1">
-              <props.Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium text-sm">{props.title}</span>
-            </div>
-          </AccordionTrigger>
+      <div>
+        {props.collapsed ? (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                {props.title}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          trigger
+        )}
 
-          <AccordionContent className="pt-2 pb-1">
-            <div className="space-y-1 ml-3 border-l border-gray-200 pl-3">
-              {props.children.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleNav(item.path)}
-                  className={`
-                    w-full flex items-center gap-3 p-2 rounded-lg text-sm transition-all duration-200
-                    ${
-                      isActive(item.path)
-                        ? "bg-blue-100 text-blue-700 font-medium border-l-2 border-blue-500 -ml-0.5"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    }
-                  `}
+        {/* Expanded children — hidden in collapsed mode */}
+        {open && !props.collapsed && (
+          <div className="mt-0.5 ml-3.5 border-l border-gray-200 pl-2 space-y-0.5">
+            {props.children.map((child, i) => {
+              const ChildIcon = child.Icon;
+              const active = matchesPath(pathname, child.path);
+              return (
+                <NavLink
+                  key={i}
+                  to={child.path}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors ${
+                    active
+                      ? "bg-blue-100 text-blue-700 font-medium"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
                 >
-                  <item.Icon className="w-4 h-4 flex-shrink-0" />
-                  <span>{item.title}</span>
-                </button>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+                  <ChildIcon className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{child.title}</span>
+                </NavLink>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   }
 
-  return (
+  // ── Leaf nav link ───────────────────────────────────────────────────
+  const link = (
     <NavLink
       to={props.path}
-      onClick={() => handleNav(props.path)}
-      className={({ isActive }) => `
-        w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all duration-200
-        ${
-          isActive
-            ? "bg-blue-100 text-blue-700 font-medium shadow-sm"
-            : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-        }
-      `}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors ${
+        isSelfActive
+          ? "bg-blue-100 text-blue-700 font-medium"
+          : "text-gray-700 hover:bg-gray-100"
+      } ${props.collapsed ? "justify-center" : ""}`}
     >
-      <props.Icon className="w-5 h-5 flex-shrink-0" />
-      <span className="font-medium text-sm">{props.title}</span>
-      {isActive(props.path) && (
-        <ChevronRight className="w-4 h-4 ml-auto text-blue-500" />
+      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      {!props.collapsed && (
+        <span className="text-xs font-medium truncate">{props.title}</span>
       )}
     </NavLink>
+  );
+
+  if (!props.collapsed) return link;
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">
+          {props.title}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

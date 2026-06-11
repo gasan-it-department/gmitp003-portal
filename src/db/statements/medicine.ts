@@ -32,6 +32,7 @@ export const removeMedicine = async (
   token: string,
   id: string,
   userId: string,
+  lineId?: string,
 ) => {
   const response = await axios.delete("/medicine/remove", {
     headers: {
@@ -39,16 +40,50 @@ export const removeMedicine = async (
       "Content-Type": "application/json",
       Accept: "application/json",
       "X-Requested-With": "XMLHttpRequest",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
-    params: {
-      id,
-      userId,
+    params: { id, userId, lineId },
+  });
+  return response.data;
+};
+
+export const transferMedicineStock = async (
+  token: string,
+  body: {
+    stockId: string;
+    departId: string;
+    quantity: number;
+    userId: string;
+  },
+) => {
+  const response = await axios.patch("/medicine/transfer", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
     },
   });
+  return response.data;
+};
 
-  if (response.status !== 200) throw new Error(response.data);
-
+export const updateMedicine = async (
+  token: string,
+  body: {
+    id: string;
+    name: string;
+    desc?: string | null;
+    userId?: string;
+    lineId?: string;
+  },
+) => {
+  const response = await axios.patch("/medicine/update", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
   return response.data;
 };
 

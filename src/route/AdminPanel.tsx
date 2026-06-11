@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   //Home,
+  DatabaseBackup,
 } from "lucide-react";
 
 //tabs
@@ -84,6 +85,12 @@ const AdminPanel = () => {
     //   badge: notifications.logs,
     //   component: <div className="p-6">Audit Logs Content</div>,
     // },
+    {
+      value: "line",
+      label: "Backup",
+      icon: Server,
+      component: <DatabaseBackup />,
+    },
   ];
 
   // const activeTab = tabs.find((tab) => tab.value === currentTab);

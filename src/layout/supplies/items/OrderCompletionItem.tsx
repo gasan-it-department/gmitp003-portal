@@ -121,7 +121,7 @@ const OrderCompletionItem = ({
       comment: item.comment,
       resolved: defaultResolved,
       price: item.price.toString(),
-      supplier: item.id || "",
+      supplier: item.supplierId || "",
       expiration: item.expiration || "",
       quality: item.quality || "",
     },
@@ -145,7 +145,7 @@ const OrderCompletionItem = ({
       comment: item.comment,
       resolved: defaultResolved,
       price: item.price.toString(),
-      supplier: item.id || "",
+      supplier: item.supplierId || "",
       expiration: item.expiration || "",
       quality: item.quality || "",
     });

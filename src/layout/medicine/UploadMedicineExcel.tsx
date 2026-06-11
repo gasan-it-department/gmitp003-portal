@@ -12,40 +12,69 @@ import { toast } from "sonner";
 interface Props {
   token: string;
   lineId: string;
+  userId: string;
 }
-const UploadMedicineExcel = ({ token, lineId }: Props) => {
+
+interface UploadResult {
+  message?: string;
+  total?: number;
+  inserted?: number;
+  skipped?: number;
+}
+
+const UploadMedicineExcel = ({ token, lineId, userId }: Props) => {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
   const [onOpen, setOnOpen] = useState(0);
 
-  const onSubmit = async () => {
-    if (!selectedFile) return;
+  const onSubmit = async (): Promise<UploadResult> => {
+    if (!selectedFile) throw new Error("No file selected");
     const formData = new FormData();
     formData.append("file", selectedFile);
     formData.append("lineId", lineId);
+    formData.append("userId", userId);
 
-    const response = await axios.post("/medicine/bulk-upload", formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+    const response = await axios.post<UploadResult>(
+      "/medicine/bulk-upload",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       },
-    });
+    );
 
-    if (response.status !== 200) throw new Error(response.data.mesage);
-    console.log("Excel", response.data);
+    if (response.status !== 200) {
+      throw new Error(response.data?.message ?? "Upload failed");
+    }
+    return response.data;
   };
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: onSubmit,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await queryClient.invalidateQueries({
         queryKey: ["medicine-list", lineId],
       });
+      const inserted = data?.inserted ?? 0;
+      const skipped = data?.skipped ?? 0;
+      toast.success(
+        inserted > 0
+          ? `Imported ${inserted} medicine${inserted !== 1 ? "s" : ""}`
+          : "No new medicines to import",
+        skipped > 0
+          ? { description: `${skipped} already existed and were skipped.` }
+          : undefined,
+      );
+      setSelectedFile(undefined);
       setOnOpen(0);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       toast.error("Transaction Failed", {
-        description: err.message,
+        description:
+          err?.response?.data?.message ??
+          (err instanceof Error ? err.message : "Upload failed"),
       });
     },
   });
@@ -116,7 +145,8 @@ const UploadMedicineExcel = ({ token, lineId }: Props) => {
               Upload Medicine Spreadsheet
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              Upload an Excel file (.xlsx, .xls, .csv) with your medicine data
+              Upload an Excel file (.xlsx, .xls, .csv) with a single column of
+              medicine names
             </p>
 
             {/* Hidden file input */}
@@ -181,10 +211,16 @@ const UploadMedicineExcel = ({ token, lineId }: Props) => {
                 </p>
                 <ul className="text-xs text-blue-700 space-y-1">
                   <li>
-                    • File must include columns: Name, Description (optional)
+                    • Only one column is needed: the{" "}
+                    <span className="font-semibold">medicine name</span> (first
+                    column)
                   </li>
+                  <li>
+                    • A header row (e.g. "Name") is optional — it's skipped
+                    automatically
+                  </li>
+                  <li>• Duplicate names already in this line are skipped</li>
                   <li>• Maximum file size: 10MB</li>
-                  <li>• First row should contain column headers</li>
                 </ul>
               </div>
             </div>

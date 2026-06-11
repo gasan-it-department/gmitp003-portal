@@ -1,26 +1,35 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+
 import { useAuth } from "@/provider/ProtectedRoute";
 import { removeCookie } from "@/utils/cookies";
-//db
 import { getUserData } from "@/db/statements/user";
-//
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge"; // Assuming you have a Badge component
-import { Card, CardContent, CardHeader } from "@/components/ui/card"; // Assuming you have Card components
+import { Badge } from "@/components/ui/badge";
 
-//props/schema/interface
+import {
+  LogOut,
+  Loader2,
+  Mail,
+  AtSign,
+  Calendar,
+  Building2,
+  MapPin,
+  Network,
+  ShieldCheck,
+  Boxes,
+  UserRound,
+} from "lucide-react";
+
 import type { User } from "@/interface/data";
-import { LogOut } from "lucide-react";
 
 const UserSideProfile = () => {
   const auth = useAuth();
-
   const nav = useNavigate();
-  const { data, isFetching, refetch } = useQuery({
+
+  const { data, isFetching } = useQuery({
     queryKey: ["userProfile", auth.userId],
     queryFn: () =>
       getUserData(
@@ -29,8 +38,6 @@ const UserSideProfile = () => {
         auth.userId as string,
       ),
     enabled: !!auth.token && !!auth.userId,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   });
 
@@ -40,176 +47,210 @@ const UserSideProfile = () => {
     nav("/auth");
   };
 
-  useEffect(() => {
-    refetch();
-  }, [auth.userId]);
-
-  if (isFetching) {
+  if (isFetching && !data) {
     return (
-      <Card className="w-full h-full shadow-lg border-border/40">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col items-center gap-4">
-            <Skeleton className="h-32 w-32 rounded-full" />
-            <div className="space-y-2 text-center">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-32" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-1.5 text-gray-400">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <p className="text-[10px]">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="w-full h-full flex items-center justify-center px-3">
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <UserRound className="h-5 w-5 text-gray-300" />
+          <p className="text-[10px] font-medium text-gray-500">
+            Profile unavailable
+          </p>
+        </div>
+      </div>
     );
   }
 
   const user = data as User;
-  const fullName = `${user.firstName} ${
-    user.middleName ? user.middleName + " " : ""
-  }${user.lastName}${user.suffix ? " " + user.suffix : ""}`;
+  const fullName = [
+    user.firstName,
+    user.middleName,
+    user.lastName,
+    user.suffix,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const profilePic = user.userProfilePictures?.file_url;
-  const initials = `${user?.firstName?.charAt(0)}${user?.lastName?.charAt(0)}`;
+  const initials =
+    `${user.firstName?.charAt(0) ?? ""}${user.lastName?.charAt(0) ?? ""}`.toUpperCase();
+
+  const isActive = (user.status as unknown as string) === "active";
 
   return (
-    <Card className="w-full h-full shadow-lg border-border/40 overflow-auto">
-      <CardHeader className="pb-6 bg-gradient-to-br from-primary/5 to-secondary/5">
-        <div className="flex flex-col items-center gap-4">
+    <div className="w-full h-full overflow-auto p-3 space-y-3">
+
+      {/* Profile header */}
+      <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="px-3 py-3 flex flex-col items-center gap-2 border-b bg-gray-50">
           <div className="relative">
-            <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
+            <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
               <AvatarImage
                 src={profilePic}
                 alt={fullName}
                 className="object-cover"
               />
-              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
-                {initials}
+              <AvatarFallback className="text-xs font-semibold bg-blue-600 text-white">
+                {initials || "U"}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-2 right-2">
-              <Badge
-                variant={user.status === "active" ? "default" : "secondary"}
-                className="px-3 py-1 font-semibold"
-              >
-                {user.status}
-              </Badge>
-            </div>
+            <span
+              className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                isActive ? "bg-emerald-500" : "bg-gray-400"
+              }`}
+              title={isActive ? "Active" : (user.status as unknown as string)}
+            />
           </div>
-
-          <div className="text-center space-y-1">
-            <h2 className="text-2xl font-bold tracking-tight">{fullName}</h2>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+          <div className="text-center min-w-0 w-full">
+            <p className="text-xs font-semibold text-gray-900 truncate">
+              {fullName}
+            </p>
+            <p className="text-[10px] text-gray-500 truncate flex items-center justify-center gap-1">
+              <Mail className="h-2.5 w-2.5" />
+              {user.email}
+            </p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="px-3 py-1">
-              Level {user.level}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200"
+            >
+              Level {user.level ?? "—"}
             </Badge>
-            <Badge variant="outline" className="px-3 py-1">
-              {user.Position?.name || "No Position"}
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {user.Position?.name || "No position"}
             </Badge>
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-6">
-        <div className="space-y-6">
-          {/* Department & Location Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">
-              Work Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Department
-                </p>
-                <p className="font-medium">
-                  {user.department?.name || "Not Assigned"}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Location
-                </p>
-                <p className="font-medium">
-                  {user.region?.name || user.province?.name || "Not Specified"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact & Info Section */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg border-b pb-2">
-              Contact Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Username
-                </p>
-                <p className="font-medium">{user.username}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Member Since
-                </p>
-                <p className="font-medium">
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
-              {user.lineId && (
-                <div className="space-y-1 md:col-span-2">
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Line ID
-                  </p>
-                  <p className="font-medium">{user.lineId}</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Modules Section */}
-          {user.modules && user.modules.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg border-b pb-2">
-                Access Modules
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {user.modules.map((module) => (
-                  <Badge
-                    key={module.id}
-                    variant="secondary"
-                    className="px-3 py-1.5 font-normal"
-                  >
-                    {module.moduleName}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+      {/* Work details */}
+      <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+          <Building2 className="h-3 w-3 text-blue-500" />
+          <h3 className="text-xs font-semibold text-gray-800">
+            Work Details
+          </h3>
+        </div>
+        <div className="p-3 space-y-2.5">
+          <Field
+            icon={<Building2 className="h-2.5 w-2.5" />}
+            label="Department"
+            value={user.department?.name}
+          />
+          <Field
+            icon={<MapPin className="h-2.5 w-2.5" />}
+            label="Location"
+            value={user.region?.name || user.province?.name}
+          />
+          {user.lineId && (
+            <Field
+              icon={<Network className="h-2.5 w-2.5" />}
+              label="Line ID"
+              value={
+                <span className="font-mono text-[11px]">{user.lineId}</span>
+              }
+            />
           )}
         </div>
+      </div>
 
-        {/* Action Button */}
-        <div className="mt-8 pt-6 border-t">
-          <Button className="w-full" variant="outline" onClick={handleLogout}>
-            <LogOut /> Logout
-          </Button>
+      {/* Account */}
+      <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+          <ShieldCheck className="h-3 w-3 text-blue-500" />
+          <h3 className="text-xs font-semibold text-gray-800">Account</h3>
         </div>
-      </CardContent>
-    </Card>
+        <div className="p-3 space-y-2.5">
+          <Field
+            icon={<AtSign className="h-2.5 w-2.5" />}
+            label="Username"
+            value={user.username}
+          />
+          <Field
+            icon={<Calendar className="h-2.5 w-2.5" />}
+            label="Member Since"
+            value={
+              user.createdAt
+                ? new Date(user.createdAt).toLocaleDateString("en-PH", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : undefined
+            }
+          />
+        </div>
+      </div>
+
+      {/* Modules */}
+      {user.modules && user.modules.length > 0 && (
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Boxes className="h-3 w-3 text-blue-500" />
+              <h3 className="text-xs font-semibold text-gray-800">
+                Module Access
+              </h3>
+            </div>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {user.modules.length}
+            </Badge>
+          </div>
+          <div className="p-3 flex flex-wrap gap-1.5">
+            {user.modules.map((m) => (
+              <Badge
+                key={m.id}
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-700 border-emerald-200"
+              >
+                {m.moduleName}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Logout */}
+      <Button
+        variant="outline"
+        className="w-full h-8 text-[11px] gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+        onClick={handleLogout}
+      >
+        <LogOut className="h-3 w-3" />
+        Logout
+      </Button>
+    </div>
   );
 };
+
+const Field = ({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value?: React.ReactNode;
+}) => (
+  <div className="flex items-start justify-between gap-2">
+    <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase tracking-wide flex-shrink-0">
+      {icon}
+      {label}
+    </div>
+    <p className="text-[11px] text-gray-800 text-right break-words min-w-0">
+      {value ?? "—"}
+    </p>
+  </div>
+);
 
 export default UserSideProfile;

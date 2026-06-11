@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useDebounce } from "use-debounce";
 import { useNavigate } from "react-router";
+
 import { getStorageMeds } from "@/db/statement";
 
 import {
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/input-group";
 import StorageMedItem from "./item/StorageMedItem";
 import PrintMedicineReport from "./PrintMedicineReport";
-import { Search, PenLine } from "lucide-react";
+import { Search, PenLine, Loader2, Package } from "lucide-react";
 
 import type { Medicine, ProtectedRouteProps } from "@/interface/data";
 
@@ -39,9 +40,8 @@ interface ListProps {
 
 const StorageMedList = ({ storageId, auth, lineId }: Props) => {
   const [text, setText] = useState("");
-  const [query] = useDebounce(text, 1000);
+  const [query] = useDebounce(text, 600);
   const nav = useNavigate();
-  const { inView, ref } = useInView();
 
   const {
     data,
@@ -49,9 +49,8 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-    refetch,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["medStorage-list", storageId],
+    queryKey: ["medStorage-list", storageId, query],
     queryFn: ({ pageParam }) =>
       getStorageMeds(
         auth.token as string,
@@ -64,183 +63,165 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
     enabled: !!storageId,
-    refetchOnMount: false,
+    // Refetch when this list remounts (e.g. after navigating back from
+    // StorageMedUpdate). The Update route invalidates this key, but with
+    // refetchOnMount disabled the stale cache would be shown until manual
+    // refresh.
+    refetchOnMount: "always",
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   });
 
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetching, isFetchingNextPage, fetchNextPage]);
-
-  useEffect(() => {
-    refetch();
-  }, [query, refetch]);
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+  });
 
   const allMedicines = data?.pages.flatMap((page) => page.list) || [];
   const totalCount = allMedicines.length;
 
   return (
-    <div className="w-full h-full flex flex-col p-2 sm:p-3 md:p-4 gap-2 sm:gap-3 md:gap-4 bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header Section - Mobile Responsive */}
-      <div className="border rounded-lg p-3 sm:p-4 bg-white shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="text-center sm:text-left">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">
+    <div className="w-full h-full flex flex-col">
+
+      {/* Toolbar */}
+      <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Package className="h-3 w-3 text-blue-500" />
+          <div className="min-w-0">
+            <h4 className="text-xs font-semibold text-gray-800">
               Medicine Stock
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500">
-              Total: {totalCount} item{totalCount !== 1 ? "s" : ""}
+            </h4>
+            <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+              {totalCount} item{totalCount !== 1 ? "s" : ""} shown
             </p>
           </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-2">
-            <div className="relative w-full sm:w-64">
-              <InputGroup className="bg-white">
-                <InputGroupAddon>
-                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </InputGroupAddon>
-                <InputGroupInput
-                  placeholder="Search medicines..."
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  className="text-xs sm:text-sm h-8 sm:h-9"
-                />
-              </InputGroup>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <PrintMedicineReport storageId={storageId as string} />
-              <Button
-                onClick={() => nav(`update`)}
-                size="sm"
-                className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm flex-1 sm:flex-initial"
-              >
-                <PenLine className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Update</span>
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <InputGroup className="bg-white w-48">
+            <InputGroupAddon>
+              <Search className="h-3 w-3 text-gray-400" />
+            </InputGroupAddon>
+            <InputGroupInput
+              placeholder="Search medicines..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="h-7 text-[11px]"
+            />
+          </InputGroup>
+          <PrintMedicineReport storageId={storageId as string} />
+          <Button
+            onClick={() => nav(`update`)}
+            size="sm"
+            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            <PenLine className="h-3 w-3" />
+            <span className="hidden sm:inline">Update</span>
+          </Button>
         </div>
       </div>
 
-      {/* Table Section - Mobile Responsive with Horizontal Scroll */}
-      <div className="flex-1 overflow-hidden border rounded-lg bg-white shadow-sm">
-        <div className="overflow-auto h-full">
-          <div className="min-w-[600px] md:min-w-0">
-            <Table>
-              <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                <TableRow>
-                  <TableHead className="font-semibold text-gray-700 w-12 text-xs sm:text-sm">
-                    No
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-xs sm:text-sm min-w-[100px]">
-                    Serial Number
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-xs sm:text-sm min-w-[150px]">
-                    Label
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-center text-xs sm:text-sm w-16">
-                    Stock
-                  </TableHead>
-                  {/* <TableHead className="font-semibold text-gray-700 text-center text-xs sm:text-sm w-16">
-                    UoM
-                  </TableHead> */}
-                  <TableHead className="font-semibold text-gray-700 text-xs sm:text-sm min-w-[100px]">
-                    Stock to Expire
-                  </TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-center text-xs sm:text-sm w-20">
-                    Status
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
+      {/* Table */}
+      <div className="flex-1 overflow-auto">
+        <Table>
+          <TableHeader className="bg-gray-50 sticky top-0 z-10">
+            <TableRow>
+              <TableHead className="text-[10px] font-semibold text-gray-700 w-10">
+                No
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[100px]">
+                Serial Number
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[150px]">
+                Label
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-16">
+                Stock
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[100px]">
+                Stock to Expire
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-20">
+                Status
+              </TableHead>
+            </TableRow>
+          </TableHeader>
 
-              <TableBody>
-                {isFetching && !data ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center py-8 sm:py-12"
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-blue-600"></div>
-                        <span className="text-xs sm:text-sm text-gray-600">
-                          Loading...
-                        </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : allMedicines.length > 0 ? (
-                  allMedicines.map((item, i) => (
-                    <StorageMedItem
-                      storageId={storageId as string}
-                      key={item.id}
-                      item={item}
-                      no={i + 1}
-                      onMultiSelect={false}
-                      lineId={lineId}
-                      auth={auth}
-                    />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center py-8 sm:py-12"
-                    >
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Search className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300" />
-                        <p className="text-sm sm:text-base text-gray-700 font-medium">
-                          No items found
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-500">
-                          {query
-                            ? "Try a different search term"
-                            : "No medicines in this storage"}
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+          <TableBody>
+            {isFetching && !data ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span className="text-[10px]">Loading medicines...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : allMedicines.length > 0 ? (
+              allMedicines.map((item, i) => (
+                <StorageMedItem
+                  storageId={storageId as string}
+                  key={item.id}
+                  item={item}
+                  no={i + 1}
+                  onMultiSelect={false}
+                  lineId={lineId}
+                  auth={auth}
+                />
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Search className="h-5 w-5 text-gray-300" />
+                    </div>
+                    <p className="text-xs font-medium text-gray-600">
+                      No items found
+                    </p>
+                    <p className="text-[10px] text-gray-400 max-w-[240px]">
+                      {query
+                        ? "Try a different search term."
+                        : "No medicines in this storage yet."}
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
 
-                {/* Infinite scroll trigger */}
-                {hasNextPage && (
-                  <TableRow ref={ref}>
-                    <TableCell colSpan={7} className="text-center py-3 sm:py-4">
-                      {isFetchingNextPage ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-3.5 w-3.5 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
-                          <span className="text-xs sm:text-sm text-gray-600">
-                            Loading more...
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs sm:text-sm text-gray-500">
-                          Scroll to load more
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )}
+            {hasNextPage && (
+              <TableRow ref={ref}>
+                <TableCell colSpan={6} className="text-center py-2">
+                  {isFetchingNextPage ? (
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-[10px]">Loading more...</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">
+                      Scroll to load more
+                    </span>
+                  )}
+                </TableCell>
+              </TableRow>
+            )}
 
-                {!hasNextPage && allMedicines.length > 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center py-3 sm:py-4 border-t"
-                    >
-                      <span className="text-xs sm:text-sm text-gray-500">
-                        Showing all {allMedicines.length} item
-                        {allMedicines.length !== 1 ? "s" : ""}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+            {!hasNextPage && allMedicines.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-2 border-t">
+                  <span className="text-[10px] text-gray-400">
+                    Showing all {allMedicines.length} item
+                    {allMedicines.length !== 1 ? "s" : ""}
+                  </span>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

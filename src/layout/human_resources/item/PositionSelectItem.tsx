@@ -1,6 +1,14 @@
 import { memo } from "react";
 import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+import { postJob } from "@/db/statement";
+
+import { TableRow, TableCell } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+
 import {
   Briefcase,
   Building,
@@ -11,20 +19,8 @@ import {
   Hash,
 } from "lucide-react";
 
-//
-import { postJob } from "@/db/statement";
-//
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-//
 import type { UnitPositionProps } from "@/interface/data";
+
 interface Props {
   item: UnitPositionProps;
   no: number;
@@ -33,6 +29,27 @@ interface Props {
   userId: string | undefined;
   query: string;
 }
+
+const highlight = (text: string, q: string) => {
+  if (!q || !text) return text;
+  const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  return text.split(regex).map((part, i) =>
+    part.toLowerCase() === q.toLowerCase() ? (
+      <mark key={i} className="bg-yellow-100 text-yellow-900 px-0.5 rounded">
+        {part}
+      </mark>
+    ) : (
+      part
+    ),
+  );
+};
+
+const slotColor = (n: number) => {
+  if (n === 0) return "bg-gray-50 text-gray-500 border-gray-200";
+  if (n <= 2) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (n <= 5) return "bg-blue-50 text-blue-700 border-blue-200";
+  return "bg-purple-50 text-purple-700 border-purple-200";
+};
 
 const PositionSelectItem = ({
   item,
@@ -56,200 +73,108 @@ const PositionSelectItem = ({
         lineId,
         userId as string,
       ),
-    onError: (err) => {
-      toast.error("Failed to create job post", {
-        description: err.message || "Please try again later",
-        action: {
-          label: "Retry",
-          onClick: () => mutateAsync(),
-        },
-      });
-    },
     onSuccess: (data) => {
-      toast.success("Job post created successfully", {
-        description: "Redirecting to job post details...",
-      });
+      toast.success("Job post created");
       nav(data.id);
+    },
+    onError: (err: any) => {
+      toast.error(
+        err?.response?.data?.message ??
+          (err instanceof Error ? err.message : "Failed to create job post"),
+      );
     },
   });
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isPending) return;
-    mutateAsync();
-  };
-
-  const highlightText = (text: string, searchQuery: string) => {
-    if (!searchQuery) return text;
-
-    const regex = new RegExp(`(${searchQuery})`, "gi");
-    return text.split(regex).map((part, index) =>
-      part.toLowerCase() === searchQuery.toLowerCase() ? (
-        <mark key={index} className="bg-yellow-200 font-semibold px-1 rounded">
-          {part}
-        </mark>
-      ) : (
-        part
-      ),
-    );
-  };
-
-  const getSlotStatusColor = (count: number) => {
-    if (count === 0) return "bg-gray-100 text-gray-600";
-    if (count <= 2) return "bg-green-100 text-green-700";
-    if (count <= 5) return "bg-blue-100 text-blue-700";
-    return "bg-purple-100 text-purple-700";
-  };
-
-  const getSlotStatusText = (count: number) => {
-    if (count === 0) return "No slots";
-    if (count === 1) return "1 slot";
-    return `${count} slots`;
-  };
-
   return (
-    <TooltipProvider>
-      <div
-        className="relative px-6 py-4 border-b border-gray-100 cursor-pointer"
-        onClick={handleClick}
-      >
-        <div className="flex items-center justify-between">
-          {/* Left side: Position info */}
-          <div className="flex-1">
-            <div className="grid grid-cols-12 gap-4 items-center">
-              {/* Serial number */}
-              <div className="col-span-1">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
-                  <span className="text-sm font-semibold text-gray-700">
-                    {no}
-                  </span>
-                </div>
-              </div>
-
-              {/* Position title */}
-              <div className="col-span-5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1.5 rounded-md bg-primary/10">
-                    <Briefcase className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {highlightText(item.position.name, query)}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <Badge
-                        variant="outline"
-                        className="text-xs font-normal border-gray-200"
-                      >
-                        <Hash className="h-3 w-3 mr-1" />
-                        {item.id.substring(0, 8)}...
-                      </Badge>
-                      {item.fixToUnit && (
-                        <Badge
-                          variant="secondary"
-                          className="text-xs bg-amber-50 text-amber-700 border-amber-200"
-                        >
-                          Fixed to Unit
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-2">
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {new Date(item.timestamp).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {item.itemNumber && item.itemNumber !== "N/A" && (
-                        <div className="text-xs text-gray-500">
-                          Item: {item.itemNumber}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Department info */}
-              <div className="col-span-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1.5 rounded-md bg-blue/10">
-                    <Building className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800">
-                      {item.unit.name || "N/A"}
-                    </p>
-                    {item.designation && item.designation !== "N/A" && (
-                      <p className="text-sm text-gray-500 mt-1">
-                        {item.designation}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Slots info */}
-              <div className="col-span-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`px-4 py-2 rounded-full ${getSlotStatusColor(item._count.slot)}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          <span className="font-bold">{item._count.slot}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500 mt-1.5">
-                        {getSlotStatusText(item._count.slot)}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Available positions for this role</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+    <TableRow
+      className="hover:bg-blue-50/40 cursor-pointer"
+      onClick={() => {
+        if (!isPending) mutateAsync();
+      }}
+    >
+      <TableCell className="text-[10px] text-gray-500">{no}</TableCell>
+      <TableCell>
+        <div className="flex items-start gap-1.5">
+          <div className="p-1 bg-blue-50 rounded flex-shrink-0">
+            <Briefcase className="h-3 w-3 text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-900 truncate">
+              {highlight(item.position.name, query)}
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500">
+              <span className="flex items-center gap-0.5">
+                <Hash className="h-2.5 w-2.5" />
+                {item.id.slice(0, 8)}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <Calendar className="h-2.5 w-2.5" />
+                {new Date(item.timestamp).toLocaleDateString()}
+              </span>
+              {item.itemNumber && item.itemNumber !== "N/A" && (
+                <span>Item: {item.itemNumber}</span>
+              )}
+              {item.fixToUnit && (
+                <Badge
+                  variant="outline"
+                  className="text-[9px] px-1 py-0 bg-amber-50 text-amber-700 border-amber-200"
+                >
+                  Fixed
+                </Badge>
+              )}
             </div>
           </div>
-
-          {/* Right side: Action button */}
-          <div className="ml-4">
-            {isPending ? (
-              <Button disabled size="sm" className="px-6 bg-primary/10">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" className="border-gray-300">
-                <span className="mr-2">Post Job</span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex items-start gap-1.5">
+          <Building className="h-3 w-3 text-gray-400 mt-0.5 flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-gray-800 truncate">
+              {item.unit.name || "—"}
+            </p>
+            {item.designation && item.designation !== "N/A" && (
+              <p className="text-[10px] text-gray-500 truncate">
+                {item.designation}
+              </p>
             )}
           </div>
         </div>
-
-        {/* Loading overlay */}
-        {isPending && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
-            <div className="flex flex-col items-center">
-              <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-              <p className="text-sm font-medium text-gray-700">
-                Creating job post...
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Redirecting to details page
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-100"></div>
-      </div>
-    </TooltipProvider>
+      </TableCell>
+      <TableCell className="text-center">
+        <Badge
+          variant="outline"
+          className={`text-[10px] px-1.5 py-0 gap-1 ${slotColor(item._count.slot)}`}
+        >
+          <Users className="h-2.5 w-2.5" />
+          {item._count.slot}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isPending}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!isPending) mutateAsync();
+          }}
+          className="h-7 text-[10px] gap-1.5"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            <>
+              Post Job
+              <ChevronRight className="h-3 w-3" />
+            </>
+          )}
+        </Button>
+      </TableCell>
+    </TableRow>
   );
 };
 

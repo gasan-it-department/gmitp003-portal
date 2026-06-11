@@ -381,7 +381,7 @@ const NewSupplyOrder = () => {
                         onClick={() => handleDropdownAction(3)}
                       >
                         <Send className="h-3.5 w-3.5 mr-2" />
-                        <span className="text-xs">Submit for Review</span>
+                        <span className="text-xs">Save Order</span>
                         <kbd className="hidden sm:inline ml-auto text-[10px]">
                           Ctrl+S
                         </kbd>
@@ -561,17 +561,18 @@ const NewSupplyOrder = () => {
         title={
           <div className="flex items-center gap-2">
             <Send className="h-4 w-4" />
-            <span className="text-sm">Submit for Review</span>
+            <span className="text-sm">Save Order</span>
           </div>
         }
         children={
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
-              Are you ready to submit this purchase request for review?
+              Save this purchase order? Once saved, it will be locked and queued
+              for processing.
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
               <p className="text-xs font-medium text-amber-800">
-                ⚠️ Important: After submission
+                ⚠️ Important: After saving
               </p>
               <ul className="text-xs text-amber-700 mt-1 space-y-0.5 list-disc pl-4">
                 <li>You cannot add or remove items</li>
@@ -598,7 +599,7 @@ const NewSupplyOrder = () => {
         setOnOpen={() => setOnOpen(0)}
         footer={true}
         onFunction={() => handleSaveOrder.mutateAsync()}
-        yesTitle="Submit for Review"
+        yesTitle="Save Order"
       />
 
       <Modal

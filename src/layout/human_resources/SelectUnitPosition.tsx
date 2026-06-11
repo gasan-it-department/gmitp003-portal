@@ -1,13 +1,20 @@
-import { useState, useEffect } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import { useDebounce } from "use-debounce";
 import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/db/axios";
 import { isAxiosError } from "axios";
-//
-import { linePositions } from "@/db/statement";
+import { toast } from "sonner";
 
-//components/layout
+import { linePositions } from "@/db/statement";
+import { AddExistingPosition } from "@/interface/zod";
+import type {
+  Position,
+  AddExistingPositionProps,
+} from "@/interface/data";
+
 import {
   Table,
   TableBody,
@@ -16,13 +23,11 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table";
-import SWWItem from "../item/SWWItem";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import SelectPosItem from "./item/SelectPosItem";
 import {
   Form,
   FormControl,
@@ -34,21 +39,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
+import SelectPosItem from "./item/SelectPosItem";
 import SalaryGradeSelect from "./SalaryGradeSelect";
-import { AddExistPositionProgress } from "@/utils/element";
-//interface/props/schema
-import type { Position, AddExistingPositionProps } from "@/interface/data";
-import { AddExistingPosition } from "@/interface/zod";
+
 import {
   Search,
   X,
   Save,
-  ListX,
   ListPlus,
+  ListX,
   Briefcase,
   Hash,
   Users,
@@ -58,11 +60,6 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
   token: string;
@@ -78,6 +75,19 @@ interface ListProps {
   hasMore: boolean;
 }
 
+const STEP_LABELS = [
+  "Select Position",
+  "Configure Details",
+  "Review & Confirm",
+];
+
+const surfaceErr = (err: unknown, fallback: string) =>
+  isAxiosError(err)
+    ? err.response?.data?.message ?? err.message
+    : err instanceof Error
+      ? err.message
+      : fallback;
+
 const SelectUnitPosition = ({
   token,
   lineId,
@@ -88,19 +98,37 @@ const SelectUnitPosition = ({
   const [step, setStep] = useState(0);
   const [text, setText] = useState("");
   const [selected, setSelected] = useState<Position | undefined>(undefined);
-  const [query] = useDebounce(text, 1000);
-
-  const { data, isFetching, isFetchingNextPage, refetch } =
-    useInfiniteQuery<ListProps>({
-      queryKey: ["line-position", lineId],
-      queryFn: ({ pageParam }) =>
-        linePositions(token, lineId, pageParam as string | null, "20", query),
-      initialPageParam: null,
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore ? lastPage.lastCursor : undefined,
-    });
+  const [query] = useDebounce(text, 400);
 
   const queryClient = useQueryClient();
+
+  const {
+    data,
+    isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    error,
+  } = useInfiniteQuery<ListProps>({
+    queryKey: ["line-position", lineId, query],
+    queryFn: ({ pageParam }) =>
+      linePositions(token, lineId, pageParam as string | null, "20", query),
+    initialPageParam: null,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
+    enabled: !!token && !!lineId,
+    refetchOnWindowFocus: false,
+  });
+
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+  });
 
   const form = useForm<AddExistingPositionProps>({
     resolver: zodResolver(AddExistingPosition),
@@ -118,73 +146,55 @@ const SelectUnitPosition = ({
     control,
     setValue,
     trigger,
-    getValues,
     watch,
   } = form;
 
-  const designation = getValues("designation");
-  const itemNumber = getValues("itemNumber");
-  const plantilla = getValues("plantilla");
-  const plantillaStatus = watch("plantilla");
+  const designation = watch("designation");
+  const itemNumber = watch("itemNumber");
+  const plantilla = watch("plantilla");
 
-  const slots = useFieldArray({
-    control,
-    name: "slot",
-  });
+  const slots = useFieldArray({ control, name: "slot" });
 
-  const handleAddSlot = () => {
-    slots.append({
-      salaryGrade: "",
-      occupied: false,
-    });
-  };
+  const handleAddSlot = () =>
+    slots.append({ salaryGrade: "", occupied: false });
+  const handleRemoveSlot = (i: number) => slots.remove(i);
+  const handleResetSlots = () => setValue("slot", []);
 
-  const handleRemoveSlot = (index: number) => {
-    slots.remove(index);
-  };
-
-  const handleResetSlots = () => {
-    setValue("slot", []);
-  };
-
-  const handleNextStep = async () => {
-    if (step === 2) return;
+  const next = async () => {
+    if (step === STEP_LABELS.length - 1) return;
     if (step === 1) {
-      const isValid = await trigger();
-      if (!isValid) {
-        toast.error("Validation Error", {
-          description: "Please fix all errors before continuing",
-        });
+      const ok = await trigger();
+      if (!ok) {
+        toast.error("Please fix the errors above before continuing.");
+        return;
+      }
+      if (slots.fields.length === 0) {
+        toast.error("Add at least one slot before continuing.");
         return;
       }
     }
-    setStep((prev) => prev + 1);
+    setStep((s) => s + 1);
   };
+  const back = () => setStep((s) => Math.max(0, s - 1));
 
-  const handlePrev = () => {
-    if (step === 0) return;
-    setStep((prev) => prev - 1);
-  };
-
-  const onSubmit = async (data: AddExistingPositionProps) => {
-    if (!selected) {
-      return toast.warning("Invalid selected item");
-    }
-    try {
-      const response = await axios.post(
+  const submitMut = useMutation({
+    mutationFn: async (vals: AddExistingPositionProps) => {
+      if (!selected) throw new Error("No position selected.");
+      const res = await axios.post(
         "/position/unit/position",
         {
           lineId,
           unitId: officeId,
-          slot: data.slot.map((item) => ({
-            status: item.occupied,
-            salaryGrade: item.salaryGrade,
+          slot: vals.slot.map((s) => ({
+            status: s.occupied,
+            salaryGrade: s.salaryGrade,
           })),
-          plantilla: data.plantilla,
+          plantilla: vals.plantilla,
           title: selected.name,
           userId: userid,
           id: selected.id,
-          itemNumber: data.itemNumber || "N/A",
+          itemNumber: vals.itemNumber || "N/A",
+          designation: vals.designation || undefined,
         },
         {
           headers: {
@@ -195,572 +205,612 @@ const SelectUnitPosition = ({
           },
         },
       );
-      if (response.status !== 200) {
-        throw new Error(response.data.message);
-      }
-
-      toast.success("Position added successfully");
-      setOnOpen(0);
+      return res.data;
+    },
+    onSuccess: async () => {
+      toast.success("Position added to this unit");
       await queryClient.invalidateQueries({
         queryKey: ["postions", officeId],
         refetchType: "active",
       });
-    } catch (error) {
-      if (isAxiosError(error)) {
-        const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data?.error ||
-          error.message ||
-          "Failed to submit";
+      setOnOpen(0);
+    },
+    onError: (err) =>
+      toast.error(surfaceErr(err, "Failed to add position to unit")),
+  });
 
-        toast.error("Failed to submit", {
-          description: errorMessage,
-        });
-      } else if (error instanceof Error) {
-        toast.error("Failed to submit", {
-          description: error.message,
-        });
-      } else {
-        toast.error("Failed to submit", {
-          description: "An unexpected error occurred",
-        });
-      }
-    }
-  };
+  const items = data?.pages.flatMap((p) => p.list) ?? [];
 
-  useEffect(() => {
-    if (isSubmitting) {
-      setOnOpen(2);
-    }
-  }, [isSubmitting]);
+  return (
+    <div className="w-full max-h-[85vh] flex flex-col">
 
-  useEffect(() => {
-    refetch();
-  }, [query]);
+      {/* Stepper header */}
+      <div className="px-3 py-2 border-b bg-gray-50 flex-shrink-0">
+        <div className="flex items-center gap-1.5">
+          {STEP_LABELS.map((label, i) => {
+            const isActive = i === step;
+            const isDone = i < step;
+            return (
+              <div
+                key={label}
+                className="flex items-center gap-1.5 flex-1 min-w-0"
+              >
+                <div
+                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${
+                    isActive
+                      ? "bg-blue-600 text-white"
+                      : isDone
+                        ? "bg-emerald-500 text-white"
+                        : "bg-gray-200 text-gray-500"
+                  }`}
+                >
+                  {isDone ? "✓" : i + 1}
+                </div>
+                <span
+                  className={`text-[10px] truncate ${
+                    isActive
+                      ? "font-semibold text-gray-900"
+                      : isDone
+                        ? "text-emerald-700"
+                        : "text-gray-500"
+                  }`}
+                >
+                  {label}
+                </span>
+                {i < STEP_LABELS.length - 1 && (
+                  <div
+                    className={`flex-1 h-px ${
+                      isDone ? "bg-emerald-300" : "bg-gray-200"
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-  const steps = [
-    // Step 0: Search and Select Position
-    <div key="step0" className="space-y-4">
-      <InputGroup className="bg-white shadow-sm">
-        <InputGroupAddon>
-          <Search className="h-4 w-4 text-gray-400" />
-        </InputGroupAddon>
-        <InputGroupInput
-          placeholder="Search position or designation..."
-          onChange={(e) => setText(e.target.value)}
-          className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-        />
-      </InputGroup>
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto p-3 space-y-3">
 
-      <Card className="border shadow-sm overflow-hidden">
-        <div className="max-h-[400px] overflow-auto">
-          <Table>
-            <TableHeader className="bg-gray-50 sticky top-0">
-              <TableHead className="w-16 text-gray-700">No.</TableHead>
-              <TableHead className="text-gray-700">Position Details</TableHead>
-            </TableHeader>
-            <TableBody>
-              {isFetching || isFetchingNextPage ? (
-                <TableRow>
-                  <TableCell colSpan={2} className="h-32">
-                    <div className="flex items-center justify-center gap-2 text-gray-500">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading positions...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : data ? (
-                data.pages.flatMap((item) => item.list).length > 0 ? (
-                  data.pages
-                    .flatMap((item) => item.list)
-                    .map((item, i) => (
+        {/* ── Step 0: select position ─────────────────────────────── */}
+        {step === 0 && (
+          <>
+            <InputGroup className="bg-white">
+              <InputGroupAddon>
+                <Search className="h-3 w-3 text-gray-400" />
+              </InputGroupAddon>
+              <InputGroupInput
+                placeholder="Search position or designation..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="h-8 text-xs"
+              />
+            </InputGroup>
+
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <Table>
+                <TableHeader className="bg-gray-50 sticky top-0 z-10">
+                  <TableRow>
+                    <TableHead className="text-[10px] font-semibold text-gray-700 w-10">
+                      No
+                    </TableHead>
+                    <TableHead className="text-[10px] font-semibold text-gray-700">
+                      Position
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isError ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-6">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          <p className="text-[10px] font-medium text-red-600">
+                            Failed to load positions
+                          </p>
+                          <p className="text-[10px] text-gray-500">
+                            {(error as any)?.message ?? "Try again later."}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : isFetching && items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-6">
+                        <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span className="text-[10px]">
+                            Loading positions...
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center py-8">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                            <Briefcase className="h-5 w-5 text-gray-300" />
+                          </div>
+                          <p className="text-xs font-medium text-gray-700">
+                            No positions found
+                          </p>
+                          <p className="text-[10px] text-gray-500 max-w-[240px]">
+                            {query
+                              ? `No matches for "${query}".`
+                              : "There are no existing positions yet."}
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    items.map((it, i) => (
                       <SelectPosItem
-                        key={item.id}
-                        item={item}
+                        key={it.id}
+                        item={it}
                         no={i}
                         onChange={() => {}}
                         query={query}
                         onClick={() => {
-                          setSelected(item);
-                          handleNextStep();
+                          setSelected(it);
+                          setStep(1);
                         }}
                       />
                     ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={2} className="h-32">
-                      <div className="flex flex-col items-center justify-center text-gray-500">
-                        <Briefcase className="h-8 w-8 mb-2 text-gray-300" />
-                        <p>No positions found</p>
-                        <p className="text-sm">Try a different search term</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              ) : (
-                <SWWItem colSpan={2} />
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+                  )}
 
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          onClick={() => setOnOpen(0)}
-          className="border-gray-200"
-        >
-          Close
-        </Button>
-      </div>
-    </div>,
+                  {hasNextPage && (
+                    <TableRow ref={ref}>
+                      <TableCell colSpan={2} className="text-center py-2">
+                        {isFetchingNextPage ? (
+                          <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span className="text-[10px]">
+                              Loading more...
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">
+                            Scroll to load more
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-    // Step 1: Configure Position Details
-    <div key="step1" className="space-y-4">
-      {selected ? (
-        <>
-          <Card className="border bg-blue-50/50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Briefcase className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">
-                    Selected Position
-                  </p>
-                  <p className="text-lg font-semibold text-gray-800">
-                    {selected.name}
-                  </p>
-                </div>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setOnOpen(0)}
+                className="h-7 text-[10px]"
+              >
+                Close
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 1: configure ───────────────────────────────────── */}
+        {step === 1 && selected && (
+          <>
+            <div className="border rounded-md bg-blue-50/50 border-blue-100 p-2.5 flex items-center gap-2">
+              <div className="p-1.5 bg-blue-100 rounded">
+                <Briefcase className="h-3.5 w-3.5 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div className="min-w-0">
+                <p className="text-[10px] font-medium text-blue-600">
+                  Selected Position
+                </p>
+                <p className="text-xs font-semibold text-gray-900 truncate">
+                  {selected.name}
+                </p>
+              </div>
+            </div>
 
-          <Form {...form}>
-            <div className="space-y-4">
-              {/* Designation */}
-              <FormField
-                control={control}
-                name="designation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-gray-400" />
-                      Designation (Optional)
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., J.O - Data Encoder"
-                        {...field}
-                        className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      For positions with specific designations
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Separator />
-
-              {/* Plantilla Options */}
-              <div className="bg-gray-50 rounded-lg p-4">
+            <Form {...form}>
+              <div className="space-y-2.5">
                 <FormField
                   control={control}
-                  name="plantilla"
+                  name="designation"
                   render={({ field }) => (
-                    <FormItem className="flex items-start space-x-3 space-y-0">
+                    <FormItem>
+                      <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+                        <Briefcase className="h-2.5 w-2.5" />
+                        Designation (optional)
+                      </FormLabel>
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(e) => field.onChange(e)}
-                          className="mt-0.5"
+                        <Input
+                          {...field}
+                          placeholder="e.g., J.O - Data Encoder"
+                          className="h-8 text-xs"
                         />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-sm font-medium cursor-pointer">
-                          Plantilla Position
-                        </FormLabel>
-                        <p className="text-xs text-gray-500">
-                          For regular/plantilla positions
-                        </p>
-                      </div>
+                      <FormDescription className="text-[10px]">
+                        For positions with a specific designation label.
+                      </FormDescription>
+                      <FormMessage className="text-[10px]" />
                     </FormItem>
                   )}
                 />
 
-                {plantillaStatus && (
+                <div className="border rounded-md bg-gray-50 p-2.5 space-y-2">
                   <FormField
                     control={control}
-                    name="itemNumber"
+                    name="plantilla"
                     render={({ field }) => (
-                      <FormItem className="mt-4">
-                        <FormLabel className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-gray-400" />
-                          Item Number/ID
-                        </FormLabel>
+                      <FormItem className="flex items-start gap-2 space-y-0">
                         <FormControl>
-                          <Input
-                            placeholder="e.g., ITEM-2024-001"
-                            {...field}
-                            className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="mt-0.5"
                           />
                         </FormControl>
-                        <FormMessage />
+                        <div className="leading-tight">
+                          <FormLabel className="text-[11px] font-medium cursor-pointer">
+                            Plantilla position
+                          </FormLabel>
+                          <p className="text-[10px] text-gray-500">
+                            Marks this as a regular plantilla item
+                          </p>
+                        </div>
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
 
-              <Separator />
-
-              {/* Slots Configuration */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <FormLabel className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    Slot Configuration
-                  </FormLabel>
-                  <Badge variant="outline" className="px-3">
-                    {slots.fields.length}{" "}
-                    {slots.fields.length === 1 ? "Slot" : "Slots"}
-                  </Badge>
-                </div>
-
-                <ScrollArea className="max-h-[300px] overflow-auto pr-3">
-                  {slots.fields.length > 0 ? (
-                    <div className="space-y-3">
-                      {slots.fields.map((_, i) => (
-                        <Card key={i} className="border border-gray-200">
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <Badge variant="secondary" className="px-3">
-                                  Slot #{i + 1}
-                                </Badge>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <FormField
-                                  control={control}
-                                  name={`slot.${i}.occupied`}
-                                  render={({ field }) => (
-                                    <FormItem className="flex items-start space-x-3 space-y-0">
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value}
-                                          onCheckedChange={(e) =>
-                                            field.onChange(e)
-                                          }
-                                          className="mt-0.5"
-                                        />
-                                      </FormControl>
-                                      <div className="space-y-1">
-                                        <FormLabel className="text-sm font-medium cursor-pointer">
-                                          Occupied
-                                        </FormLabel>
-                                        <p className="text-xs text-gray-500">
-                                          Slot is currently filled
-                                        </p>
-                                      </div>
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={control}
-                                  name={`slot.${i}.salaryGrade`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel className="text-sm">
-                                        Salary Grade
-                                      </FormLabel>
-                                      <FormControl>
-                                        <SalaryGradeSelect
-                                          lineId={lineId}
-                                          token={token}
-                                          onChange={field.onChange}
-                                          value={field.value}
-                                        />
-                                      </FormControl>
-                                      <FormMessage className="text-xs" />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              <div className="flex justify-end">
-                                <Button
-                                  type="button"
-                                  onClick={() => handleRemoveSlot(i)}
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <X className="h-4 w-4 mr-1" />
-                                  Remove Slot
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Alert className="border-orange-200 bg-orange-50">
-                      <AlertCircle className="h-4 w-4 text-orange-600" />
-                      <AlertDescription className="text-orange-700">
-                        At least one slot is required. Add a slot to continue.
-                      </AlertDescription>
-                    </Alert>
+                  {plantilla && (
+                    <FormField
+                      control={control}
+                      name="itemNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
+                            <Hash className="h-2.5 w-2.5" />
+                            Item Number / ID
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g., ITEM-2024-001"
+                              className="h-8 text-xs"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                </ScrollArea>
+                </div>
 
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAddSlot}
-                    variant="outline"
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                  >
-                    <ListPlus className="h-4 w-4 mr-1" />
-                    Add Slot
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={slots.fields.length === 0}
-                    size="sm"
-                    onClick={handleResetSlots}
-                    variant="outline"
-                    className="border-red-200 text-red-700 hover:bg-red-50"
-                  >
-                    <ListX className="h-4 w-4 mr-1" />
-                    Clear All
-                  </Button>
+                <div className="border rounded-md bg-white overflow-hidden">
+                  <div className="px-2.5 py-1.5 border-b bg-gray-50 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-blue-500" />
+                      <h4 className="text-[10px] font-semibold text-gray-700">
+                        Slots
+                      </h4>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {slots.fields.length} slot
+                      {slots.fields.length === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+
+                  <div className="p-2 space-y-2">
+                    {slots.fields.length === 0 ? (
+                      <div className="flex items-start gap-1.5 p-2 bg-amber-50 border border-amber-100 rounded">
+                        <AlertCircle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-[10px] text-amber-700">
+                          Add at least one slot before continuing.
+                        </p>
+                      </div>
+                    ) : (
+                      slots.fields.map((_, i) => (
+                        <div
+                          key={i}
+                          className="border rounded bg-gray-50/40 p-2 space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              Slot #{i + 1}
+                            </Badge>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-[10px] gap-1 text-red-600 hover:bg-red-50"
+                              onClick={() => handleRemoveSlot(i)}
+                            >
+                              <X className="h-3 w-3" />
+                              Remove
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <FormField
+                              control={control}
+                              name={`slot.${i}.occupied`}
+                              render={({ field }) => (
+                                <FormItem className="flex items-start gap-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      className="mt-0.5"
+                                    />
+                                  </FormControl>
+                                  <div className="leading-tight">
+                                    <FormLabel className="text-[11px] font-medium cursor-pointer">
+                                      Occupied
+                                    </FormLabel>
+                                    <p className="text-[10px] text-gray-500">
+                                      Slot is currently filled
+                                    </p>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={control}
+                              name={`slot.${i}.salaryGrade`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                                    Salary Grade
+                                  </FormLabel>
+                                  <FormControl>
+                                    <SalaryGradeSelect
+                                      lineId={lineId}
+                                      token={token}
+                                      onChange={field.onChange}
+                                      value={field.value}
+                                    />
+                                  </FormControl>
+                                  <FormMessage className="text-[10px]" />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAddSlot}
+                        className="h-7 text-[10px] gap-1.5"
+                      >
+                        <ListPlus className="h-3 w-3" />
+                        Add Slot
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={slots.fields.length === 0}
+                        onClick={handleResetSlots}
+                        className="h-7 text-[10px] gap-1.5 text-red-600 hover:bg-red-50"
+                      >
+                        <ListX className="h-3 w-3" />
+                        Clear All
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </Form>
+          </>
+        )}
 
-              <Separator />
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={handlePrev}
-                  className="border-gray-200"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleNextStep}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  Continue
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </Form>
-        </>
-      ) : (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-6 text-center">
-            <AlertCircle className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-            <p className="text-orange-700">Invalid selected item</p>
-            <p className="text-sm text-orange-600 mt-1">
-              Please go back and select a position
+        {step === 1 && !selected && (
+          <div className="border rounded-md bg-amber-50 border-amber-200 p-3 text-center">
+            <AlertCircle className="h-6 w-6 text-amber-500 mx-auto mb-1" />
+            <p className="text-xs font-semibold text-amber-800">
+              No position selected
+            </p>
+            <p className="text-[10px] text-amber-700 mt-0.5">
+              Go back and pick a position to continue.
             </p>
             <Button
-              type="button"
               size="sm"
-              onClick={handlePrev}
-              className="mt-4"
               variant="outline"
+              onClick={back}
+              className="h-7 text-[10px] gap-1.5 mt-2"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Go Back
+              <ChevronLeft className="h-3 w-3" />
+              Back
             </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>,
+          </div>
+        )}
 
-    // Step 2: Review and Confirm
-    <div key="step2" className="space-y-4">
-      {selected ? (
-        <>
-          <Card className="border border-green-200 bg-green-50">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-green-100 rounded-full">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-green-800">Review Details</p>
-                  <p className="text-sm text-green-600">
-                    Please confirm the position details before saving
-                  </p>
-                </div>
+        {/* ── Step 2: review ──────────────────────────────────────── */}
+        {step === 2 && selected && (
+          <>
+            <div className="border rounded-md bg-emerald-50/60 border-emerald-200 p-2.5 flex items-start gap-2">
+              <div className="p-1.5 bg-emerald-100 rounded">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <p className="text-xs font-semibold text-emerald-800">
+                  Review &amp; Confirm
+                </p>
+                <p className="text-[10px] text-emerald-700 mt-0.5">
+                  Double-check before saving — these settings tie the
+                  position to this unit.
+                </p>
+              </div>
+            </div>
 
-          <Card className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 py-1 border-b">
-                  <span className="text-sm font-medium text-gray-500">
-                    Position:
-                  </span>
-                  <span className="text-sm font-semibold text-gray-800 col-span-2">
-                    {selected.name}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1 border-b">
-                  <span className="text-sm font-medium text-gray-500">
-                    Designation:
-                  </span>
-                  <span className="text-sm text-gray-800 col-span-2">
-                    {designation || (
-                      <span className="text-gray-400">Not specified</span>
-                    )}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1 border-b">
-                  <span className="text-sm font-medium text-gray-500">
-                    Item Number:
-                  </span>
-                  <span className="text-sm font-mono text-gray-800 col-span-2">
-                    {itemNumber || (
-                      <span className="text-gray-400">Not specified</span>
-                    )}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1 border-b">
-                  <span className="text-sm font-medium text-gray-500">
-                    Plantilla:
-                  </span>
-                  <span className="text-sm col-span-2">
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50">
+                <h4 className="text-xs font-semibold text-gray-800">
+                  Summary
+                </h4>
+              </div>
+              <div className="p-3 space-y-2 text-[11px]">
+                <SummaryRow label="Position" value={selected.name} />
+                <SummaryRow
+                  label="Designation"
+                  value={designation || "Not specified"}
+                />
+                <SummaryRow
+                  label="Item Number"
+                  value={
+                    <span className="font-mono">
+                      {itemNumber || "Not specified"}
+                    </span>
+                  }
+                />
+                <SummaryRow
+                  label="Plantilla"
+                  value={
                     <Badge
-                      variant={plantilla ? "default" : "secondary"}
-                      className="px-3"
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 ${
+                        plantilla
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : "bg-gray-50 text-gray-600"
+                      }`}
                     >
                       {plantilla ? "YES" : "NO"}
                     </Badge>
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1">
-                  <span className="text-sm font-medium text-gray-500">
-                    Slots:
-                  </span>
-                  <span className="text-sm col-span-2">
-                    <Badge variant="outline" className="px-3">
-                      {slots.fields.length}{" "}
-                      {slots.fields.length === 1 ? "Slot" : "Slots"} Configured
+                  }
+                />
+                <SummaryRow
+                  label="Slots"
+                  value={
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {slots.fields.length} configured
                     </Badge>
-                  </span>
-                </div>
+                  }
+                />
 
                 {slots.fields.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="pt-2 border-t mt-2 space-y-1.5">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
                       Slot Details
                     </p>
-                    {slots.fields.map((slot, index) => (
+                    {slots.fields.map((slot, i) => (
                       <div
-                        key={index}
-                        className="bg-gray-50 rounded-lg p-2 text-sm"
+                        key={i}
+                        className="bg-gray-50 rounded px-2 py-1.5 flex items-center justify-between"
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Slot #{index + 1}</span>
-                          <Badge variant="outline" className="text-xs">
+                        <span className="text-[11px] font-medium text-gray-800">
+                          Slot #{i + 1}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-gray-500">
+                            SG: {slot.salaryGrade || "—"}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] px-1.5 py-0 ${
+                              slot.occupied
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}
+                          >
                             {slot.occupied ? "Occupied" : "Vacant"}
                           </Badge>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
-                          Salary Grade: {slot.salaryGrade || "Not set"}
-                        </p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </>
+        )}
+      </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-end gap-2 pt-2">
+      {/* Step nav */}
+      <div className="px-3 py-2 border-t bg-white flex items-center justify-between gap-2 flex-shrink-0">
+        <div className="text-[10px] text-gray-500">
+          Step {step + 1} of {STEP_LABELS.length}
+        </div>
+        <div className="flex items-center gap-1.5">
+          {step > 0 && (
             <Button
-              type="button"
               size="sm"
               variant="outline"
-              onClick={handlePrev}
-              className="border-gray-200"
+              onClick={back}
+              disabled={submitMut.isPending || isSubmitting}
+              className="h-7 text-[10px] gap-1.5"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-3 w-3" />
               Back
             </Button>
+          )}
+          {step < STEP_LABELS.length - 1 && (
             <Button
-              type="button"
               size="sm"
-              onClick={handleSubmit(onSubmit)}
-              disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white min-w-[100px]"
+              onClick={next}
+              disabled={step === 0 && !selected}
+              className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
             >
-              {isSubmitting ? (
+              Continue
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          )}
+          {step === STEP_LABELS.length - 1 && (
+            <Button
+              size="sm"
+              onClick={handleSubmit((v) => submitMut.mutateAsync(v))}
+              disabled={submitMut.isPending || isSubmitting}
+              className="h-7 text-[10px] gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            >
+              {submitMut.isPending || isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-1" />
+                  <Save className="h-3 w-3" />
                   Save Position
                 </>
               )}
             </Button>
-          </div>
-        </>
-      ) : (
-        <div></div>
-      )}
-    </div>,
-  ];
-
-  return (
-    <div className="w-full h-full bg-white rounded-lg">
-      {/* Progress Header */}
-      <div className="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
-        <AddExistPositionProgress index={step} />
-        <p className="text-xs text-gray-500 mt-2 text-center">
-          Step {step + 1} of 3:{" "}
-          {step === 0
-            ? "Select Position"
-            : step === 1
-              ? "Configure Details"
-              : "Review & Confirm"}
-        </p>
+          )}
+        </div>
       </div>
-
-      {/* Content Area */}
-      <div className="p-4">{steps[step]}</div>
     </div>
   );
 };
+
+const SummaryRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div className="flex items-center justify-between gap-2">
+    <span className="text-[10px] text-gray-500 uppercase tracking-wide">
+      {label}
+    </span>
+    <span className="text-gray-800 text-right truncate max-w-[60%]">
+      {value ?? "—"}
+    </span>
+  </div>
+);
 
 export default SelectUnitPosition;

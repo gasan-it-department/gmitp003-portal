@@ -1,27 +1,44 @@
+import { useState } from "react";
 import { Outlet } from "react-router";
 import "./App.css";
 
-//i
 import SideBarProfile from "./layout/SideBarProfile";
 import MainHeader from "./layout/MainHeader";
 
-//icons
-
 function App() {
+  // Mobile drawer state for the right side panel. On lg+ the panel is
+  // always visible; below lg the user toggles it from the header.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
-    <div className=" w-full h-screen flex bg-neutral-100">
-      <div className=" w-full lg:w-2/3 h-full">
-        <div className=" w-full h-[10%]">
-          <MainHeader />
-        </div>
-        <div className=" w-full h-[90%]">
+    <div className="w-full h-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+
+      {/* ── Main column ────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <MainHeader onToggleDrawer={() => setDrawerOpen((v) => !v)} />
+        <div className="flex-1 min-h-0 overflow-hidden">
           <Outlet />
         </div>
-        {/* <p className=" font-medium text-neutral-800">Control Panel</p> */}
       </div>
-      <div className=" hidden lg:block lg:w-1/3 h-full border border-y-0 border-r-0">
+
+      {/* ── Right side panel (Notifications + Profile) ─────────────── */}
+      {/* Desktop: always visible at lg+, fixed width */}
+      <aside className="hidden lg:flex w-80 xl:w-96 h-full border-l bg-white flex-shrink-0">
         <SideBarProfile />
-      </div>
+      </aside>
+
+      {/* Mobile drawer */}
+      {drawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <aside className="fixed top-0 right-0 h-full w-[85vw] max-w-sm bg-white border-l z-50 lg:hidden flex flex-col">
+            <SideBarProfile onClose={() => setDrawerOpen(false)} />
+          </aside>
+        </>
+      )}
     </div>
   );
 }

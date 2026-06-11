@@ -40,12 +40,12 @@ const AddSupplyOrder = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-3 flex-1 min-h-0">
-        <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_22rem] gap-3">
+    <div className="w-full bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_22rem] gap-3 items-start">
 
-          {/* ── Left Panel: Item picker ──────────────────────────────────── */}
-          <div className="border rounded-lg bg-white overflow-hidden flex flex-col min-h-0">
+          {/* ── Left Panel: Item picker (grows with modal scroll) ──────── */}
+          <div className="order-2 lg:order-none min-w-0 overflow-hidden border rounded-lg bg-white flex flex-col">
             {/* Header */}
             <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
@@ -111,8 +111,8 @@ const AddSupplyOrder = () => {
               )}
             </div>
 
-            {/* Items list (scrollable) */}
-            <div className="flex-1 overflow-auto">
+            {/* Items list (flows with modal scroll) */}
+            <div className="min-h-0">
               {currentDataSet ? (
                 <DataSetItemSelect
                   id={currentDataSet}
@@ -134,8 +134,8 @@ const AddSupplyOrder = () => {
             </div>
           </div>
 
-          {/* ── Right Panel: Order details ───────────────────────────────── */}
-          <div className="border rounded-lg bg-white overflow-hidden flex flex-col min-h-0">
+          {/* ── Right Panel: Order details (sticky to modal viewport) ──── */}
+          <div className="order-1 lg:order-none sticky top-0 z-10 border rounded-lg bg-white flex flex-col max-h-[calc(90vh-1.5rem)] overflow-hidden shadow-sm">
             <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="h-3 w-3 text-blue-500" />
@@ -153,7 +153,7 @@ const AddSupplyOrder = () => {
               )}
             </div>
 
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-auto">
               {selected ? (
                 <div className="p-3">
                   <AddItemOrder selected={selected} setSelected={setSelected} />

@@ -1,26 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/provider/ProtectedRoute";
 import { useState } from "react";
-//
+import { useQuery } from "@tanstack/react-query";
+
+import { useAuth } from "@/provider/ProtectedRoute";
+import { getApplicationData } from "@/db/statement";
 import {
   formatPureDate,
   formatDate,
   calculateExperienceDuration,
 } from "@/utils/date";
 import { calculateAge, applicantionStatus } from "@/utils/helper";
-//
-import { getApplicationData } from "@/db/statement";
-//
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Spinner } from "@/components/ui/spinner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Modal from "@/components/custom/Modal";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Modal from "@/components/custom/Modal";
 import ApplicationDataShow from "./ApplicationDataShow";
-//icons
+import ContactApplicant from "./ContactApplicant";
+
 import {
   User,
   Mail,
@@ -36,17 +32,72 @@ import {
   Shield,
   BookMarked,
   Lightbulb,
-  //MessageSquareText,
   PhoneOutgoing,
+  Loader2,
+  Calendar,
 } from "lucide-react";
-//interface/Schema/props
+
 import type { SubmittedApplicationProps } from "@/interface/data";
-import ContactApplicant from "./ContactApplicant";
 
 interface Props {
   applicationId?: string;
 }
 
+// ── Reusable building blocks (kept tiny + co-located so we don't bloat
+// the file tree for one screen) ─────────────────────────────────────────
+const Section = ({
+  icon,
+  title,
+  count,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) => (
+  <div className="border rounded-lg bg-white overflow-hidden">
+    <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+      {icon}
+      <h3 className="text-xs font-semibold text-gray-800">{title}</h3>
+      {typeof count === "number" && (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-auto">
+          {count}
+        </Badge>
+      )}
+    </div>
+    <div className="p-3">{children}</div>
+  </div>
+);
+
+const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div>
+    <p className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</p>
+    <p className="text-xs text-gray-800 mt-0.5 break-words">{value ?? "—"}</p>
+  </div>
+);
+
+const TimelineItem = ({
+  accent,
+  title,
+  trailing,
+  children,
+}: {
+  accent: string;
+  title: React.ReactNode;
+  trailing?: React.ReactNode;
+  children?: React.ReactNode;
+}) => (
+  <div className={`border-l-2 ${accent} pl-2.5 py-1`}>
+    <div className="flex items-start justify-between gap-2 mb-0.5">
+      <p className="text-[11px] font-semibold text-gray-900">{title}</p>
+      {trailing}
+    </div>
+    <div className="space-y-0.5 text-[10px] text-gray-600">{children}</div>
+  </div>
+);
+
+// ── Main component ─────────────────────────────────────────────────────
 const ApplicationData = ({ applicationId }: Props) => {
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [onOpen, setOnOpen] = useState(0);
@@ -62,23 +113,12 @@ const ApplicationData = ({ applicationId }: Props) => {
     refetchOnWindowFocus: false,
   });
 
-  const progressButton = [
-    <Button size="sm" onClick={() => setOnOpen(1)}>
-      <PhoneOutgoing />
-      Contact Applicant
-    </Button>,
-    <Button size="sm">View Status</Button>,
-    <Button size="sm" disabled={data?.status === 2}>
-      Concluded
-    </Button>,
-  ];
-
-  if (isFetching) {
+  if (isFetching && !data) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <Spinner className="w-8 h-8 mx-auto mb-4" />
-          <p className="text-gray-600">Loading application data...</p>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-1.5 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading application...</p>
         </div>
       </div>
     );
@@ -86,878 +126,692 @@ const ApplicationData = ({ applicationId }: Props) => {
 
   if (!data) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="font-semibold text-gray-800 text-lg mb-2">
-            Application Not Found
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-xs font-semibold text-gray-800">
+            Application not found
           </p>
-          <p className="text-gray-600">
-            The application data could not be loaded or doesn't exist.
+          <p className="text-[10px] text-gray-500 mt-1">
+            The application data could not be loaded.
           </p>
         </div>
       </div>
     );
   }
 
+  const fullName = [
+    data.firstname,
+    data.middleName,
+    data.lastname,
+    data.suffix,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const resAddress = [
+    data.reshouseBlock,
+    data.resStreet,
+    data.resSub,
+    data.resBarangay,
+    data.resCity,
+    data.resProvince,
+    data.resZipCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const permaAddress = [
+    data.permahouseBlock,
+    data.permaStreet,
+    data.permaSub,
+    data.permaBarangay,
+    data.permaCity,
+    data.permaProvince,
+    data.permaZipCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
-    <ScrollArea className="w-full h-full">
-      <div className="p-6 space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div>
-            <div className=" w-auto flex items-center gap-4">
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-3 max-w-6xl mx-auto space-y-3">
+
+        {/* Header card */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="p-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <ApplicationDataShow
                 showData={
-                  <div className=" w-full flex justify-center">
-                    <Avatar className=" w-40 h-40">
+                  <div className="w-full flex justify-center">
+                    <Avatar className="w-40 h-40">
                       <AvatarImage
                         src={data.profilePic?.file_url}
                         alt={data.profilePic?.file_name}
                       />
-                      <AvatarFallback>ER</AvatarFallback>
+                      <AvatarFallback>
+                        {fullName
+                          .split(" ")
+                          .map((s) => s[0])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                   </div>
                 }
                 isOpen={openModal === "profile"}
                 setIsOpen={(open) => setOpenModal(open ? "profile" : null)}
-                title={`Applicant Photo`}
+                title="Applicant Photo"
               >
-                <Avatar className=" w-12 h-12">
+                <Avatar className="h-10 w-10 cursor-pointer">
                   <AvatarImage
                     src={data.profilePic?.file_url}
                     alt={data.profilePic?.file_name}
                   />
-                  <AvatarFallback>ER</AvatarFallback>
+                  <AvatarFallback className="text-xs">
+                    {fullName
+                      .split(" ")
+                      .map((s) => s[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               </ApplicationDataShow>
 
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {data.firstname} {data.middleName || ""} {data.lastname}{" "}
-                {data.suffix || ""}
-              </h1>
+              <div className="min-w-0">
+                <h1 className="text-sm font-semibold text-gray-900 truncate">
+                  {fullName || "Unnamed applicant"}
+                </h1>
+                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                  {data.forPosition && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200"
+                    >
+                      {data.forPosition.name}
+                    </Badge>
+                  )}
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0"
+                  >
+                    {applicantionStatus[data.status + 1] ?? "—"}
+                  </Badge>
+                  <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
+                    <Calendar className="h-2.5 w-2.5" />
+                    Applied {formatDate(data.timestamp)}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {data.forPosition && (
-                <Badge variant="secondary" className="text-sm">
-                  {data.forPosition.name}
-                </Badge>
-              )}
-              <Badge variant={data.status === 1 ? "default" : "outline"}>
-                {applicantionStatus[data.status + 1]}
-              </Badge>
-              <span className="text-sm text-gray-500">
-                Applied on {formatDate(data.timestamp)}
-              </span>
-            </div>
+            <Button
+              size="sm"
+              onClick={() => setOnOpen(1)}
+              className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+            >
+              <PhoneOutgoing className="h-3 w-3" />
+              Contact Applicant
+            </Button>
           </div>
-          <div className="flex gap-2">{progressButton[data.status]}</div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Personal Information */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Personal Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Full Name
-                    </label>
-                    <p className="text-gray-900">
-                      {data.firstname} {data.middleName || ""} {data.lastname}{" "}
-                      {data.suffix || ""}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Birth Date & Age
-                    </label>
-                    <p className="text-gray-900">
-                      {formatPureDate(data.birthDate)} (
-                      {calculateAge(data.birthDate)} years old)
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Gender
-                    </label>
-                    <p className="text-gray-900 capitalize">{data.gender}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Civil Status
-                    </label>
-                    <p className="text-gray-900 capitalize">
-                      {data.civilStatus}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Citizenship
-                    </label>
-                    <p className="text-gray-900">
+        {/* Body grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+
+          {/* ── Left column (2/3) ─────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-3">
+
+            <Section
+              icon={<User className="h-3 w-3 text-blue-500" />}
+              title="Personal Information"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Field label="Full Name" value={fullName} />
+                <Field
+                  label="Birth Date & Age"
+                  value={
+                    data.birthDate
+                      ? `${formatPureDate(data.birthDate)} (${calculateAge(data.birthDate)} yrs)`
+                      : "—"
+                  }
+                />
+                <Field label="Gender" value={data.gender} />
+                <Field label="Civil Status" value={data.civilStatus} />
+                <Field
+                  label="Citizenship"
+                  value={
+                    <>
                       {data.filipino ? "Filipino" : "Foreigner"}
                       {data.dualCitizen &&
-                        `, Dual Citizen (${data.dualCitizenHalf})`}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Blood Type
-                    </label>
-                    <p className="text-gray-900">
-                      {data.bloodType || "Not specified"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        `, Dual (${data.dualCitizenHalf ?? ""})`}
+                    </>
+                  }
+                />
+                <Field label="Blood Type" value={data.bloodType} />
+              </div>
+            </Section>
 
-            {/* Work Experience */}
             {data.experience && data.experience.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Briefcase className="w-5 h-5" />
-                    Work Experience
-                    <Badge variant="outline" className="ml-2">
-                      {data.experience.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.experience.map((exp, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-blue-500 pl-4 py-2"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          {exp.position || "Position"}
-                        </h4>
-                        <Badge variant="secondary" className="mt-1 sm:mt-0">
+              <Section
+                icon={<Briefcase className="h-3 w-3 text-blue-500" />}
+                title="Work Experience"
+                count={data.experience.length}
+              >
+                <div className="space-y-2">
+                  {data.experience.map((exp, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-blue-500"
+                      title={exp.position || "Position"}
+                      trailing={
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0"
+                        >
                           {calculateExperienceDuration(exp.from, exp.to)}
                         </Badge>
-                      </div>
-                      <p className="text-gray-700 font-medium">
+                      }
+                    >
+                      <p className="text-[11px] font-medium text-gray-800">
                         {exp.department || exp.employer}
                       </p>
-                      <p className="text-sm text-gray-600">
-                        {formatPureDate(exp.from)} -{" "}
+                      <p>
+                        {formatPureDate(exp.from)} —{" "}
                         {exp.to ? formatPureDate(exp.to) : "Present"}
                       </p>
-
                       {exp.statusOfAppointment && (
-                        <p className="text-sm text-gray-600">
-                          Status: {exp.statusOfAppointment}
-                        </p>
+                        <p>Status: {exp.statusOfAppointment}</p>
                       )}
                       {!exp.govService && (
-                        <Badge variant="outline" className="mt-1">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 mt-1"
+                        >
                           Government Service
                         </Badge>
                       )}
-                    </div>
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
 
-            {/* Civil Service Eligibility */}
             {data.civilService && data.civilService.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="w-5 h-5" />
-                    Civil Service Eligibility
-                    <Badge variant="outline" className="ml-2">
-                      {data.civilService.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.civilService.map((eligibility, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-green-500 pl-4 py-2"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">
-                          {eligibility.title}
-                        </h4>
-                        <Badge variant="secondary">
-                          Rating: {eligibility.rating}
+              <Section
+                icon={<Award className="h-3 w-3 text-blue-500" />}
+                title="Civil Service Eligibility"
+                count={data.civilService.length}
+              >
+                <div className="space-y-2">
+                  {data.civilService.map((e, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-emerald-500"
+                      title={e.title}
+                      trailing={
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          Rating: {e.rating}
                         </Badge>
-                      </div>
-                      <p className="text-gray-700">{eligibility.type}</p>
-                      <p className="text-sm text-gray-600">
-                        Date: {formatPureDate(eligibility.date)}
-                      </p>
-                      {eligibility.placeOfExam && (
-                        <p className="text-sm text-gray-600">
-                          Place of Exam: {eligibility.placeOfExam}
-                        </p>
-                      )}
-                      {eligibility.number && (
-                        <p className="text-sm text-gray-600">
-                          License Number: {eligibility.number}
-                        </p>
-                      )}
-                      {eligibility.validity && (
-                        <p className="text-sm text-gray-600">
-                          Validity: {eligibility.validity}
-                        </p>
-                      )}
-                    </div>
+                      }
+                    >
+                      <p>{e.type}</p>
+                      <p>Date: {formatPureDate(e.date)}</p>
+                      {e.placeOfExam && <p>Place: {e.placeOfExam}</p>}
+                      {e.number && <p>License: {e.number}</p>}
+                      {e.validity && <p>Validity: {e.validity}</p>}
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
 
-            {/* Educational Background */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5" />
-                  Educational Background
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Elementary */}
-                {data.elementary && (
-                  <div className="border-l-4 border-purple-500 pl-4 py-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      Elementary
-                    </h4>
-                    <p className="text-gray-700">{data.elementary.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {data.elementary.from} - {data.elementary.to}
-                    </p>
-                    {data.elementary.highestLevel && (
-                      <p className="text-sm text-gray-600">
-                        Highest Level: {data.elementary.highestLevel}
+            <Section
+              icon={<GraduationCap className="h-3 w-3 text-blue-500" />}
+              title="Educational Background"
+            >
+              <div className="space-y-2.5">
+                {(
+                  [
+                    { level: "Elementary", entry: data.elementary, accent: "border-purple-500" },
+                    { level: "Secondary",  entry: data.secondary,  accent: "border-blue-500" },
+                    { level: "Vocational", entry: data.vocational, accent: "border-orange-500" },
+                    { level: "College",    entry: data.college,    accent: "border-emerald-500" },
+                    { level: "Graduate Studies", entry: data.graduateCollege, accent: "border-red-500" },
+                  ] as const
+                )
+                  .filter((e) => e.entry)
+                  .map(({ level, entry, accent }) => (
+                    <TimelineItem
+                      key={level}
+                      accent={accent}
+                      title={
+                        <>
+                          {level}
+                          {entry!.name && (
+                            <span className="text-[10px] font-normal text-gray-500 ml-1">
+                              · {entry!.name}
+                            </span>
+                          )}
+                        </>
+                      }
+                    >
+                      <p>
+                        {entry!.from} — {entry!.to || "Present"}
                       </p>
-                    )}
-                    {data.elementary.yearGraduated && (
-                      <p className="text-sm text-gray-600">
-                        Year Graduated: {data.elementary.yearGraduated}
-                      </p>
-                    )}
-                    {data.elementary.honors && (
-                      <p className="text-sm text-gray-600">
-                        Honors: {data.elementary.honors}
-                      </p>
-                    )}
-                  </div>
-                )}
+                      {(entry as any).degree && <p>Degree: {(entry as any).degree}</p>}
+                      {entry!.highestLevel && (
+                        <p>Highest Level: {entry!.highestLevel}</p>
+                      )}
+                      {entry!.yearGraduated && (
+                        <p>Year Graduated: {entry!.yearGraduated}</p>
+                      )}
+                      {entry!.honors && <p>Honors: {entry!.honors}</p>}
+                      {(entry as any).unitsEarned && (
+                        <p>Units Earned: {(entry as any).unitsEarned}</p>
+                      )}
+                    </TimelineItem>
+                  ))}
+              </div>
+            </Section>
 
-                {/* Secondary */}
-                {data.secondary && (
-                  <div className="border-l-4 border-blue-500 pl-4 py-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      Secondary
-                    </h4>
-                    <p className="text-gray-700">{data.secondary.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {data.secondary.from} - {data.secondary.to}
-                    </p>
-                    {data.secondary.highestLevel && (
-                      <p className="text-sm text-gray-600">
-                        Highest Level: {data.secondary.highestLevel}
-                      </p>
-                    )}
-                    {data.secondary.yearGraduated && (
-                      <p className="text-sm text-gray-600">
-                        Year Graduated: {data.secondary.yearGraduated}
-                      </p>
-                    )}
-                    {data.secondary.honors && (
-                      <p className="text-sm text-gray-600">
-                        Honors: {data.secondary.honors}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Vocational */}
-                {data.vocational && (
-                  <div className="border-l-4 border-orange-500 pl-4 py-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      Vocational/Trade Course
-                    </h4>
-                    <p className="text-gray-700">{data.vocational.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {data.vocational.from} - {data.vocational.to}
-                    </p>
-                    {data.vocational.highestLevel && (
-                      <p className="text-sm text-gray-600">
-                        Highest Level: {data.vocational.highestLevel}
-                      </p>
-                    )}
-                    {data.vocational.yearGraduated && (
-                      <p className="text-sm text-gray-600">
-                        Year Graduated: {data.vocational.yearGraduated}
-                      </p>
-                    )}
-                    {data.vocational.honors && (
-                      <p className="text-sm text-gray-600">
-                        Honors: {data.vocational.honors}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* College */}
-                {data.college && (
-                  <div className="border-l-4 border-green-500 pl-4 py-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      College
-                    </h4>
-                    <p className="text-gray-700">{data.college.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {data.college.from} - {data.college.to}
-                    </p>
-                    {data.college.degree && (
-                      <p className="text-sm text-gray-600">
-                        Degree: {data.college.degree}
-                      </p>
-                    )}
-                    {data.college.highestLevel && (
-                      <p className="text-sm text-gray-600">
-                        Highest Level: {data.college.highestLevel}
-                      </p>
-                    )}
-                    {data.college.yearGraduated && (
-                      <p className="text-sm text-gray-600">
-                        Year Graduated: {data.college.yearGraduated}
-                      </p>
-                    )}
-                    {data.college.honors && (
-                      <p className="text-sm text-gray-600">
-                        Honors: {data.college.honors}
-                      </p>
-                    )}
-                    {data.college.unitsEarned && (
-                      <p className="text-sm text-gray-600">
-                        Units Earned: {data.college.unitsEarned}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Graduate Studies */}
-                {data.graduateCollege && (
-                  <div className="border-l-4 border-red-500 pl-4 py-2">
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      Graduate Studies
-                    </h4>
-                    <p className="text-gray-700">{data.graduateCollege.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {data.graduateCollege.from} - {data.graduateCollege.to}
-                    </p>
-                    {data.graduateCollege.degree && (
-                      <p className="text-sm text-gray-600">
-                        Degree: {data.graduateCollege.degree}
-                      </p>
-                    )}
-                    {data.graduateCollege.highestLevel && (
-                      <p className="text-sm text-gray-600">
-                        Highest Level: {data.graduateCollege.highestLevel}
-                      </p>
-                    )}
-                    {data.graduateCollege.yearGraduated && (
-                      <p className="text-sm text-gray-600">
-                        Year Graduated: {data.graduateCollege.yearGraduated}
-                      </p>
-                    )}
-                    {data.graduateCollege.honors && (
-                      <p className="text-sm text-gray-600">
-                        Honors: {data.graduateCollege.honors}
-                      </p>
-                    )}
-                    {data.graduateCollege.unitsEarned && (
-                      <p className="text-sm text-gray-600">
-                        Units Earned: {data.graduateCollege.unitsEarned}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Voluntary Work */}
             {data.voluntaryWork && data.voluntaryWork.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Heart className="w-5 h-5" />
-                    Voluntary Work
-                    <Badge variant="outline" className="ml-2">
-                      {data.voluntaryWork.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.voluntaryWork.map((work, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-pink-500 pl-4 py-2"
+              <Section
+                icon={<Heart className="h-3 w-3 text-blue-500" />}
+                title="Voluntary Work"
+                count={data.voluntaryWork.length}
+              >
+                <div className="space-y-2">
+                  {data.voluntaryWork.map((w, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-pink-500"
+                      title={w.organization}
                     >
-                      <h4 className="font-semibold text-gray-900 mb-1">
-                        {work.organization}
-                      </h4>
-                      <p className="text-gray-700">{work.position}</p>
-                      <p className="text-sm text-gray-600">
-                        {formatPureDate(work.from)} -{" "}
-                        {work.to ? formatPureDate(work.to) : "Present"}
+                      <p className="text-[11px] font-medium text-gray-800">
+                        {w.position}
                       </p>
-                      {work.hours && (
-                        <p className="text-sm text-gray-600">
-                          {work.hours} hours
-                        </p>
-                      )}
-                    </div>
+                      <p>
+                        {formatPureDate(w.from)} —{" "}
+                        {w.to ? formatPureDate(w.to) : "Present"}
+                      </p>
+                      {w.hours && <p>{w.hours} hours</p>}
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
 
-            {/* Learning and Development */}
             {data.learningDev && data.learningDev.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5" />
-                    Learning & Development
-                    <Badge variant="outline" className="ml-2">
-                      {data.learningDev.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.learningDev.map((training, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-yellow-500 pl-4 py-2"
+              <Section
+                icon={<Lightbulb className="h-3 w-3 text-blue-500" />}
+                title="Learning & Development"
+                count={data.learningDev.length}
+              >
+                <div className="space-y-2">
+                  {data.learningDev.map((t, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-yellow-500"
+                      title={t.title}
+                      trailing={
+                        t.type && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0"
+                          >
+                            {t.type}
+                          </Badge>
+                        )
+                      }
                     >
-                      <h4 className="font-semibold text-gray-900 mb-1">
-                        {training.title}
-                      </h4>
-                      <p className="text-gray-700">{training.conductedBy}</p>
-                      <p className="text-sm text-gray-600">
-                        {formatPureDate(training.from)} -{" "}
-                        {training.to ? formatPureDate(training.to) : "Present"}
+                      <p className="text-[11px] font-medium text-gray-800">
+                        {t.conductedBy}
                       </p>
-                      {training.hours && (
-                        <p className="text-sm text-gray-600">
-                          {training.hours} hours
-                        </p>
-                      )}
-                      {training.type && (
-                        <Badge variant="outline" className="mt-1">
-                          {training.type}
-                        </Badge>
-                      )}
-                    </div>
+                      <p>
+                        {formatPureDate(t.from)} —{" "}
+                        {t.to ? formatPureDate(t.to) : "Present"}
+                      </p>
+                      {t.hours && <p>{t.hours} hours</p>}
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
 
-            {/* Other Information */}
             {data.otherInfo && data.otherInfo.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookMarked className="w-5 h-5" />
-                    Other Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.otherInfo.map((info, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-gray-500 pl-4 py-2"
+              <Section
+                icon={<BookMarked className="h-3 w-3 text-blue-500" />}
+                title="Other Information"
+                count={data.otherInfo.length}
+              >
+                <div className="space-y-2">
+                  {data.otherInfo.map((info, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-gray-400"
+                      title={info.specialSkills}
                     >
-                      <h4 className="font-semibold text-gray-900 mb-1">
-                        {info.specialSkills}
-                      </h4>
-                      <p className="text-gray-700">{info.recognition}</p>
-                      {info.membership && (
-                        <p className="text-sm text-gray-600">
-                          Membership: {info.membership}
-                        </p>
-                      )}
-                    </div>
+                      {info.recognition && <p>{info.recognition}</p>}
+                      {info.membership && <p>Membership: {info.membership}</p>}
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
 
-            {/* References */}
             {data.references && data.references.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    References
-                    <Badge variant="outline" className="ml-2">
-                      {data.references.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {data.references.map((ref, index) => (
-                    <div
-                      key={index}
-                      className="border-l-4 border-indigo-500 pl-4 py-2"
+              <Section
+                icon={<Users className="h-3 w-3 text-blue-500" />}
+                title="References"
+                count={data.references.length}
+              >
+                <div className="space-y-2">
+                  {data.references.map((r, i) => (
+                    <TimelineItem
+                      key={i}
+                      accent="border-indigo-500"
+                      title={`${r.name}${r.position ? " — " + r.position : ""}`}
                     >
-                      <h4 className="font-semibold text-gray-900 mb-1">
-                        {ref.name} - {ref.position}
-                      </h4>
-                      <p className="text-gray-700">{ref.company}</p>
-                      <p className="text-sm text-gray-600">{ref.address}</p>
-                      <p className="text-sm text-gray-600">
-                        Tel: {ref.telephone}
+                      <p className="text-[11px] font-medium text-gray-800">
+                        {r.company}
                       </p>
-                    </div>
+                      {r.address && <p>{r.address}</p>}
+                      {r.telephone && <p>Tel: {r.telephone}</p>}
+                    </TimelineItem>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
           </div>
 
-          {/* Right Column - Additional Information */}
-          <div className="space-y-6">
-            {/* Contact Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="w-5 h-5" />
-                  Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      Email Address
-                    </label>
-                    <p className="text-gray-900">{data.email}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Mobile Number
-                    </label>
-                    <p className="text-gray-900">{data.mobileNo}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Telephone Number
-                    </label>
-                    <p className="text-gray-900">
-                      {data.teleNo || "Not provided"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* ── Right column (1/3) ────────────────────────────────── */}
+          <div className="space-y-3">
 
-            {/* Address Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Address Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-2">
-                    <Home className="w-4 h-4" />
-                    Residential Address
-                  </label>
-                  <p className="text-gray-900 text-sm">
-                    {[
-                      data.reshouseBlock,
-                      data.resStreet,
-                      data.resSub,
-                      data.resBarangay,
-                      data.resCity,
-                      data.resProvince,
-                      data.resZipCode,
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                </div>
-                <Separator />
-                <div>
-                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2 mb-2">
-                    <MapPin className="w-4 h-4" />
-                    Permanent Address
-                  </label>
-                  <p className="text-gray-900 text-sm">
-                    {[
-                      data.permahouseBlock,
-                      data.permaStreet,
-                      data.permaSub,
-                      data.permaBarangay,
-                      data.permaCity,
-                      data.permaProvince,
-                      data.permaZipCode,
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Physical Attributes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Physical Attributes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Height</span>
-                  <span className="font-medium">{data.height} cm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Weight</span>
-                  <span className="font-medium">{data.weight} kg</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Government IDs */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Government IDs
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {data.tinNo && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">TIN</span>
-                    <span className="font-medium text-sm">{data.tinNo}</span>
-                  </div>
-                )}
-                {data.pagIbigNo && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Pag-IBIG</span>
-                    <span className="font-medium text-sm">
-                      {data.pagIbigNo}
+            <Section
+              icon={<Phone className="h-3 w-3 text-blue-500" />}
+              title="Contact Information"
+            >
+              <div className="space-y-2.5">
+                <Field
+                  label="Email"
+                  value={
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-2.5 w-2.5 text-gray-400" />
+                      {data.email}
                     </span>
-                  </div>
-                )}
-                {data.philHealthNo && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">PhilHealth</span>
-                    <span className="font-medium text-sm">
-                      {data.philHealthNo}
-                    </span>
-                  </div>
-                )}
-                {data.umidNo && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">UMID</span>
-                    <span className="font-medium text-sm">{data.umidNo}</span>
-                  </div>
-                )}
-                {data.philSys && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">PhilSys</span>
-                    <span className="font-medium text-sm">{data.philSys}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  }
+                />
+                <Field label="Mobile" value={data.mobileNo} />
+                <Field label="Telephone" value={data.teleNo} />
+              </div>
+            </Section>
 
-            {/* Family Background */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Family Background
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <Section
+              icon={<MapPin className="h-3 w-3 text-blue-500" />}
+              title="Address"
+            >
+              <div className="space-y-2.5">
+                <Field
+                  label={
+                    <>
+                      <Home className="h-2.5 w-2.5 inline mr-1" />
+                      Residential
+                    </> as any
+                  }
+                  value={resAddress || "—"}
+                />
+                <Field
+                  label="Permanent"
+                  value={permaAddress || "—"}
+                />
+              </div>
+            </Section>
+
+            <Section
+              icon={<User className="h-3 w-3 text-blue-500" />}
+              title="Physical Attributes"
+            >
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field label="Height" value={data.height ? `${data.height} cm` : "—"} />
+                <Field label="Weight" value={data.weight ? `${data.weight} kg` : "—"} />
+              </div>
+            </Section>
+
+            <Section
+              icon={<Shield className="h-3 w-3 text-blue-500" />}
+              title="Government IDs"
+            >
+              <div className="space-y-1.5">
+                {[
+                  { label: "TIN", value: data.tinNo },
+                  { label: "Pag-IBIG", value: data.pagIbigNo },
+                  { label: "PhilHealth", value: data.philHealthNo },
+                  { label: "UMID", value: data.umidNo },
+                  { label: "PhilSys", value: data.philSys },
+                ]
+                  .filter((row) => row.value)
+                  .map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-[10px] text-gray-500">
+                        {row.label}
+                      </span>
+                      <span className="text-[11px] font-mono text-gray-800">
+                        {row.value}
+                      </span>
+                    </div>
+                  ))}
+                {![data.tinNo, data.pagIbigNo, data.philHealthNo, data.umidNo, data.philSys].some(
+                  Boolean,
+                ) && (
+                  <p className="text-[10px] text-gray-400 italic">
+                    No IDs provided.
+                  </p>
+                )}
+              </div>
+            </Section>
+
+            <Section
+              icon={<Users className="h-3 w-3 text-blue-500" />}
+              title="Family"
+            >
+              <div className="space-y-2.5">
                 {data.spouseFirstname && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Spouse
-                    </label>
-                    <p className="text-gray-900 text-sm">
-                      {data.spouseFirstname} {data.spouseMiddle || ""}{" "}
-                      {data.spouseSurname || ""}
-                    </p>
-                  </div>
+                  <Field
+                    label="Spouse"
+                    value={[
+                      data.spouseFirstname,
+                      data.spouseMiddle,
+                      data.spouseSurname,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  />
                 )}
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Father
-                  </label>
-                  <p className="text-gray-900 text-sm">
-                    {data.fatherFirstname} {data.fatherMiddlename || ""}{" "}
-                    {data.fatherSurname || ""}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Mother
-                  </label>
-                  <p className="text-gray-900 text-sm">
-                    {data.motherFirstname} {data.motherMiddlename || ""}{" "}
-                    {data.motherSurname || ""}
-                  </p>
-                </div>
+                <Field
+                  label="Father"
+                  value={[
+                    data.fatherFirstname,
+                    data.fatherMiddlename,
+                    data.fatherSurname,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                />
+                <Field
+                  label="Mother"
+                  value={[
+                    data.motherFirstname,
+                    data.motherMiddlename,
+                    data.motherSurname,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                />
                 {data.children && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">
-                      Children
-                    </label>
-                    <p className="text-gray-900 text-sm">
-                      {(JSON.parse(data.children) as { fullname: string }[])
-                        .length > 0
-                        ? (
-                            JSON.parse(data.children) as { fullname: string }[]
-                          ).map((item) => <p>{item.fullname},</p>)
-                        : "No children listed"}
-                    </p>
-                  </div>
+                  <Field
+                    label="Children"
+                    value={
+                      <ChildrenList raw={data.children as unknown as string} />
+                    }
+                  />
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </Section>
 
-            {/* Application Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Application Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Responses</span>
-                  <Badge variant="outline">
+            <Section
+              icon={<FileText className="h-3 w-3 text-blue-500" />}
+              title="Application Details"
+            >
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-500">Responses</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                     {data.ApplicationResponse?.length || 0}
                   </Badge>
                 </div>
+
                 <ApplicationDataShow
                   showData={
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Attached Files</h3>
+                    <div className="space-y-2">
+                      <h3 className="text-xs font-semibold text-gray-800">
+                        Attached Files
+                      </h3>
                       {data.fileAttached && data.fileAttached.length > 0 ? (
-                        <div className="space-y-2">
-                          {data.fileAttached.map((file, index) => (
+                        <div className="space-y-1.5">
+                          {data.fileAttached.map((file, i) => (
                             <div
-                              key={index}
-                              className="flex items-center gap-3 p-2 border rounded"
+                              key={i}
+                              className="flex items-center gap-2 p-2 border rounded"
                             >
-                              <FileText className="w-4 h-4" />
-                              <span className="text-sm">{file.file_name}</span>
+                              <FileText className="h-3 w-3 text-gray-400" />
+                              <span className="text-[11px] text-gray-800 truncate">
+                                {file.file_name}
+                              </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-500">No files attached</p>
+                        <p className="text-[10px] text-gray-500">
+                          No files attached.
+                        </p>
                       )}
                     </div>
                   }
                   isOpen={openModal === "files"}
                   setIsOpen={(open) => setOpenModal(open ? "files" : null)}
                   title="Attached Files"
-                  className="max-w-2xl"
+                  className="max-w-lg"
                 >
-                  <div className="flex justify-between cursor-pointer hover:bg-gray-50 p-1 rounded">
-                    <span className="text-sm text-gray-500">
+                  <div className="flex justify-between items-center cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                    <span className="text-[10px] text-gray-500">
                       Attached Files
                     </span>
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {data.fileAttached?.length || 0}
                     </Badge>
                   </div>
                 </ApplicationDataShow>
 
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Conversations</span>
-                  <Badge variant="outline">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-gray-500">Conversations</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                     {data.ApplicationConversation?.length || 0}
                   </Badge>
                 </div>
+
                 <ApplicationDataShow
                   showData={
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                       {data.ApplicationSkillTags &&
                       data.ApplicationSkillTags.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {data.ApplicationSkillTags.map((skill, index) => (
-                            <Badge key={index} variant="secondary">
-                              {skill.tags}
+                        <div className="flex flex-wrap gap-1.5">
+                          {data.ApplicationSkillTags.map((s, i) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {s.tags}
                             </Badge>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-500">No skills listed</p>
+                        <p className="text-[10px] text-gray-500">
+                          No skills listed.
+                        </p>
                       )}
                     </div>
                   }
                   isOpen={openModal === "skills"}
                   setIsOpen={(open) => setOpenModal(open ? "skills" : null)}
                   title="Applicant Skills"
-                  className="max-w-2xl"
+                  className="max-w-lg"
                 >
-                  <div className="flex justify-between cursor-pointer hover:bg-gray-50 p-1 rounded">
-                    <span className="text-sm text-gray-500">Skills</span>
-                    <Badge variant="outline">
+                  <div className="flex justify-between items-center cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                    <span className="text-[10px] text-gray-500">Skills</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                       {data.ApplicationSkillTags?.length || 0}
                     </Badge>
                   </div>
                 </ApplicationDataShow>
-              </CardContent>
-            </Card>
+              </div>
+            </Section>
           </div>
         </div>
       </div>
-      <ScrollBar orientation="vertical" />
+
       <Modal
-        title={"Contact Applicant"}
+        title="Contact Applicant"
         children={
-          <div>
-            <ContactApplicant
-              setOnOpen={setOnOpen}
-              applicationId={data.id}
-              token={auth.token as string}
-              ids={[]}
-              many={1}
-            />
-          </div>
+          <ContactApplicant
+            setOnOpen={setOnOpen}
+            applicationId={data.id}
+            token={auth.token as string}
+            ids={[]}
+            many={1}
+          />
         }
         onOpen={onOpen === 1}
-        className={" min-w-3xl max-h-5/6 overflow-auto"}
+        className="max-w-2xl max-h-[90vh] overflow-auto"
         footer={1}
         setOnOpen={() => setOnOpen(0)}
       />
-    </ScrollArea>
+    </div>
+  );
+};
+
+// Parse the JSON-string children blob safely.
+const ChildrenList = ({ raw }: { raw: string }) => {
+  let arr: { fullname: string }[] = [];
+  try {
+    arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) arr = [];
+  } catch {
+    arr = [];
+  }
+  if (arr.length === 0) {
+    return <span className="text-[10px] text-gray-500">No children listed</span>;
+  }
+  return (
+    <span>
+      {arr.map((c, i) => (
+        <span key={i}>
+          {c.fullname}
+          {i < arr.length - 1 ? ", " : ""}
+        </span>
+      ))}
+    </span>
   );
 };
 

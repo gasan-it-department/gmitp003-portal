@@ -1,34 +1,47 @@
-import { useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/provider/ProtectedRoute";
-//
-import { room } from "@/db/statements/document";
 
-//
+import { useAuth } from "@/provider/ProtectedRoute";
+import { room } from "@/db/statements/document";
+import { formatDate } from "@/utils/date";
 
 import { Button } from "@/components/ui/button";
-import ManageRoom from "./ManageRoom";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-//
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+import ManageRoom from "./ManageRoom";
+
+import {
+  Settings,
+  Info,
+  Building2,
+  Hash,
+  Loader2,
+  ArrowLeft,
+  Calendar,
+  Users,
+  MapPin,
+  AlertCircle,
+} from "lucide-react";
+
 import type { ReceivingRoom } from "@/interface/data";
-import { Home, Settings, Info, Building2, Hash } from "lucide-react";
 
 const RoomDetails = () => {
   const [searchParams, setSearchParams] = useSearchParams({ roomTab: "info" });
   const { roomId, lineId } = useParams();
   const { token, userId } = useAuth();
-  const currentRoomTabs = searchParams.get("roomTab") || "info";
+  const nav = useNavigate();
+  const currentRoomTab = searchParams.get("roomTab") || "info";
 
-  const { data, isFetching } = useQuery<ReceivingRoom>({
+  const { data, isFetching, isError, error } = useQuery<ReceivingRoom>({
     queryKey: ["room", roomId],
     queryFn: () => room(token as string, roomId as string),
-    enabled: !!token || !!roomId,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    enabled: !!token && !!roomId,
     refetchOnWindowFocus: false,
   });
 
-  const handleChangeParam = (key: string, value: string) => {
+  const handleTab = (key: string, value: string) =>
     setSearchParams(
       (prev) => {
         prev.set(key, value);
@@ -36,196 +49,246 @@ const RoomDetails = () => {
       },
       { replace: true },
     );
-  };
 
-  if (isFetching) {
+  if (isFetching && !data) {
     return (
-      <div className="w-full h-full min-h-[400px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-gray-300" />
-            </div>
-          </div>
-          <p className="text-gray-500 font-medium">Loading room details...</p>
-          <p className="text-sm text-gray-400 mt-1">Please wait</p>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-1.5 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading room...</p>
         </div>
       </div>
     );
   }
 
-  if (!data) {
+  if (isError || !data) {
     return (
-      <div className="w-full h-full min-h-[400px] flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="bg-red-50 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <Home className="h-10 w-10 text-red-400" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-red-500" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Room Not Found
+          <h3 className="text-xs font-semibold text-gray-900 mb-1">
+            Room not found
           </h3>
-          <p className="text-gray-500 mb-4">
-            The room you're looking for doesn't exist or you don't have
-            permission to view it.
+          <p className="text-[10px] text-gray-500 mb-3">
+            {(error as any)?.message ??
+              "This room may have been removed or you don't have access."}
           </p>
           <Button
+            size="sm"
             variant="outline"
-            onClick={() => window.history.back()}
-            className="mx-auto"
+            className="h-7 text-[10px] gap-1.5"
+            onClick={() => nav(-1)}
           >
-            Go Back
+            <ArrowLeft className="h-3 w-3" />
+            Back
           </Button>
         </div>
       </div>
     );
   }
 
+  const isActive = data.status === 1;
+  const userCount = data._count?.authorizedUser ?? data.authorizedUser?.length ?? 0;
+
   return (
-    <div className="w-full h-full p-4 md:p-6 bg-gray-50">
-      {/* Header Section */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-          <Home className="h-4 w-4" />
-          <span>Rooms</span>
-          <span>/</span>
-          <span className="text-gray-700 font-medium truncate">
-            {data.code}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{data.address}</h1>
-            <p className="text-sm text-gray-500 mt-1">Room Code: {data.code}</p>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => nav(-1)}
+            >
+              <ArrowLeft className="h-3 w-3" />
+            </Button>
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <Building2 className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                {data.address ?? "Receiving Room"}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-500">
+                <Hash className="h-2.5 w-2.5" />
+                <span className="font-mono truncate">{data.code}</span>
+                {data.timestamp && (
+                  <>
+                    <span className="text-gray-300">·</span>
+                    <Calendar className="h-2.5 w-2.5" />
+                    <span>{formatDate(data.timestamp)}</span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              data.status === 1
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-600"
+          <Badge
+            variant="outline"
+            className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${
+              isActive
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-gray-50 text-gray-600 border-gray-200"
             }`}
           >
-            {data.status === 1 ? "Active" : "Inactive"}
-          </div>
+            {isActive ? "Active" : "Inactive"}
+          </Badge>
         </div>
       </div>
 
-      {/* Tabs Section */}
+      {/* Tabs */}
       <Tabs
-        defaultValue={"info"}
-        value={currentRoomTabs}
-        onValueChange={(e) => handleChangeParam("roomTab", e)}
-        className="w-full"
+        value={currentRoomTab}
+        onValueChange={(e) => handleTab("roomTab", e)}
+        className="flex-1 min-h-0 flex flex-col"
       >
-        <TabsList className="mb-6 bg-white border shadow-sm">
-          <TabsTrigger
-            value="info"
-            className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
-          >
-            <Info className="h-4 w-4" />
-            Information
-          </TabsTrigger>
-          <TabsTrigger
-            value="manage"
-            className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
-          >
-            <Settings className="h-4 w-4" />
-            Manage Room
-          </TabsTrigger>
-        </TabsList>
+        <div className="bg-white border-b px-3 py-1.5 flex-shrink-0">
+          <TabsList className="h-7 p-0.5 bg-gray-100">
+            <TabsTrigger
+              value="info"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <Info className="h-3 w-3" />
+              Information
+            </TabsTrigger>
+            <TabsTrigger
+              value="manage"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <Settings className="h-3 w-3" />
+              Manage
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="info" className="mt-0">
-          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-            {/* Room Info Header */}
-            <div className="px-6 py-4 border-b bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-500" />
-                Room Information
-              </h2>
+        <TabsContent
+          value="info"
+          className="flex-1 min-h-0 m-0 overflow-auto focus-visible:outline-none"
+        >
+          <div className="p-3 max-w-4xl mx-auto space-y-3">
+
+            {/* Room Information */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                <Info className="h-3 w-3 text-blue-500" />
+                <h3 className="text-xs font-semibold text-gray-800">
+                  Room Information
+                </h3>
+              </div>
+              <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <Field
+                  icon={<MapPin className="h-2.5 w-2.5" />}
+                  label="Address"
+                  value={data.address ?? "—"}
+                />
+                <Field
+                  icon={<Hash className="h-2.5 w-2.5" />}
+                  label="Code"
+                  value={
+                    <code className="font-mono text-[11px]">{data.code}</code>
+                  }
+                />
+                <Field
+                  label="Room ID"
+                  value={
+                    <span className="font-mono text-[10px] break-all">
+                      {data.id}
+                    </span>
+                  }
+                />
+                <Field
+                  icon={<Calendar className="h-2.5 w-2.5" />}
+                  label="Created"
+                  value={data.timestamp ? formatDate(data.timestamp) : "—"}
+                />
+              </div>
             </div>
 
-            {/* Room Details */}
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-500 flex items-center gap-1">
-                    <Building2 className="h-4 w-4" />
-                    Address
-                  </label>
-                  <p className="text-lg text-gray-900 bg-gray-50 p-3 rounded-md border">
-                    {data.address}
-                  </p>
+            {/* Authorized Users */}
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-3 w-3 text-blue-500" />
+                  <h3 className="text-xs font-semibold text-gray-800">
+                    Authorized Users
+                  </h3>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-500 flex items-center gap-1">
-                    <Hash className="h-4 w-4" />
-                    Room Code
-                  </label>
-                  <p className="text-lg text-gray-900 bg-gray-50 p-3 rounded-md border font-mono">
-                    {data.code}
-                  </p>
-                </div>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0"
+                >
+                  {userCount}
+                </Badge>
               </div>
-
-              {/* Additional Info Cards */}
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <p className="text-xs text-blue-600 font-medium mb-1">
-                    Room ID
+              <div className="p-3">
+                {data.authorizedUser && data.authorizedUser.length > 0 ? (
+                  <ul className="divide-y">
+                    {data.authorizedUser.map((u) => {
+                      const initials =
+                        `${u.user?.firstName?.[0] ?? ""}${u.user?.lastName?.[0] ?? ""}`.toUpperCase() ||
+                        "U";
+                      return (
+                        <li
+                          key={u.id}
+                          className="py-2 flex items-center gap-2"
+                        >
+                          <Avatar className="h-7 w-7 flex-shrink-0">
+                            <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-medium text-gray-900 truncate">
+                              {u.user?.firstName} {u.user?.lastName}
+                            </p>
+                            <p className="text-[10px] text-gray-500 truncate">
+                              @{u.user?.username ?? "—"}
+                            </p>
+                          </div>
+                          {typeof (u as any).type === "number" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] px-1.5 py-0"
+                            >
+                              {(u as any).type === 1 ? "Primary" : "Secondary"}
+                            </Badge>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-[10px] text-gray-400 text-center py-3">
+                    No authorized users yet.
                   </p>
-                  <p className="text-sm text-gray-700 font-mono truncate">
-                    {data.id}
-                  </p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-                  <p className="text-xs text-purple-600 font-medium mb-1">
-                    Created
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    {new Date().toLocaleDateString()}{" "}
-                    {/* Replace with actual creation date if available */}
-                  </p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                  <p className="text-xs text-green-600 font-medium mb-1">
-                    Status
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span
-                      className={`inline-flex items-center gap-1 ${
-                        data.status === 1 ? "text-green-600" : "text-gray-500"
-                      }`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          data.status === 1 ? "bg-green-500" : "bg-gray-400"
-                        }`}
-                      />
-                      {data.status === 1 ? "Active and receiving" : "Inactive"}
-                    </span>
-                  </p>
-                </div>
+                )}
               </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="manage" className="mt-0">
-          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-            {/* Manage Header */}
-            <div className="px-6 py-4 border-b bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                <Settings className="h-5 w-5 text-blue-500" />
-                Room Management
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Manage room settings, activation status, and removal
-              </p>
-            </div>
-
-            {/* Manage Content */}
-            <div className="p-6">
+        <TabsContent
+          value="manage"
+          className="flex-1 min-h-0 m-0 overflow-auto focus-visible:outline-none"
+        >
+          <div className="p-3 max-w-2xl mx-auto">
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                <Settings className="h-3 w-3 text-blue-500" />
+                <div>
+                  <h3 className="text-xs font-semibold text-gray-800">
+                    Room Management
+                  </h3>
+                  <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                    Activation, removal, and audit-safe settings
+                  </p>
+                </div>
+              </div>
               <ManageRoom
                 id={data.id}
                 userId={userId as string}
@@ -240,5 +303,23 @@ const RoomDetails = () => {
     </div>
   );
 };
+
+const Field = ({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div>
+    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+      {icon}
+      {label}
+    </p>
+    <p className="text-xs text-gray-800 mt-0.5 break-words">{value ?? "—"}</p>
+  </div>
+);
 
 export default RoomDetails;

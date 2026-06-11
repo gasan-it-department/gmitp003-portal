@@ -1,11 +1,9 @@
-//import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
-//components and layouts
+
 import EmployeeSearch from "@/layout/human_resources/EmployeeSearch";
 import EmployeeList from "@/layout/human_resources/EmployeeList";
-//import { Button } from "@/components/ui/button";
-//import { useDebouncedCallback } from "use-debounce";
+
 const Employee = () => {
   const [params, setParams] = useSearchParams({
     page: "1",
@@ -24,6 +22,7 @@ const Employee = () => {
   const currentQuery = params.get("query") || "";
 
   const { lineId } = useParams();
+  const auth = useAuth();
 
   const handleChangeParams = (key: string, value: string) => {
     setParams(
@@ -31,37 +30,22 @@ const Employee = () => {
         prev.set(key, value);
         return prev;
       },
-      {
-        replace: true,
-      },
+      { replace: true },
     );
   };
 
-  // const debounce = useDebouncedCallback((value: string) => {
-  //   handleChangeParams("query", value);
-  // }, 1000);
-
-  // const handleSearch = (value: string) => {
-  //   debounce(value);
-  // };
-
-  const auth = useAuth();
-
   return (
-    <div className=" w-full h-full ">
-      <div className=" w-full h-[15%]">
-        <EmployeeSearch
-          handleChangeParams={handleChangeParams}
-          office={currentOffice}
-          page={currentPage}
-          year={currentYear}
-          sgFrom={currentSgFrom}
-          sgTo={currentSgTo}
-          query={currentQuery}
-        />
-      </div>
-
-      <div className=" w-full h-[85%] overflow-auto ">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <EmployeeSearch
+        handleChangeParams={handleChangeParams}
+        office={currentOffice}
+        page={currentPage}
+        year={currentYear}
+        sgFrom={currentSgFrom}
+        sgTo={currentSgTo}
+        query={currentQuery}
+      />
+      <div className="flex-1 min-h-0 p-3">
         <EmployeeList
           office={currentOffice}
           page={currentPage}

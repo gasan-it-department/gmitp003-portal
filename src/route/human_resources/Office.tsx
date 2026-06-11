@@ -1,73 +1,58 @@
-import { useParams } from "react-router";
-import { useAuth } from "@/provider/ProtectedRoute";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router";
-//
+
+import { useAuth } from "@/provider/ProtectedRoute";
 import { getUnitInfo } from "@/db/statement";
-//
+
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-//
-import { BriefcaseBusiness, Group, Users, Building2, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-//
 import OfficePersonnel from "@/layout/human_resources/OfficePersonnel";
 import OfficePostion from "@/layout/human_resources/OfficePostion";
-
-//
-import type { Department } from "@/interface/data";
 import OfficeInfo from "@/layout/human_resources/OfficeInfo";
+
+import {
+  BriefcaseBusiness,
+  Users,
+  Building2,
+  Info,
+  Loader2,
+  ArrowLeft,
+  AlertCircle,
+} from "lucide-react";
+
+import type { Department } from "@/interface/data";
 
 const Office = () => {
   const [params, setParams] = useSearchParams({ tab: "personnel" });
   const { officeID, lineId } = useParams();
   const auth = useAuth();
+  const nav = useNavigate();
+  const currentTab = params.get("tab") || "personnel";
 
-  const currentTabs = params.get("tab") || "personnel";
-
-  const { data, isFetching, isError } = useQuery<Department>({
+  const { data, isFetching, isError, error } = useQuery<Department>({
     queryKey: ["unit", officeID],
     queryFn: () => getUnitInfo(auth.token as string, officeID as string),
     enabled: !!officeID && !!auth.token,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   });
 
-  const handleChangeParams = (key: string, value: string) => {
+  const handleTab = (key: string, value: string) =>
     setParams(
       (prev) => {
         prev.set(key, value);
         return prev;
       },
-      {
-        replace: true,
-      },
+      { replace: true },
     );
-  };
 
-  if (isFetching) {
+  if (isFetching && !data) {
     return (
-      <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-        {/* Header Loading - Compact */}
-        <div className="px-4 py-3 border-b bg-white/80 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <div className="space-y-1.5">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-3 w-56" />
-            </div>
-          </div>
-        </div>
-
-        {/* Content Loading - Compact */}
-        <div className="flex-1 p-4">
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-10 w-full" />
-            ))}
-          </div>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-1.5 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading unit...</p>
         </div>
       </div>
     );
@@ -75,148 +60,133 @@ const Office = () => {
 
   if (isError || !data) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="text-center py-12 px-4 bg-white rounded-lg shadow-md max-w-md mx-4">
-          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-            <Building2 className="h-8 w-8 text-gray-400" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-red-500" />
           </div>
-          <h3 className="text-base font-semibold text-gray-900 mb-1">
-            Unit Not Found
+          <h3 className="text-xs font-semibold text-gray-900 mb-1">
+            Unit not found
           </h3>
-          <p className="text-xs text-gray-500 mb-4">
-            The requested unit could not be found or you don't have permission.
+          <p className="text-[10px] text-gray-500 mb-3">
+            {(error as any)?.message ??
+              "It may have been removed or you don't have access."}
           </p>
-          <Badge variant="outline" className="text-xs bg-gray-50">
-            Not Available
-          </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] gap-1.5"
+            onClick={() => nav(-1)}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header Section - Compact with gradient theme */}
-      <div className="px-4 py-3 border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md shadow-sm">
-            <Building2 className="h-5 w-5 text-white" />
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => nav(-1)}
+            >
+              <ArrowLeft className="h-3 w-3" />
+            </Button>
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <Building2 className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                {data.name ?? "Untitled Unit"}
+              </h1>
+              {data.description && (
+                <p className="text-[10px] text-gray-500 truncate">
+                  {data.description}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-semibold text-gray-900 truncate">
-              {data.name}
-            </h1>
-            {data.description && (
-              <p className="text-xs text-gray-500 truncate">
-                {data.description}
-              </p>
-            )}
-          </div>
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 flex-shrink-0"
+          >
+            {data._count?.users ?? 0} member
+            {(data._count?.users ?? 0) === 1 ? "" : "s"}
+          </Badge>
         </div>
       </div>
 
-      {/* Tabs Section - Full height */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs
-          value={currentTabs}
-          onValueChange={(e) => handleChangeParams("tab", e)}
-          className="h-full flex flex-col"
-          defaultValue="personnel"
+      {/* Tabs */}
+      <Tabs
+        value={currentTab}
+        onValueChange={(e) => handleTab("tab", e)}
+        className="flex-1 min-h-0 flex flex-col"
+      >
+        <div className="bg-white border-b px-3 py-1.5 flex-shrink-0">
+          <TabsList className="h-7 p-0.5 bg-gray-100">
+            <TabsTrigger
+              value="personnel"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <Users className="h-3 w-3" />
+              Personnel
+            </TabsTrigger>
+            <TabsTrigger
+              value="position"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <BriefcaseBusiness className="h-3 w-3" />
+              Positions
+            </TabsTrigger>
+            <TabsTrigger
+              value="info"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <Info className="h-3 w-3" />
+              Info
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="personnel"
+          className="flex-1 min-h-0 m-0 focus-visible:outline-none overflow-hidden"
         >
-          {/* Tabs Navigation - Compact with gradient theme */}
-          <div className="border-b bg-white/50 backdrop-blur-sm">
-            <TabsList className="h-10 px-4 bg-transparent rounded-none border-0 gap-1">
-              <TabsTrigger
-                value="personnel"
-                className="h-8 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  <span>Personnel</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="position"
-                className="h-8 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <BriefcaseBusiness className="h-3.5 w-3.5" />
-                  <span>Positions</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="group"
-                className="h-8 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Group className="h-3.5 w-3.5" />
-                  <span>Teams</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="info"
-                className="h-8 px-3 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-xs text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5" />
-                  <span>Info</span>
-                </div>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <OfficePersonnel />
+        </TabsContent>
 
-          {/* Tabs Content - Full height */}
-          <TabsContent
-            value="personnel"
-            className="h-full flex-1 m-0 p-0 data-[state=active]:flex overflow-hidden"
-          >
-            <OfficePersonnel />
-          </TabsContent>
+        <TabsContent
+          value="position"
+          className="flex-1 min-h-0 m-0 focus-visible:outline-none overflow-hidden"
+        >
+          <OfficePostion
+            id={officeID as string}
+            token={auth.token as string}
+            userId={auth.userId as string}
+          />
+        </TabsContent>
 
-          <TabsContent
-            value="position"
-            className="h-full flex-1 m-0 p-0 data-[state=active]:flex overflow-hidden"
-          >
-            <OfficePostion
-              id={officeID as string}
-              token={auth.token as string}
-              userId={auth.userId as string}
-            />
-          </TabsContent>
-
-          <TabsContent
-            value="group"
-            className="h-full flex-1 m-0 p-0 data-[state=active]:flex overflow-hidden"
-          >
-            <div className="h-full flex flex-col items-center justify-center p-4">
-              <div className="w-12 h-12 mb-3 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                <Group className="h-6 w-6 text-gray-400" />
-              </div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">
-                Teams Feature
-              </h3>
-              <p className="text-xs text-gray-500 text-center max-w-sm mb-3">
-                Team management functionality is coming soon
-              </p>
-              <Badge variant="outline" className="text-xs bg-white">
-                Coming Soon
-              </Badge>
-            </div>
-          </TabsContent>
-
-          <TabsContent
-            value="info"
-            className="h-full flex-1 m-0 p-0 data-[state=active]:flex overflow-hidden"
-          >
-            <OfficeInfo
-              unit={data}
-              lineId={lineId as string}
-              userId={auth.userId as string}
-              token={auth.token as string}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent
+          value="info"
+          className="flex-1 min-h-0 m-0 focus-visible:outline-none overflow-hidden"
+        >
+          <OfficeInfo
+            unit={data}
+            lineId={lineId as string}
+            userId={auth.userId as string}
+            token={auth.token as string}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

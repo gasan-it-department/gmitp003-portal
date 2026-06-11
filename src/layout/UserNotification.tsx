@@ -1,10 +1,11 @@
 import { useInfiniteQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 import { userNotifications } from "@/db/statement";
 import { markNotificationAsRead } from "@/db/statements/notification";
+import { joinUserRoom } from "@/db/socketClient";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,46 @@ const UserNotification = ({ token, userId }: Props) => {
       if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
     },
   });
+
+  // ── Real-time: prepend new notifications as they arrive ──────────
+  useEffect(() => {
+    if (!userId) return;
+    return joinUserRoom(userId, (n) => {
+      queryClient.setQueryData<{
+        pages: ListProps[];
+        pageParams: unknown[];
+      }>(["notifications", userId], (prev) => {
+        if (!prev) return prev;
+        const exists = prev.pages.some((p) =>
+          p.list.some((m) => m.id === n.id),
+        );
+        if (exists) return prev;
+        const [first, ...rest] = prev.pages;
+        if (!first) return prev;
+        return {
+          ...prev,
+          pages: [
+            {
+              ...first,
+              list: [
+                {
+                  id: n.id,
+                  title: n.title,
+                  content: n.content,
+                  path: n.path ?? null,
+                  createdAt: n.createdAt,
+                  isRead: n.isRead ?? false,
+                } as unknown as Notification,
+                ...first.list,
+              ],
+            },
+            ...rest,
+          ],
+        };
+      });
+      toast(n.title, { description: n.content });
+    });
+  }, [userId, queryClient]);
 
   const notifications = data?.pages.flatMap((p) => p.list) ?? [];
   const total = notifications.length;

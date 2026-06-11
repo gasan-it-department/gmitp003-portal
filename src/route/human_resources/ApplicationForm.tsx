@@ -193,7 +193,8 @@ const ApplicationForm = () => {
     }
     formData.append("jobPostId", jobPostId);
     formData.append("municipalId", municipalId);
-    formData.append("positionId", data.positionId);
+    // PESO / external posts have no internal position.
+    formData.append("positionId", data.positionId ?? "");
     formData.append("profilePicture", formInput.profilePicture!);
 
     Object.entries(formInput).forEach(([key, value]) => {
@@ -469,7 +470,7 @@ const ApplicationForm = () => {
                 Application Form
               </h1>
               <h1 className="text-xl font-bold text-gray-900 mb-2 mt-10">
-                APPLYING FOR: {data.position.name}
+                APPLYING FOR: {data.position?.name ?? data.jobTitle ?? "this role"}
               </h1>
               <p className="text-gray-600 mb-4">
                 Please fill out all required fields.

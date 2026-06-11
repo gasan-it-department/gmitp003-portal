@@ -66,11 +66,15 @@ const Suppliers = ({ onChange, lineId, auth, handleResetSupplier }: Props) => {
   const isEmpty =
     !isLoading && debouncedQuery.trim() && allSuppliers.length === 0;
 
+  // Only push free-text upstream when the user is still typing (i.e. they
+  // haven't picked from the list). Once an id is selected, leave the field
+  // value alone — otherwise the next keystroke debounce clobbers the id.
   useEffect(() => {
-    if (!isEmpty) {
-      onChange(debouncedQuery);
-    }
-  }, [debouncedQuery]);
+    if (selectedId) return;
+    onChange(debouncedQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, selectedId]);
+
   const handleSelectSupplier = (supplier: SupplierProps) => {
     setQuery(supplier.name);
     setSelectedId(supplier.id);
@@ -92,6 +96,8 @@ const Suppliers = ({ onChange, lineId, auth, handleResetSupplier }: Props) => {
         <Input
           value={query}
           onChange={(e) => {
+            // Editing the text invalidates any previous selection.
+            setSelectedId(null);
             setQuery(e.target.value);
             onChange(e.target.value);
           }}

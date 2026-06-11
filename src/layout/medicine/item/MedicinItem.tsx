@@ -1,14 +1,19 @@
 import { memo, useState } from "react";
-//
-import { zodResolver } from "@hookform/resolvers/zod";
-//
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-//statements
-import { removeMedicine } from "@/db/statements/medicine";
+import { toast } from "sonner";
 
-//
+import {
+  removeMedicine,
+  updateMedicine,
+} from "@/db/statements/medicine";
+
 import { TableRow, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -16,32 +21,23 @@ import {
   FormItem,
   FormMessage,
   FormLabel,
+  FormDescription,
 } from "@/components/ui/form";
-//import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
-import SelectUnit from "../SelectUnit";
-import { toast } from "sonner";
-//icons
+import ConfirmDelete from "@/layout/ConfirmDelete";
+
 import {
   Package,
   Hash,
-  Tag,
-  FileText,
   AlertTriangle,
-  Warehouse,
   Trash2,
+  Pencil,
+  Loader2,
 } from "lucide-react";
-//
-import type {
-  Medicine,
-  MedicineActionProps,
-  ProtectedRouteProps,
-} from "@/interface/data";
-import { MedicineActionSchema } from "@/interface/zod";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
+
+import type { Medicine, ProtectedRouteProps } from "@/interface/data";
+import { AddNewMedicineSchema } from "@/interface/zod";
+import type { AddNewMedicineProps } from "@/interface/data";
 
 interface Props {
   item: Medicine;
@@ -51,416 +47,291 @@ interface Props {
 }
 
 const MedicinItem = ({ item, no, lineId, auth }: Props) => {
-  const [onOpen, setOnOpen] = useState(0);
-  const form = useForm<MedicineActionProps>({
-    resolver: zodResolver(MedicineActionSchema),
-    defaultValues: {
-      unitId: "",
-    },
+  const [onOpen, setOnOpen] = useState(0); // 0=closed, 1=edit, 2=delete
+  const queryClient = useQueryClient();
+
+  const form = useForm<AddNewMedicineProps>({
+    resolver: zodResolver(AddNewMedicineSchema),
+    defaultValues: { name: item.name, desc: item.desc ?? "" },
   });
   const {
     handleSubmit,
     formState: { isSubmitting },
     control,
+    reset,
   } = form;
 
-  const removeMedicineMutation = useMutation({
-    mutationFn: () =>
-      removeMedicine(auth.token as string, item.id, auth.userId as string),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["medicine-list", lineId],
-      });
+  const refreshList = () =>
+    queryClient.invalidateQueries({
+      queryKey: ["medicine-list", lineId],
+      refetchType: "active",
+    });
+
+  const editMut = useMutation({
+    mutationFn: (data: AddNewMedicineProps) =>
+      updateMedicine(auth.token as string, {
+        id: item.id,
+        name: data.name,
+        desc: data.desc,
+        userId: auth.userId as string,
+        lineId,
+      }),
+    onSuccess: async () => {
+      await refreshList();
+      toast.success("Medicine updated");
       setOnOpen(0);
     },
-    onError: () => {
-      toast.error("Failed to remove medicine. Please try again.");
+    onError: (err: any) => {
+      toast.error(
+        err?.response?.data?.message ??
+          (err instanceof Error ? err.message : "Failed to update"),
+      );
     },
   });
-  const queryClient = useQueryClient();
+
+  const removeMut = useMutation({
+    mutationFn: () =>
+      removeMedicine(
+        auth.token as string,
+        item.id,
+        auth.userId as string,
+        lineId,
+      ),
+    onSuccess: async () => {
+      await refreshList();
+      toast.success("Medicine removed");
+      setOnOpen(0);
+    },
+    onError: (err: any) => {
+      toast.error(
+        err?.response?.data?.message ??
+          (err instanceof Error ? err.message : "Failed to remove medicine"),
+      );
+    },
+  });
+
+  const batches = item.stats?.batches ?? 0;
+  const units = item.stats?.totalUnits ?? 0;
+  const canDelete = units === 0;
 
   return (
     <>
-      <TableRow className="group hover:bg-blue-50/50 cursor-pointer transition-colors">
-        <TableCell className="border-r py-4">
-          <div className="flex items-center justify-center">
-            <Badge variant="outline" className="font-mono text-xs">
-              {no}
-            </Badge>
-          </div>
-        </TableCell>
-        <TableCell className="border-r py-4">
-          <div className="flex items-center gap-2">
-            <Hash className="h-3 w-3 text-gray-400" />
-            <code className="font-mono text-sm bg-gray-50 px-2 py-1 rounded border">
+      <TableRow className="hover:bg-gray-50">
+        <TableCell className="text-[10px] text-gray-500">{no}</TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1.5">
+            <Hash className="h-2.5 w-2.5 text-gray-400" />
+            <code className="text-[11px] font-mono text-gray-700">
               {item.serialNumber}
             </code>
           </div>
         </TableCell>
-        <TableCell className="py-4">
-          <div className="flex items-center gap-3" onClick={() => setOnOpen(1)}>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Package className="h-4 w-4 text-blue-600" />
+        <TableCell>
+          <div className="flex items-start gap-2">
+            <div className="p-1 bg-blue-50 rounded flex-shrink-0">
+              <Package className="h-3 w-3 text-blue-600" />
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-gray-800 group-hover:text-blue-700 transition-colors">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-gray-900 truncate">
                 {item.name}
               </p>
               {item.desc && (
-                <p className="text-xs text-gray-500 truncate max-w-xs">
+                <p className="text-[10px] text-gray-500 truncate max-w-xs">
                   {item.desc}
                 </p>
               )}
             </div>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-              <Badge variant="outline" className="text-xs">
-                Manage
-              </Badge>
-            </div>
           </div>
         </TableCell>
-        <TableCell className="border-l py-4">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="opacity-0 group-hover:opacity-100 transition-all"
-            onClick={() => setOnOpen(1)}
+        <TableCell className="text-center">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 font-mono"
           >
-            <Package className="h-4 w-4 mr-2" />
-            Actions
-          </Button>
+            {batches}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-center">
+          <Badge
+            variant="outline"
+            className={`text-[10px] px-1.5 py-0 font-mono ${
+              units === 0
+                ? "bg-gray-50 text-gray-500"
+                : units < 10
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+            }`}
+          >
+            {units}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={() => {
+                reset({ name: item.name, desc: item.desc ?? "" });
+                setOnOpen(1);
+              }}
+              title="Edit"
+            >
+              <Pencil className="h-3 w-3 text-gray-600" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0 text-red-600 hover:bg-red-50"
+              onClick={() => setOnOpen(2)}
+              title={
+                canDelete
+                  ? "Remove medicine"
+                  : "Cannot remove — stock still on hand"
+              }
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
 
-      {/* Medicine Details Modal */}
+      {/* Edit modal */}
       <Modal
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                {item.name}
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Hash className="h-3 w-3" />
-                <code className="font-mono">{item.serialNumber}</code>
-              </div>
-            </div>
-          </div>
-        }
+        title="Edit Medicine"
         onOpen={onOpen === 1}
-        className="max-w-md max-h-[90vh] overflow-y-auto"
-        setOnOpen={() => setOnOpen(0)}
-        cancelTitle="Close"
-      >
-        <div className="space-y-4">
-          {/* Medicine Information */}
-          <Card className="border-0 bg-gray-50">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Tag className="h-4 w-4 text-gray-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Medicine Name
-                    </p>
-                    <p className="font-medium">{item.name}</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-start gap-3">
-                  <Hash className="h-4 w-4 text-gray-400 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Serial Number
-                    </p>
-                    <code className="font-mono text-sm bg-white px-2 py-1 rounded border">
-                      {item.serialNumber}
-                    </code>
-                  </div>
-                </div>
-
-                {item.desc && (
-                  <>
-                    <Separator />
-                    <div className="flex items-start gap-3">
-                      <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Description
-                        </p>
-                        <p className="text-sm text-gray-700">{item.desc}</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Action Buttons */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Available Actions
-            </p>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start h-12 px-4 hover:bg-blue-50 hover:border-blue-200"
-              onClick={() => setOnOpen(2)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded">
-                  <Warehouse className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-medium">Stock to Storage</p>
-                  <p className="text-xs text-gray-500">
-                    Add stock to a specific unit or department
-                  </p>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start h-12 px-4 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-              onClick={() => setOnOpen(2)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-medium">Reset All Records</p>
-                  <p className="text-xs text-gray-500">
-                    Clear all transaction history for this medicine
-                  </p>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start h-12 px-4 hover:bg-red-50 hover:border-red-200 hover:text-red-700"
-              onClick={() => setOnOpen(3)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded">
-                  <Trash2 className="h-4 w-4 text-red-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-medium">Remove</p>
-                  <p className="text-xs text-gray-500">
-                    Permanently delete this medicine from the system
-                  </p>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Stock to Storage Modal */}
-      <Modal
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Warehouse className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Stock to Storage
-              </h2>
-              <p className="text-sm text-gray-500">
-                Select destination for {item.name}
-              </p>
-            </div>
-          </div>
-        }
-        onOpen={onOpen === 2}
-        className="max-w-lg max-h-[95vh] overflow-y-auto"
-        setOnOpen={() => setOnOpen(0)}
-        footer={true}
-        loading={isSubmitting}
-        onFunction={handleSubmit(() => {
-          // Handle form submission
-          console.log("Form submitted");
-        })}
-        cancelTitle="Cancel"
-      >
-        <div className="space-y-4">
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-2">
-              <Package className="h-4 w-4 text-blue-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-blue-800">
-                  Medicine: {item.name}
-                </p>
-                <p className="text-xs text-blue-600">
-                  Serial: {item.serialNumber}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Card className="border">
-            <CardContent className="p-4">
-              <Form {...form}>
-                <FormField
-                  control={control}
-                  name="unitId"
-                  render={({ field: { onChange, value } }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">
-                        Select Destination Unit
-                      </FormLabel>
-                      <div className="mt-2">
-                        <FormControl>
-                          <SelectUnit
-                            onChange={onChange}
-                            lineId={lineId}
-                            auth={auth}
-                            currentValue={value}
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage className="text-xs mt-1" />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Choose the office, department, or unit where this
-                        medicine will be stocked.
-                      </p>
-                    </FormItem>
-                  )}
-                />
-              </Form>
-            </CardContent>
-          </Card>
-
-          <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-amber-800 mb-1">
-                  Important Note
-                </p>
-                <p className="text-xs text-amber-700">
-                  This action will transfer the selected quantity of {item.name}{" "}
-                  to the chosen unit. This cannot be undone automatically.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        title={
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Remove Medicine
-              </h2>
-              <p className="text-sm text-gray-500">
-                This action cannot be undone
-              </p>
-            </div>
-          </div>
-        }
-        onOpen={onOpen === 3}
-        className="max-w-md max-h-11/12 overflow-y-auto"
-        loading={removeMedicineMutation.isPending}
+        className="max-w-md"
         setOnOpen={() => {
-          if (removeMedicineMutation.isPending) return;
+          if (editMut.isPending) return;
           setOnOpen(0);
         }}
         footer={true}
-        onFunction={() => {
-          removeMedicineMutation.mutateAsync();
-        }}
-        yesTitle="Yes, Remove"
-        cancelTitle="Cancel"
+        yesTitle="Save Changes"
+        onFunction={handleSubmit((d) => editMut.mutateAsync(d))}
+        loading={editMut.isPending}
       >
-        <div className="space-y-4">
-          {/* Warning Alert */}
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-red-800 mb-1">
-                  Are you absolutely sure?
+        <Form {...form}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b">
+              <div className="p-1.5 bg-blue-50 rounded">
+                <Package className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-900 truncate">
+                  {item.name}
                 </p>
-                <p className="text-sm text-red-700">
-                  This action will permanently remove{" "}
-                  <span className="font-semibold">{item.name}</span> from the
-                  system.
+                <code className="text-[10px] font-mono text-gray-500">
+                  {item.serialNumber}
+                </code>
+              </div>
+            </div>
+
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                    Name *
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={isSubmitting || editMut.isPending}
+                      className="h-8 text-xs"
+                    />
+                  </FormControl>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="desc"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                    Description
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      value={field.value ?? ""}
+                      disabled={isSubmitting || editMut.isPending}
+                      className="min-h-[70px] text-xs resize-y"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-[10px]">
+                    Serial number stays the same — it's permanently linked to
+                    history and labels.
+                  </FormDescription>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )}
+            />
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal
+        title={undefined}
+        onOpen={onOpen === 2}
+        className=""
+        setOnOpen={() => {
+          if (removeMut.isPending) return;
+          setOnOpen(0);
+        }}
+        footer={1}
+      >
+        {canDelete ? (
+          <ConfirmDelete
+            title="Remove medicine"
+            confirmation="confirm"
+            setOnOpen={() => {
+              if (!removeMut.isPending) setOnOpen(0);
+            }}
+            onFunction={() => {
+              if (!removeMut.isPending) removeMut.mutateAsync();
+            }}
+            isLoading={removeMut.isPending}
+          />
+        ) : (
+          <div className="p-3 space-y-3">
+            <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-100 rounded-md">
+              <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-red-800">
+                  Can't remove this medicine
+                </p>
+                <p className="text-[10px] text-red-700 mt-0.5">
+                  <strong>{item.name}</strong> still has{" "}
+                  <strong>{units}</strong> unit{units === 1 ? "" : "s"} on hand
+                  across <strong>{batches}</strong> batch
+                  {batches === 1 ? "" : "es"}. Zero out or transfer the stock
+                  before removing.
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Medicine Details Card */}
-          <Card className="border-gray-200">
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700">
-                    Medicine:
-                  </span>
-                  <span className="text-sm text-gray-900">{item.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Hash className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700">
-                    Serial:
-                  </span>
-                  <code className="text-sm bg-gray-100 px-2 py-0.5 rounded">
-                    {item.serialNumber}
-                  </code>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Consequences */}
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              This will:
-            </p>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
-                <span>Remove all records associated with this medicine</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
-                <span>Delete from inventory and transaction history</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5" />
-                <span>This action is permanent and cannot be reversed</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Loading State */}
-          {removeMedicineMutation.isPending && (
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600" />
-                Removing medicine...
-              </div>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px]"
+                onClick={() => setOnOpen(0)}
+              >
+                Close
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+        {removeMut.isPending && (
+          <div className="flex items-center justify-center gap-1.5 py-2 text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-[10px]">Removing...</span>
+          </div>
+        )}
       </Modal>
     </>
   );

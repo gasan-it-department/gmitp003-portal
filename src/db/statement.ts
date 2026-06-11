@@ -1216,6 +1216,28 @@ export const deleteInviteLink = async (
   return response.data;
 };
 
+export const suspendInviteLink = async (
+  token: string,
+  id: string,
+  suspend: boolean,
+  userId: string,
+  lineId: string,
+) => {
+  const response = await axios.patch(
+    "/invitation/suspend",
+    { id, suspend, userId, lineId },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  return response.data;
+};
+
 export const getPurchaseRequest = async (
   token: string,
   id: string,
@@ -1348,6 +1370,45 @@ export const medicineNotifications = async (
   if (response.status !== 200) {
     throw new Error(response.data);
   }
+  return response.data;
+};
+
+export const updateUnit = async (
+  token: string,
+  body: {
+    id: string;
+    name?: string;
+    description?: string | null;
+    userId: string;
+    lineId: string;
+  },
+) => {
+  const response = await axios.patch("/unit/update", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  return response.data;
+};
+
+export const deleteUnit = async (
+  token: string,
+  id: string,
+  userId: string,
+  lineId: string,
+) => {
+  const response = await axios.delete("/unit/delete", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { id, userId, lineId },
+  });
   return response.data;
 };
 
@@ -1831,6 +1892,9 @@ export const lineApplications = async (
   dateFrom: string | undefined,
   dateTo: string | undefined,
   positionId: string | undefined,
+  /** When true, the backend drops applications already onboarded or with
+   *  a live invitation. Used by the Position → Select Applicant picker. */
+  eligibleOnly?: boolean,
 ) => {
   const response = await axios.get("/application/list", {
     headers: {
@@ -1848,6 +1912,7 @@ export const lineApplications = async (
       dateFrom,
       dateTo,
       positionId,
+      ...(eligibleOnly ? { eligibleOnly: "1" } : {}),
     },
   });
 

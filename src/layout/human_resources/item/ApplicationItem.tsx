@@ -1,14 +1,16 @@
 import { memo, useState } from "react";
 import { useNavigate } from "react-router";
-import { deleleteApplication } from "@/db/statements/application";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-//
+import { toast } from "sonner";
+
+import { deleleteApplication } from "@/db/statements/application";
 import { formatDate } from "@/utils/date";
 import { applicationStatus } from "@/utils/helper";
 import { searchedChar } from "@/utils/element";
-//
+
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   ContextMenu,
   ContextMenuItem,
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/context-menu";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
-//
+
 import type { SubmittedApplicationProps } from "@/interface/data";
 
 interface Props {
@@ -31,7 +33,9 @@ interface Props {
   token: string;
   userId: string;
   lineId: string;
+  statusColor?: (s: number) => string;
 }
+
 const ApplicationItem = ({
   no,
   item,
@@ -42,84 +46,115 @@ const ApplicationItem = ({
   userId,
   token,
   lineId,
+  statusColor,
 }: Props) => {
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const [onOpen, setOnOpen] = useState(0);
-  const [_, setIsOpen] = useState(false);
+  const checked = handleCheckSelected(item.id);
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: () => deleleteApplication(item.id, token, userId, lineId),
     onSuccess: () => {
-      setIsOpen(false);
       setOnOpen(0);
+      toast.success("Application deleted");
       queryClient.invalidateQueries({
         queryKey: ["applications", item.lineId],
       });
     },
-    onError: (error) => {
-      console.error("Error deleting application:", error);
+    onError: (err: any) => {
+      toast.error(
+        err?.response?.data?.message ??
+          (err instanceof Error ? err.message : "Delete failed"),
+      );
     },
   });
+
+  const sCls =
+    statusColor?.(item.status) ??
+    "bg-gray-50 text-gray-700 border-gray-200";
+
   return (
-    <ContextMenu onOpenChange={(open) => setIsOpen(open)}>
-      <ContextMenuTrigger
-        asChild={true}
-        onContextMenu={() => {
-          setIsOpen(true);
-        }}
-      >
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
         <TableRow
-          className=" hover:bg-neutral-200 cursor-pointer"
+          className={`hover:bg-blue-50/40 cursor-pointer ${
+            checked ? "bg-blue-50/50" : ""
+          }`}
           onClick={() => {
-            if (onMultiSelect) {
-              handleAddSelected(item.id);
-              return;
-            }
-            nav(item.id);
+            if (onMultiSelect) handleAddSelected(item.id);
+            else nav(item.id);
           }}
         >
           {onMultiSelect && (
-            <TableCell>
-              <Checkbox checked={handleCheckSelected(item.id)} />
+            <TableCell onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={checked}
+                onCheckedChange={() => handleAddSelected(item.id)}
+                className="border-gray-300"
+              />
             </TableCell>
           )}
-          <TableCell>{no}</TableCell>
-          <TableCell>{item?.forPosition?.name || "N/A"}</TableCell>
-          <TableCell className=" truncate max-w-40">
-            {searchedChar(query, item.lastname)},{" "}
-            {searchedChar(query, item.firstname)}{" "}
+          <TableCell className="text-[10px] text-gray-500">{no}</TableCell>
+          <TableCell className="text-[11px] text-gray-800 truncate max-w-[200px]">
+            {item?.forPosition?.name || "—"}
           </TableCell>
-          <TableCell>{formatDate(item.timestamp)}</TableCell>
-          <TableCell>{applicationStatus[item.status]}</TableCell>
+          <TableCell className="text-[11px] text-gray-900 font-medium truncate max-w-[220px]">
+            {searchedChar(query, item.lastname)},{" "}
+            {searchedChar(query, item.firstname)}
+          </TableCell>
+          <TableCell className="text-[10px] text-gray-600">
+            {formatDate(item.timestamp)}
+          </TableCell>
+          <TableCell className="text-center">
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 ${sCls}`}
+            >
+              {applicationStatus[item.status] ?? "—"}
+            </Badge>
+          </TableCell>
         </TableRow>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuLabel>Actions</ContextMenuLabel>
-        <ContextMenuItem disabled={isPending} onClick={() => setOnOpen(1)}>
+        <ContextMenuLabel className="text-[10px]">Actions</ContextMenuLabel>
+        <ContextMenuItem
+          className="text-[11px]"
+          onClick={() => nav(item.id)}
+        >
+          Open
+        </ContextMenuItem>
+        <ContextMenuItem
+          className="text-[11px] text-red-600 focus:text-red-700 focus:bg-red-50"
+          disabled={isPending}
+          onClick={() => setOnOpen(1)}
+        >
           Delete
         </ContextMenuItem>
       </ContextMenuContent>
+
       <Modal
-        title={"Delete Application"}
-        children={
-          <ConfirmDelete
-            confirmation={"confirm"}
-            setOnOpen={setOnOpen}
-            onFunction={() => {
-              mutateAsync();
-            }}
-            isLoading={isPending}
-          />
-        }
-        footer={1}
+        title={undefined}
         onOpen={onOpen === 1}
-        className={""}
+        className=""
+        footer={1}
         setOnOpen={() => {
           if (isPending) return;
           setOnOpen(0);
         }}
-      />
+      >
+        <ConfirmDelete
+          title="Delete application"
+          confirmation="confirm"
+          setOnOpen={() => {
+            if (!isPending) setOnOpen(0);
+          }}
+          onFunction={() => {
+            if (!isPending) mutateAsync();
+          }}
+          isLoading={isPending}
+        />
+      </Modal>
     </ContextMenu>
   );
 };

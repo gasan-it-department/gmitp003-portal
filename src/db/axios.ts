@@ -18,7 +18,7 @@ export const getUrl = () => {
 export const url = import.meta.env.VITE_SERVER_URL;
 const onUrl = ["http://127.0.0.1:3000", "https://lgu-api.xyz"];
 const axios = axiosInstance.create({
-  baseURL: onUrl[1],
+  baseURL: onUrl[0],
   withCredentials: true,
 });
 

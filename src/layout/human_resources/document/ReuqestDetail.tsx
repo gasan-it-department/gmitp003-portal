@@ -1,26 +1,23 @@
-import React, { useState } from "react";
-import { useParams } from "react-router";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { isAxiosError } from "axios";
+
 import { useAuth } from "@/provider/ProtectedRoute";
-//stmt
 import {
   documentRoomRequestDetails,
   upadateRequestStatus,
 } from "@/db/statements/document";
 
-//
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import Modal from "@/components/custom/Modal";
-//
-//interface
-import type { RoomRegistration } from "@/interface/data";
-//icons
+
+// (imports referenced below) — keep grouped above
+
+
 import {
   User,
   MapPin,
@@ -30,25 +27,78 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  AlertCircle,
+  Loader2,
+  ArrowLeft,
+  FileText,
+  ShieldAlert,
 } from "lucide-react";
 
+import type { RoomRegistration } from "@/interface/data";
+
+const statusBadge = (status: number) => {
+  switch (status) {
+    case 0:
+      return {
+        cls: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: <Clock className="h-2.5 w-2.5 mr-1" />,
+        label: "Pending",
+      };
+    case 1:
+      return {
+        cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: <CheckCircle className="h-2.5 w-2.5 mr-1" />,
+        label: "Approved",
+      };
+    case 2:
+      return {
+        cls: "bg-red-50 text-red-700 border-red-200",
+        icon: <XCircle className="h-2.5 w-2.5 mr-1" />,
+        label: "Rejected",
+      };
+    default:
+      return {
+        cls: "bg-gray-50 text-gray-700 border-gray-200",
+        icon: null,
+        label: "Unknown",
+      };
+  }
+};
+
+const surfaceErr = (err: unknown, fallback: string) =>
+  isAxiosError(err)
+    ? err.response?.data?.message ?? err.message
+    : err instanceof Error
+      ? err.message
+      : fallback;
+
+const fmt = (d?: string | Date | null) =>
+  d
+    ? new Date(d).toLocaleString("en-PH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
 const RequestDetail = () => {
-  const [onOpen, setOnOpen] = useState(0);
+  const [onOpen, setOnOpen] = useState(0); // 0 closed · 1 reject · 2 approve
   const { requestId, lineId } = useParams();
   const auth = useAuth();
+  const nav = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data, isFetching } = useQuery<RoomRegistration>({
+  const { data, isFetching, isError, error } = useQuery<RoomRegistration>({
     queryKey: ["request-details", requestId],
     queryFn: () =>
       documentRoomRequestDetails(auth.token as string, requestId as string),
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    enabled: !!requestId && !!auth.token,
     refetchOnWindowFocus: false,
-    enabled: !!requestId || !!requestId,
   });
 
-  const updateRequestRoomStatus = useMutation({
+  const statusMut = useMutation({
     mutationFn: (status: number) =>
       upadateRequestStatus(
         auth.token as string,
@@ -57,495 +107,452 @@ const RequestDetail = () => {
         auth.userId as string,
         status,
       ),
-    onSuccess: async () => {
+    onSuccess: async (_, status) => {
       await queryClient.invalidateQueries({
         queryKey: ["request-details", requestId],
       });
+      await queryClient.invalidateQueries({ queryKey: ["room-request", lineId] });
+      toast.success(
+        status === 1
+          ? "Request approved"
+          : status === 2
+            ? "Request rejected"
+            : "Status updated",
+      );
+      setOnOpen(0);
     },
-    onError: () => {
-      toast.error("TRANSACTION FAILED");
-    },
+    onError: (err) => toast.error(surfaceErr(err, "Failed to update status")),
   });
 
-  const getStatusBadge = (status: number) => {
-    switch (status) {
-      case 0:
-        return (
-          <Badge
-            variant="outline"
-            className="bg-yellow-50 text-yellow-700 border-yellow-200"
-          >
-            <Clock className="w-3 h-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      case 1:
-        return (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 border-green-200"
-          >
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Approved
-          </Badge>
-        );
-      case 2:
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-50 text-red-700 border-red-200"
-          >
-            <XCircle className="w-3 h-3 mr-1" />
-            Rejected
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const formatDate = (date: string | Date | null | undefined) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  if (isFetching) {
+  if (isFetching && !data) {
     return (
-      <div className="w-full h-full p-4 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-1.5 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading request...</p>
         </div>
-        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  if (!data) {
+  if (isError || !data) {
     return (
-      <div className="w-full h-full flex items-center justify-center">
-        <p className="text-gray-500">Request not found</p>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-xs font-semibold text-gray-800">
+            Request not found
+          </p>
+          <p className="text-[10px] text-gray-500 mt-1">
+            {(error as any)?.message ??
+              "This request may have been removed."}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] gap-1.5 mt-3"
+            onClick={() => nav(-1)}
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Back
+          </Button>
+        </div>
       </div>
     );
   }
+
+  const status = statusBadge(data.status);
+  const initials =
+    `${data.user?.firstName?.[0] ?? ""}${data.user?.lastName?.[0] ?? ""}`.toUpperCase() ||
+    "U";
+  const isPending = data.status === 0;
+  const isPendingMut = statusMut.isPending;
 
   return (
-    <div className="w-full h-full p-4 md:p-6 overflow-auto">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        {/* Header */}
-        {/* Header */}
-        <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50/50 p-4 rounded-lg border border-blue-100">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-blue-600 rounded-full inline-block"></span>
-              Room Request Details
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              ID: {data.id.substring(0, 8)}...
-            </p>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => nav(-1)}
+            >
+              <ArrowLeft className="h-3 w-3" />
+            </Button>
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <FileText className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                Room Request Details
+              </h1>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5 font-mono">
+                #{data.id.slice(0, 8)}
+              </p>
+            </div>
           </div>
-
-          {/* Status Badge and Action Buttons */}
-          <div className="flex items-center gap-3">
-            {getStatusBadge(data.status)}
-
-            {/* Action Buttons - Only show for pending requests */}
-            {data.status === 0 && (
-              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 ${status.cls}`}
+            >
+              {status.icon}
+              {status.label}
+            </Badge>
+            {isPending && (
+              <>
                 <Button
-                  onClick={() => setOnOpen(1)}
                   size="sm"
                   variant="outline"
-                  className="border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+                  className="h-7 text-[10px] gap-1.5 text-red-700 hover:bg-red-50 hover:border-red-200"
+                  onClick={() => setOnOpen(1)}
+                  disabled={isPendingMut}
                 >
-                  <XCircle className="w-4 h-4 mr-1.5" />
+                  <XCircle className="h-3 w-3" />
                   Reject
                 </Button>
                 <Button
-                  onClick={() => setOnOpen(2)}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
+                  className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setOnOpen(2)}
+                  disabled={isPendingMut}
                 >
-                  <CheckCircle className="w-4 h-4 mr-1.5" />
+                  <CheckCircle className="h-3 w-3" />
                   Approve
                 </Button>
-              </div>
+              </>
             )}
           </div>
         </div>
+      </div>
 
-        {/* User Info Card */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Applicant Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback className="bg-primary/10 text-primary">
-                  {data.user?.firstName?.[0]}
-                  {data.user?.lastName?.[0]}
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="max-w-4xl mx-auto space-y-3">
+
+          {/* Applicant */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+              <User className="h-3 w-3 text-blue-500" />
+              <h3 className="text-xs font-semibold text-gray-800">
+                Applicant
+              </h3>
+            </div>
+            <div className="p-3 flex items-start gap-2.5">
+              <Avatar className="h-9 w-9 flex-shrink-0">
+                <AvatarFallback className="text-[11px] bg-blue-100 text-blue-700">
+                  {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1">
-                <p className="font-medium">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-900">
                   {data.user?.firstName} {data.user?.lastName}
                 </p>
-                <p className="text-sm text-gray-500">@{data.user?.username}</p>
+                <p className="text-[10px] text-gray-500">
+                  @{data.user?.username ?? "—"}
+                </p>
                 {data.user?.email && (
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
+                  <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                    <Mail className="h-2.5 w-2.5" />
                     {data.user.email}
                   </p>
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Request Details Card */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Request Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gray-500">Address</p>
-                <p className="text-sm font-medium">{data.address}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Line</p>
-                <p className="text-sm font-medium">
-                  {data.line?.name || data.lineId}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Submitted</p>
-                <p className="text-sm font-medium flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {formatDate(data.timestamp)}
-                </p>
-              </div>
+          {/* Request meta */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+              <MapPin className="h-3 w-3 text-blue-500" />
+              <h3 className="text-xs font-semibold text-gray-800">
+                Request Information
+              </h3>
+            </div>
+            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <Field
+                icon={<MapPin className="h-2.5 w-2.5" />}
+                label="Address"
+                value={data.address}
+              />
+              <Field
+                label="Line"
+                value={data.line?.name || data.lineId || "—"}
+              />
+              <Field
+                icon={<Calendar className="h-2.5 w-2.5" />}
+                label="Submitted"
+                value={fmt(data.timestamp)}
+              />
               {data.dateApproved && (
-                <div>
-                  <p className="text-xs text-gray-500">Approved Date</p>
-                  <p className="text-sm font-medium">
-                    {formatDate(data.dateApproved)}
-                  </p>
-                </div>
+                <Field label="Approved" value={fmt(data.dateApproved)} />
               )}
               {data.dateRejected && (
-                <div>
-                  <p className="text-xs text-gray-500">Rejected Date</p>
-                  <p className="text-sm font-medium">
-                    {formatDate(data.dateRejected)}
-                  </p>
-                </div>
+                <Field label="Rejected" value={fmt(data.dateRejected)} />
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {data.roomRegistrationSignatures?.file_url && (
-          <div
-            className="border rounded-lg p-2 bg-gray-50 relative overflow-hidden"
-            onContextMenu={(e) => {
-              e.preventDefault();
-              return false;
-            }}
-          >
-            {/* Semi-transparent watermark */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-              <div className="rotate-45 text-gray-400/30 text-4xl font-bold whitespace-nowrap">
-                SIGNATURE • CONFIDENTIAL • SIGNATURE
+          {/* Signature */}
+          {data.roomRegistrationSignatures?.file_url && (
+            <div className="border rounded-lg bg-white overflow-hidden">
+              <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                <ShieldAlert className="h-3 w-3 text-amber-500" />
+                <h3 className="text-xs font-semibold text-gray-800">
+                  Signature
+                </h3>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 ml-auto"
+                >
+                  Confidential
+                </Badge>
+              </div>
+              <div
+                className="p-3 relative overflow-hidden bg-gray-50"
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                  <div className="rotate-45 text-gray-300/40 text-2xl font-bold whitespace-nowrap">
+                    SIGNATURE · CONFIDENTIAL
+                  </div>
+                </div>
+                <div
+                  className="absolute inset-0 pointer-events-none z-10"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(45deg, rgba(150,150,150,0.08) 0px, rgba(150,150,150,0.08) 14px, rgba(200,200,200,0.06) 14px, rgba(200,200,200,0.06) 28px)",
+                  }}
+                />
+                <img
+                  src={data.roomRegistrationSignatures.file_url}
+                  alt="Signature"
+                  className="max-h-40 w-auto object-contain mx-auto relative z-0"
+                />
+                <p className="text-[9px] text-gray-400 text-center mt-1 relative z-20">
+                  Not for reproduction
+                </p>
               </div>
             </div>
-
-            {/* Diagonal repeating watermark */}
-            <div
-              className="absolute inset-0 pointer-events-none z-10"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-          45deg,
-          rgba(150,150,150,0.1) 0px,
-          rgba(150,150,150,0.1) 20px,
-          rgba(200,200,200,0.1) 20px,
-          rgba(200,200,200,0.1) 40px
-        )`,
-              }}
-            />
-
-            <img
-              src={data.roomRegistrationSignatures.file_url}
-              alt="Signature"
-              className="max-h-48 w-auto object-contain mx-auto relative z-0"
-            />
-
-            <p className="text-[8px] text-gray-400 text-center mt-1">
-              CONFIDENTIAL - Not for reproduction
-            </p>
-          </div>
-        )}
-
-        {/* Receivers Card */}
-        {data.receivers && data.receivers.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                Receivers ({data.receivers.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.receivers.map((receiver, index) => (
-                  <React.Fragment key={receiver.id}>
-                    {index > 0 && <Separator />}
-                    <div className="flex items-start gap-3 py-1">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-gray-100 text-gray-600 text-xs">
-                          {receiver.user?.firstName?.[0]}
-                          {receiver.user?.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">
-                          {receiver.user?.lastName}, {receiver.user?.firstName}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          @{receiver.user?.username}
-                        </p>
-                      </div>
-                    </div>
-                  </React.Fragment>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* No Receivers Fallback */}
-        {(!data.receivers || data.receivers.length === 0) && (
-          <Card>
-            <CardContent className="py-6">
-              <p className="text-sm text-gray-500 text-center">
-                No receivers assigned
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Conversations Section - if needed */}
-        {data.roomRegistrationConversations &&
-          data.roomRegistrationConversations.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Conversations
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500">
-                  {data.roomRegistrationConversations.length} conversation(s)
-                </p>
-              </CardContent>
-            </Card>
           )}
-      </div>
-      <Modal
-        title={"Confirm Reject"}
-        children={undefined}
-        onOpen={onOpen === 1}
-        className={""}
-        setOnOpen={() => {
-          if (!updateRequestRoomStatus.isPending) return;
-          setOnOpen(0);
-        }}
-      />
 
-      {/* Reject Modal */}
+          {/* Receivers */}
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-3 w-3 text-blue-500" />
+                <h3 className="text-xs font-semibold text-gray-800">
+                  Receivers
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {data.receivers?.length ?? 0}
+              </Badge>
+            </div>
+            <div className="p-3">
+              {data.receivers && data.receivers.length > 0 ? (
+                <ul className="divide-y">
+                  {data.receivers.map((r) => {
+                    const ri =
+                      `${r.user?.firstName?.[0] ?? ""}${r.user?.lastName?.[0] ?? ""}`.toUpperCase() ||
+                      "U";
+                    return (
+                      <li key={r.id} className="py-2 flex items-center gap-2">
+                        <Avatar className="h-7 w-7 flex-shrink-0">
+                          <AvatarFallback className="text-[10px] bg-gray-100 text-gray-700">
+                            {ri}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-medium text-gray-900 truncate">
+                            {r.user?.lastName}, {r.user?.firstName}
+                          </p>
+                          <p className="text-[10px] text-gray-500 truncate">
+                            @{r.user?.username ?? "—"}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="text-[10px] text-gray-400 text-center py-3">
+                  No receivers assigned.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Conversations */}
+          {data.roomRegistrationConversations &&
+            data.roomRegistrationConversations.length > 0 && (
+              <div className="border rounded-lg bg-white overflow-hidden">
+                <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+                  <FileText className="h-3 w-3 text-blue-500" />
+                  <h3 className="text-xs font-semibold text-gray-800">
+                    Conversations
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] px-1.5 py-0 ml-auto"
+                  >
+                    {data.roomRegistrationConversations.length}
+                  </Badge>
+                </div>
+                <div className="p-3">
+                  <p className="text-[11px] text-gray-600">
+                    {data.roomRegistrationConversations.length} conversation
+                    {data.roomRegistrationConversations.length === 1 ? "" : "s"}{" "}
+                    on this request.
+                  </p>
+                </div>
+              </div>
+            )}
+        </div>
+      </div>
+
+      {/* Reject modal */}
       <Modal
+        title={undefined}
+        onOpen={onOpen === 1}
         className=""
         footer={1}
-        title="Confirm Rejection"
-        onOpen={onOpen === 1}
         setOnOpen={() => {
-          if (!updateRequestRoomStatus.isPending) {
-            setOnOpen(0);
-          }
+          if (isPendingMut) return;
+          setOnOpen(0);
         }}
       >
-        <div className="space-y-6">
-          {/* Icon and Warning */}
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="p-3 bg-red-100 rounded-full">
-              <XCircle className="w-8 h-8 text-red-600" />
+        <div className="p-3 space-y-3">
+          <div className="flex items-start gap-2 pb-2 border-b">
+            <div className="p-1.5 bg-red-100 rounded-md">
+              <XCircle className="h-3.5 w-3.5 text-red-600" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Reject Room Request
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Are you sure you want to reject this room request?
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-gray-900">
+                Reject this request?
+              </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                The applicant won't be granted room access.
               </p>
             </div>
           </div>
 
-          {/* Request Info Summary */}
-          <div className="bg-red-50/50 border border-red-100 rounded-lg p-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Request ID:</span>
-                <span className="font-mono font-medium">
-                  {data.id.substring(0, 12)}...
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Applicant:</span>
-                <span className="font-medium">
-                  {data.user?.firstName} {data.user?.lastName}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Address:</span>
-                <span className="font-medium truncate max-w-[200px]">
-                  {data.address}
-                </span>
-              </div>
-            </div>
+          <div className="border rounded-md bg-red-50/50 p-2 space-y-1.5">
+            <Row
+              label="Applicant"
+              value={`${data.user?.firstName ?? ""} ${data.user?.lastName ?? ""}`.trim()}
+            />
+            <Row label="Address" value={data.address ?? "—"} />
+            <Row
+              label="Request"
+              value={
+                <span className="font-mono">{data.id.slice(0, 12)}…</span>
+              }
+            />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex items-start gap-1.5 p-2 bg-amber-50 border border-amber-100 rounded-md">
+            <AlertCircle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-[10px] text-amber-700">
+              You can re-approve later if rejected by mistake.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-1.5">
             <Button
+              size="sm"
               variant="outline"
-              className="flex-1"
+              className="h-7 text-[10px]"
               onClick={() => setOnOpen(0)}
-              disabled={updateRequestRoomStatus.isPending}
+              disabled={isPendingMut}
             >
               Cancel
             </Button>
             <Button
+              size="sm"
               variant="destructive"
-              className="flex-1 bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                updateRequestRoomStatus.mutateAsync(2);
-                setOnOpen(0);
-              }}
-              disabled={updateRequestRoomStatus.isPending}
+              className="h-7 text-[10px] gap-1.5 bg-red-600 hover:bg-red-700"
+              onClick={() => statusMut.mutateAsync(2)}
+              disabled={isPendingMut}
             >
-              {updateRequestRoomStatus.isPending ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Processing...
-                </div>
+              {isPendingMut ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <>
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Confirm Reject
-                </>
+                <XCircle className="h-3 w-3" />
               )}
+              Reject
             </Button>
           </div>
         </div>
       </Modal>
 
+      {/* Approve modal */}
       <Modal
+        title={undefined}
+        onOpen={onOpen === 2}
         className=""
         footer={1}
-        title="Confirm Approval"
-        onOpen={onOpen === 2}
         setOnOpen={() => {
-          if (!updateRequestRoomStatus.isPending) {
-            setOnOpen(0);
-          }
+          if (isPendingMut) return;
+          setOnOpen(0);
         }}
       >
-        <div className="space-y-6">
-          {/* Icon and Success Message - Now Blue */}
-          <div className="flex flex-col items-center text-center space-y-3">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <CheckCircle className="w-8 h-8 text-blue-600" />
+        <div className="p-3 space-y-3">
+          <div className="flex items-start gap-2 pb-2 border-b">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <CheckCircle className="h-3.5 w-3.5 text-blue-600" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Approve Room Request
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                You are about to approve this room request
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-gray-900">
+                Approve this request?
+              </p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                The applicant will gain access to the receiving room.
               </p>
             </div>
           </div>
 
-          {/* Request Info Summary - Enhanced Blue */}
-          <div className="bg-blue-50/50 border border-blue-200 rounded-lg p-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-blue-600 font-medium">Applicant</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {data.user?.firstName} {data.user?.lastName}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-blue-600 font-medium">Request ID</p>
-                <p className="text-sm font-mono text-gray-900">
-                  {data.id.substring(0, 8)}...
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs text-blue-600 font-medium">Address</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {data.address}
-                </p>
-              </div>
-            </div>
+          <div className="border rounded-md bg-blue-50/50 p-2 space-y-1.5">
+            <Row
+              label="Applicant"
+              value={`${data.user?.firstName ?? ""} ${data.user?.lastName ?? ""}`.trim()}
+            />
+            <Row label="Address" value={data.address ?? "—"} />
+            <Row
+              label="Request"
+              value={
+                <span className="font-mono">{data.id.slice(0, 12)}…</span>
+              }
+            />
           </div>
 
-          {/* Action Buttons - Blue Theme */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex justify-end gap-1.5">
             <Button
+              size="sm"
               variant="outline"
-              className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              className="h-7 text-[10px]"
               onClick={() => setOnOpen(0)}
-              disabled={updateRequestRoomStatus.isPending}
+              disabled={isPendingMut}
             >
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-200"
-              onClick={() => {
-                updateRequestRoomStatus.mutateAsync(1);
-                setOnOpen(0);
-              }}
-              disabled={updateRequestRoomStatus.isPending}
+              size="sm"
+              className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+              onClick={() => statusMut.mutateAsync(1)}
+              disabled={isPendingMut}
             >
-              {updateRequestRoomStatus.isPending ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Processing...
-                </div>
+              {isPendingMut ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirm Approval
-                </>
+                <CheckCircle className="h-3 w-3" />
               )}
+              Approve
             </Button>
           </div>
         </div>
@@ -553,5 +560,32 @@ const RequestDetail = () => {
     </div>
   );
 };
+
+const Field = ({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) => (
+  <div>
+    <p className="text-[10px] text-gray-500 uppercase tracking-wide flex items-center gap-1">
+      {icon}
+      {label}
+    </p>
+    <p className="text-xs text-gray-800 mt-0.5 break-words">{value ?? "—"}</p>
+  </div>
+);
+
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="flex items-center justify-between gap-2 text-[10px]">
+    <span className="text-gray-500 uppercase tracking-wide">{label}</span>
+    <span className="text-gray-800 text-right truncate max-w-[60%]">
+      {value ?? "—"}
+    </span>
+  </div>
+);
 
 export default RequestDetail;

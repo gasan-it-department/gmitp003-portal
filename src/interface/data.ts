@@ -32,6 +32,7 @@ import {
   ReleasePrescribeMedSchema,
   ReleasePrescribeMedItemSchema,
   PostJobApplicationSchema,
+  PesoJobSchema,
   AddExistingPosition,
   JobApplicationRequirements,
   ContactApplicationSchema,
@@ -86,6 +87,7 @@ export type AddStorageMedProps = z.infer<typeof AddStorageMedSchema>;
 export type DispensaryProps = z.infer<typeof DispensarySchema>;
 export type PrescribeMedProps = z.infer<typeof PrecribeMedSchema>;
 export type PostJobApplicationProps = z.infer<typeof PostJobApplicationSchema>;
+export type PesoJobFormProps = z.infer<typeof PesoJobSchema>;
 export type ReleasePrescribeMedProps = z.infer<
   typeof ReleasePrescribeMedSchema
 >;
@@ -249,6 +251,14 @@ export interface PositionSlotProps {
   salaryGrade: SalaryGrade;
   pos: Position;
   occupied: boolean;
+  /** Occupant info — present on list endpoints that join the user. */
+  userId?: string | null;
+  user?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    accountId?: string | null;
+  } | null;
 }
 // SalaryGrade Interface
 export interface SalaryGrade {
@@ -314,6 +324,34 @@ export interface HumanResourcesDashboardProps {
   vacancies: number;
   announcementsLive: number;
   announcementDraft: number;
+  trends?: {
+    employees: number;
+    applications: number;
+    postedJobs: number;
+    announcements: number;
+  };
+  recent?: {
+    applications: {
+      id: string;
+      firstname?: string | null;
+      lastname?: string | null;
+      status: number;
+      timestamp: string;
+      forPosition?: { name: string } | null;
+    }[];
+    jobs: {
+      id: string;
+      timestamp: string;
+      status: number;
+      position?: { name: string } | null;
+    }[];
+    announcements: {
+      id: string;
+      title: string;
+      status: number;
+      createdAt: string;
+    }[];
+  };
 }
 
 export interface AnnouncementReaction {
@@ -425,6 +463,12 @@ export interface InvitationLinkProps {
   url: string;
   lineId: string;
   status: number;
+  /**
+   * Server-computed effective status. Differs from `status` only when an
+   * active link has passed its expiresAt — then effectiveStatus = 3
+   * (Expired). Use this for badges, keep `status` for actions.
+   */
+  effectiveStatus?: number;
   line: LineProps;
 }
 
@@ -574,6 +618,8 @@ export interface SupplyStockTrack {
   inventoryBoxId?: string | null;
   price: SupplyPriceTrack[];
   brand: SupplyBrandProps[];
+  supplier?: { id: string; name: string } | null;
+  supplierId?: string | null;
 }
 
 export interface SupplyBrandProps {
@@ -714,6 +760,7 @@ export type Medicine = {
   MedicineHistory: MedicineHistory[];
   MedicineTrack: MedicineTrack[];
   MedicineStock: MedicineStock[];
+  stats?: { batches: number; totalUnits: number };
 };
 
 export type MedicineTransaction = {
@@ -1104,7 +1151,8 @@ export type JobPostAssetsProps = {
 
 export interface JobPostProps {
   id: string;
-  position: Position;
+  // Internal LGU posts have a Position; PESO / external posts do not.
+  position?: Position | null;
   salaryGrade?: SalaryGrade | null;
   salaryGradeId?: string | null;
   hideSG: boolean;
@@ -1113,15 +1161,25 @@ export interface JobPostProps {
   updateAt: Date;
   showApplicationCount: boolean;
   desc?: string | null;
-  application: ApplicationProps[];
+  deadline?: string | Date | null;
+  application?: ApplicationProps[];
   requirements: JobPostRequirementsProps[];
   timestamp: string;
-  positionId: string;
+  positionId?: string | null;
   location: string;
   _count: {
     application: number;
   };
-  unitPos: UnitPosition;
+  unitPos?: UnitPosition | null;
+  // ── PESO / external job fields ──────────────────────────────────────────
+  postType?: string; // "HR" | "PESO"
+  applyMode?: string; // "INTERNAL" | "EXTERNAL"
+  jobTitle?: string | null;
+  employerName?: string | null;
+  employmentType?: string | null;
+  salaryText?: string | null;
+  applyUrl?: string | null;
+  contactInfo?: string | null;
 }
 
 export interface SupplyDispenseRecordProps {
@@ -1443,6 +1501,9 @@ export interface ReceivingRoom extends Timestamp {
   targetRooms: TargetRoom[];
   authorizedUser: RoomAuthorizedUserProps[];
   signatory: Signatory[];
+  _count?: {
+    authorizedUser?: number;
+  };
 }
 
 // Document Interfaces
@@ -1575,11 +1636,20 @@ export interface ArchiveDocument {
   docType: number;
 }
 
+export interface MedicineQualityBreakdown {
+  quality: string;
+  units: number;
+}
+
 export interface MedicineOverviewProps {
   medicines: { total: number; lowStock: number };
   storage: number;
   nearExpiration: number;
   expired: number;
+  nearExpirationUnits?: number;
+  expiredUnits?: number;
+  nearExpirationByQuality?: MedicineQualityBreakdown[];
+  expiredByQuality?: MedicineQualityBreakdown[];
 }
 
 export interface Patient {

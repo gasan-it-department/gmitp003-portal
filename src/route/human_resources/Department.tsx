@@ -1,13 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useInView } from "react-intersection-observer";
-import { useAuth } from "@/provider/ProtectedRoute";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { useForm } from "react-hook-form";
-import axios from "@/db/axios";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useDebounce } from "use-debounce";
+import { toast } from "sonner";
+import { isAxiosError } from "axios";
+
+import { useAuth } from "@/provider/ProtectedRoute";
 import { getLinetUnits } from "@/db/statement";
-//
+import axios from "@/db/axios";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,31 +26,35 @@ import {
   FormMessage,
   FormLabel,
 } from "@/components/ui/form";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import Modal from "@/components/custom/Modal";
-import UnitItem from "@/layout/human_resources/item/UnitItem";
-import { toast } from "sonner";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+
+import UnitItem from "@/layout/human_resources/item/UnitItem";
+
 import {
   Building2,
   Users,
   Hash,
-  Info,
   PlusCircle,
   AlertCircle,
-  Briefcase,
+  Search,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 
-//
 import type {
   Department as DepartmentProps,
   AddUnitProps,
 } from "@/interface/data";
 import { AddUnitSchema } from "@/interface/zod";
+
 interface ListProps {
   list: DepartmentProps[];
   lastCursor: string | null;
@@ -51,16 +62,9 @@ interface ListProps {
 }
 
 const Department = () => {
-  const [selected, setSelected] = useState<{
-    id: string;
-    title: string;
-    option: number;
-  } | null>(null);
-  const [onOpen, setOnOpen] = useState(0);
-
-  // Add useInView hook for infinite scroll
-  const { ref, inView } = useInView();
-
+  const [onOpen, setOnOpen] = useState(0); // 0 closed · 1 add
+  const [text, setText] = useState("");
+  const [query] = useDebounce(text, 400);
   const { lineId } = useParams();
   const auth = useAuth();
   const queryClient = useQueryClient();
@@ -68,39 +72,42 @@ const Department = () => {
   const {
     data,
     isFetching,
-    fetchNextPage,
     isFetchingNextPage,
+    fetchNextPage,
     hasNextPage,
+    isError,
     error,
+    refetch,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["departments", lineId],
+    queryKey: ["departments", lineId, query],
     queryFn: ({ pageParam }) =>
       getLinetUnits(
         auth.token as string,
         lineId as string,
         pageParam as string | null,
         "20",
-        "",
+        query,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    enabled: !!auth.token && !!lineId,
     refetchOnWindowFocus: false,
   });
 
-  // Infinite scroll trigger effect
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+  });
 
   const form = useForm<AddUnitProps>({
     resolver: zodResolver(AddUnitSchema),
+    defaultValues: { name: "", description: "" },
   });
-
   const {
     handleSubmit,
     formState: { isSubmitting },
@@ -108,16 +115,14 @@ const Department = () => {
     control,
   } = form;
 
-  const onSubmit = async (data: AddUnitProps) => {
-    if (!auth.userId) return toast.error("User not authenticated");
-    if (!lineId) return toast.error("Line ID is missing");
-    try {
-      const response = await axios.post(
+  const createMut = useMutation({
+    mutationFn: async (vals: AddUnitProps) => {
+      const res = await axios.post(
         "/add-unit",
         {
           lineId,
-          title: data.name,
-          description: data.description,
+          title: vals.name,
+          description: vals.description,
           userId: auth.userId,
         },
         {
@@ -126,314 +131,260 @@ const Department = () => {
             "Content-Type": "application/json",
             Accept: "application/json",
             "X-Requested-With": "XMLHttpRequest",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
           },
         },
       );
-
-      if (response.status !== 200) {
-      }
+      return res.data;
+    },
+    onSuccess: async (_, vars) => {
       await queryClient.invalidateQueries({
         queryKey: ["departments", lineId],
         refetchType: "active",
       });
       reset();
       setOnOpen(0);
-      toast.success("Unit added successfully", {
-        description: `${data.name} has been created`,
+      toast.success("Unit created", {
+        description: vars.name,
       });
-    } catch (error) {
-      toast.error("Failed to add unit", {
-        description: "Please check your connection and try again",
-      });
-      console.log("Error: ", error);
-    }
-  };
+    },
+    onError: (err) => {
+      const msg = isAxiosError(err)
+        ? err.response?.data?.message ?? err.message
+        : err instanceof Error
+          ? err.message
+          : "Failed to add unit";
+      toast.error(msg);
+    },
+  });
 
-  const allDepartments = data?.pages.flatMap((page) => page.list) || [];
-  const totalDepartments = allDepartments.length;
-  const isLoading =
-    isFetching && !isFetchingNextPage && allDepartments.length === 0;
-
-  // Show error state if there's an error
-  if (error) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <Card className="max-w-md mx-auto shadow-lg border-red-100">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-red-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Unable to Load Departments
-              </h3>
-              <p className="text-gray-500 mb-4">
-                There was a problem fetching the department list
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-              >
-                Try Again
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const items = data?.pages.flatMap((p) => p.list) ?? [];
+  const total = items.length;
 
   return (
-    <div className="w-full h-full bg-gray-50">
-      <div className="h-full px-4 py-4">
-        {/* Header Section - Compact */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  Departments & Units
-                </h1>
-                <p className="text-xs text-gray-500">
-                  Manage organizational structure
-                </p>
-              </div>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <Building2 className="h-3.5 w-3.5 text-white" />
             </div>
-            <Button
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-sm"
-              onClick={() => setOnOpen(1)}
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add Unit
-            </Button>
-          </div>
-        </div>
-
-        {/* Main Content Card - Compact */}
-        <div className="  overflow-hidden bg-white">
-          <div className="p-0">
-            <div className="h-[calc(100vh-180px)] overflow-auto">
-              {isLoading ? (
-                // Loading skeleton - Compact
-                <div className="p-3 space-y-2">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 border rounded-md bg-white"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-10 w-10 rounded-md" />
-                        <div className="space-y-1.5">
-                          <Skeleton className="h-4 w-40" />
-                          <Skeleton className="h-3 w-28" />
-                        </div>
-                      </div>
-                      <Skeleton className="h-7 w-20" />
-                    </div>
-                  ))}
-                </div>
-              ) : allDepartments.length > 0 ? (
-                <div>
-                  {/* Table Header - Compact */}
-                  <div className="sticky top-0 z-10 bg-gray-50 border-b px-4 py-2">
-                    <div className="grid grid-cols-12 gap-3">
-                      <div className="col-span-1 flex items-center gap-1 text-xs font-medium text-gray-500">
-                        <Hash className="h-3 w-3" />#
-                      </div>
-                      <div className="col-span-5 flex items-center gap-1 text-xs font-medium text-gray-500">
-                        <Building2 className="h-3 w-3" />
-                        Unit
-                      </div>
-                      <div className="col-span-4 flex items-center gap-1 text-xs font-medium text-gray-500">
-                        <Users className="h-3 w-3" />
-                        Personnel
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* List Items */}
-                  <div className="divide-y divide-gray-100">
-                    {allDepartments.map((item, i) => (
-                      <UnitItem key={item.id} item={item} no={i + 1} />
-                    ))}
-                  </div>
-
-                  {/* Infinite scroll trigger */}
-                  <div ref={ref} className="h-1" />
-
-                  {/* Loading more indicator */}
-                  {isFetchingNextPage && (
-                    <div className="py-4 bg-gray-50 border-t">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                        <span className="text-xs text-gray-600">
-                          Loading more...
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* End of list footer */}
-                  {!hasNextPage && totalDepartments > 0 && (
-                    <div className="px-4 py-3 bg-gray-50 border-t">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-gray-500">
-                          Showing all {totalDepartments} unit
-                          {totalDepartments !== 1 ? "s" : ""}
-                        </div>
-                        <Badge variant="outline" className="text-xs bg-white">
-                          End
-                        </Badge>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Empty state - Compact
-                <div className="py-12 text-center">
-                  <div className="max-w-xs mx-auto">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <Building2 className="h-8 w-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-md font-semibold text-gray-900 mb-1">
-                      No Departments Yet
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-4">
-                      Create your first organizational unit
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={() => setOnOpen(1)}
-                      className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700"
-                    >
-                      <PlusCircle className="h-3 w-3" />
-                      Create Unit
-                    </Button>
-                  </div>
-                </div>
-              )}
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                Departments &amp; Units
+              </h1>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                Organizational structure for this line
+              </p>
             </div>
           </div>
+          <Button
+            size="sm"
+            onClick={() => setOnOpen(1)}
+            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            <PlusCircle className="h-3 w-3" />
+            Add Unit
+          </Button>
         </div>
       </div>
 
-      {/* Add Unit Modal - Compact */}
+      {/* Toolbar */}
+      <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-shrink-0">
+        <InputGroup className="bg-white flex-1 max-w-xs">
+          <InputGroupAddon>
+            <Search className="h-3 w-3 text-gray-400" />
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="Search by name or code..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="h-7 text-[11px]"
+          />
+        </InputGroup>
+        <span className="text-[10px] text-gray-500 ml-auto">
+          {total} unit{total !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          {/* Table header */}
+          <div className="px-3 py-2 border-b bg-gray-50 grid grid-cols-12 gap-2">
+            <div className="col-span-1 flex items-center gap-1 text-[10px] font-semibold text-gray-700">
+              <Hash className="h-2.5 w-2.5" />#
+            </div>
+            <div className="col-span-7 flex items-center gap-1 text-[10px] font-semibold text-gray-700">
+              <Building2 className="h-2.5 w-2.5" />
+              Unit
+            </div>
+            <div className="col-span-3 flex items-center gap-1 text-[10px] font-semibold text-gray-700">
+              <Users className="h-2.5 w-2.5" />
+              Personnel
+            </div>
+            <div className="col-span-1 text-right text-[10px] font-semibold text-gray-700">
+              {/* Actions */}
+            </div>
+          </div>
+
+          {/* Body rows */}
+          {isError ? (
+            <div className="flex flex-col items-center gap-1.5 py-10 px-3 text-center">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <p className="text-[10px] font-medium text-red-600">
+                Failed to load departments
+              </p>
+              <p className="text-[10px] text-gray-500 max-w-[280px]">
+                {(error as any)?.message ?? "Try again later."}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px] gap-1.5 mt-1"
+                onClick={() => refetch()}
+              >
+                <RefreshCw className="h-3 w-3" />
+                Retry
+              </Button>
+            </div>
+          ) : isFetching && total === 0 ? (
+            <div className="flex items-center justify-center gap-1.5 py-10 text-gray-400">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span className="text-[10px]">Loading units...</span>
+            </div>
+          ) : total === 0 ? (
+            <div className="flex flex-col items-center gap-1.5 py-10 px-3 text-center">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-gray-300" />
+              </div>
+              <p className="text-xs font-medium text-gray-700">
+                No units yet
+              </p>
+              <p className="text-[10px] text-gray-500 max-w-[260px]">
+                {query
+                  ? `No units match "${query}".`
+                  : "Create your first organizational unit."}
+              </p>
+              {!query && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] gap-1.5 mt-1"
+                  onClick={() => setOnOpen(1)}
+                >
+                  <PlusCircle className="h-3 w-3" />
+                  Create Unit
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <ul className="divide-y divide-gray-100">
+                {items.map((item, i) => (
+                  <UnitItem key={item.id} item={item} no={i + 1} />
+                ))}
+              </ul>
+
+              {hasNextPage && (
+                <div
+                  ref={ref}
+                  className="px-3 py-2 border-t text-center"
+                >
+                  {isFetchingNextPage ? (
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-[10px]">Loading more...</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-gray-400">
+                      Scroll to load more
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {!hasNextPage && total > 0 && (
+                <div className="px-3 py-2 border-t flex items-center justify-between bg-gray-50">
+                  <span className="text-[10px] text-gray-500">
+                    Showing all {total} unit{total !== 1 ? "s" : ""}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                    End
+                  </Badge>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Add Unit Modal */}
       <Modal
         title="Create New Unit"
-        onFunction={handleSubmit(onSubmit)}
-        children={
-          <div className="p-5">
-            <Form {...form}>
-              <div className="space-y-5">
-                {/* Header */}
-                <div className="flex items-center gap-2 pb-3 border-b">
-                  <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-                    <Briefcase className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      Unit Configuration
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      Define unit information
-                    </p>
-                  </div>
-                </div>
-
-                {/* Unit Name Field */}
-                <FormField
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold text-gray-700">
-                        Unit Name <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Human Resources"
-                          {...field}
-                          className="h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Clear, descriptive name for this unit
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Separator className="my-1" />
-
-                {/* Description Field */}
-                <FormField
-                  control={control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs font-semibold text-gray-700">
-                        Description
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Describe the unit's purpose and responsibilities..."
-                          {...field}
-                          className="min-h-[100px] text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500 resize-none"
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Optional: Provide context about this unit's role
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Info Alert */}
-                <div className="rounded-md bg-blue-50 p-3 border border-blue-100">
-                  <div className="flex gap-2">
-                    <Info className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-blue-900 mb-0.5">
-                        About Organizational Units
-                      </p>
-                      <p className="text-xs text-blue-700">
-                        Units represent departments, teams, or divisions within
-                        your organization.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Form>
-          </div>
-        }
         onOpen={onOpen === 1}
-        className="max-w-md max-h-[90vh] overflow-auto"
-        setOnOpen={() => {
-          setOnOpen(0);
-          reset();
-        }}
-        loading={isSubmitting}
-        footer={true}
-      />
-
-      {/* Other Modal */}
-      <Modal
-        title={selected?.title ?? "Unit Details"}
-        children={undefined}
-        onOpen={selected?.id ? true : false}
         className="max-w-md"
         setOnOpen={() => {
-          setSelected(null);
+          if (createMut.isPending || isSubmitting) return;
+          reset();
+          setOnOpen(0);
         }}
-      />
+        footer={true}
+        yesTitle="Create Unit"
+        onFunction={handleSubmit((v) => createMut.mutateAsync(v))}
+        loading={createMut.isPending || isSubmitting}
+      >
+        <Form {...form}>
+          <div className="space-y-3">
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                    Unit Name *
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Human Resources"
+                      {...field}
+                      className="h-8 text-xs"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-[10px]">
+                    Clear, descriptive name (max 120 chars).
+                  </FormDescription>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                    Description
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe the unit's purpose..."
+                      {...field}
+                      className="min-h-[80px] text-xs resize-y"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-[10px]">
+                    Optional — context about this unit's role.
+                  </FormDescription>
+                  <FormMessage className="text-[10px]" />
+                </FormItem>
+              )}
+            />
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };

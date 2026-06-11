@@ -5,6 +5,33 @@ export const LoginSchema = z.object({
   password: z.string().min(4, "Password must be at least 8 characters."),
 });
 
+// PESO external / private-sector job posting form.
+export const PesoJobSchema = z
+  .object({
+    jobTitle: z.string().min(2, "Job title is required"),
+    employerName: z.string().optional(),
+    location: z.string().optional(),
+    employmentType: z.string().optional(),
+    salaryText: z.string().optional(),
+    desc: z.string().optional(),
+    deadline: z.string().optional(),
+    slot: z.coerce.number().min(1, "At least 1 slot").optional(),
+    showApplicationCount: z.boolean().optional(),
+    applyMode: z.enum(["INTERNAL", "EXTERNAL"]),
+    applyUrl: z.string().optional(),
+    contactInfo: z.string().optional(),
+  })
+  .refine(
+    (v) =>
+      v.applyMode !== "EXTERNAL" ||
+      (v.applyUrl && v.applyUrl.trim()) ||
+      (v.contactInfo && v.contactInfo.trim()),
+    {
+      message: "External jobs need an application link or contact info.",
+      path: ["applyUrl"],
+    },
+  );
+
 export const NewEmployeeSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
@@ -465,20 +492,47 @@ export const MedicineActionSchema = z.object({
   unitId: z.string().min(1, "Unit is required."),
 });
 
-export const AddStorageMedSchema = z.object({
-  medicineId: z.string(),
-  unitOfmeasure: z.string(),
-  quantity: z.string(),
-  thresHold: z.string(),
-  perUnit: z.string(),
-  manufacturingDate: z.string(),
-  expiration: z.string(),
-  addressRoom: z.string().optional(),
-  addressCol: z.string().optional(),
-  addressRow: z.string().optional(),
-  addressSec: z.string().optional(),
-  container: z.string().optional(),
-});
+// Helper: string that must parse to a whole number ≥ `min`.
+const intString = (min = 0) =>
+  z.string().refine(
+    (v) => {
+      const n = Number(v);
+      return Number.isInteger(n) && n >= min;
+    },
+    { message: `Must be a whole number ≥ ${min}` },
+  );
+
+export const AddStorageMedSchema = z
+  .object({
+    medicineId: z.string(),
+    unitOfmeasure: z.string().min(1, "Pick a unit"),
+    quantity: intString(1),    // at least 1 batch unit being added
+    perUnit: intString(1),     // at least 1 item per unit
+    thresHold: intString(0),   // 0 means no alert
+    price: z
+      .string()
+      .refine(
+        (v) => v === "" || (!Number.isNaN(Number(v)) && Number(v) >= 0),
+        { message: "Price must be a non-negative number" },
+      ),
+    manufacturingDate: z.string().min(1, "Required"),
+    expiration: z.string().min(1, "Required"),
+    addressRoom: z.string().optional(),
+    addressCol: z.string().optional(),
+    addressRow: z.string().optional(),
+    addressSec: z.string().optional(),
+    container: z.string().optional(),
+  })
+  .refine(
+    (d) =>
+      !d.manufacturingDate ||
+      !d.expiration ||
+      new Date(d.expiration) > new Date(d.manufacturingDate),
+    {
+      path: ["expiration"],
+      message: "Expiration must be after manufacturing date",
+    },
+  );
 
 export const PrescribeMedRes = z.object({
   quantityDispense: z.string(),
@@ -689,8 +743,14 @@ export const NewAnnouncementSchema = z.object({
 });
 
 export const TransferMedStorageSchema = z.object({
-  departId: z.string(),
-  quantity: z.string(),
+  stockId: z.string().min(1, "Pick a batch to transfer"),
+  departId: z.string().min(1, "Pick a destination storage"),
+  quantity: z
+    .string()
+    .refine((v) => {
+      const n = Number(v);
+      return Number.isInteger(n) && n > 0;
+    }, "Enter a whole number greater than zero"),
 });
 
 export const UpdateMedicineStockSchema = z.object({

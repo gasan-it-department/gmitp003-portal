@@ -218,10 +218,10 @@ const UserDispenseRecord = () => {
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-4 space-y-4">
+    <div className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-4 flex-1 min-h-0 flex flex-col gap-4">
         {/* Header - Compact */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
               <History className="h-4 w-4 text-white" />
@@ -240,11 +240,11 @@ const UserDispenseRecord = () => {
           </Badge>
         </div>
 
-        <Separator className="my-2" />
+        <Separator className="flex-shrink-0 my-0" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Left Sidebar - Compact */}
-          <div className="lg:col-span-1 space-y-3">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-4">
+          {/* Left Sidebar - sticky / non-scrolling with page */}
+          <div className="lg:col-span-1 space-y-3 lg:overflow-auto lg:pr-1">
             {/* User Info Card */}
             <div className="border rounded-lg bg-white overflow-hidden">
               <div className="px-4 py-3 bg-gray-50 border-b">
@@ -340,9 +340,9 @@ const UserDispenseRecord = () => {
           </div>
 
           {/* Main Content - Dispense Records Table */}
-          <div className="lg:col-span-3 space-y-4">
-            <div className="border rounded-lg bg-white overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b">
+          <div className="lg:col-span-3 flex flex-col min-h-0 gap-4">
+            <div className="flex-1 min-h-0 border rounded-lg bg-white overflow-hidden flex flex-col">
+              <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4 text-blue-600" />
@@ -365,7 +365,7 @@ const UserDispenseRecord = () => {
                   </div>
                 </div>
               </div>
-              <div className="overflow-auto">
+              <div className="flex-1 min-h-0 overflow-auto">
                 <div className="min-w-[700px]">
                   <Table>
                     <TableHeader className="bg-gray-50">
@@ -441,7 +441,7 @@ const UserDispenseRecord = () => {
 
             {/* Summary Stats - Compact */}
             {totalItems.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="flex-shrink-0 grid grid-cols-3 gap-3">
                 <div className="border rounded-lg p-3 text-center bg-white">
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider">
                     Transactions

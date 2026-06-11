@@ -1,21 +1,14 @@
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
+
 import { getUserData } from "@/db/statements/user";
-import { Spinner } from "@/components/ui/spinner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { userActiveStatus } from "@/utils/helper";
 
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-//import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   Calendar,
   Mail,
@@ -28,13 +21,74 @@ import {
   Heart,
   Home,
   Smartphone,
+  Loader2,
+  UserX,
+  LayoutGrid,
 } from "lucide-react";
+
 import type { User } from "@/interface/data";
 import UserProfileAction from "./UserProfileAction";
 
-//
-import { userActiveStatus } from "@/utils/helper";
+// ─────────────────────────────────────────────────────────────────────────
+const formatDate = (date?: Date | string | null) => {
+  if (!date) return null;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
 
+// Small "field" row used across cards
+const Field = ({
+  label,
+  value,
+  icon: Icon,
+  fallback = "Not provided",
+}: {
+  label: string;
+  value?: string | number | null;
+  icon?: React.ElementType;
+  fallback?: string;
+}) => (
+  <div>
+    <p className="text-[10px] text-gray-500">{label}</p>
+    <div className="flex items-center gap-1 mt-0.5">
+      {Icon && <Icon className="h-2.5 w-2.5 text-gray-400 flex-shrink-0" />}
+      {value !== undefined && value !== null && value !== "" ? (
+        <p className="text-xs font-medium text-gray-800 truncate">{value}</p>
+      ) : (
+        <p className="text-xs text-gray-400 italic">{fallback}</p>
+      )}
+    </div>
+  </div>
+);
+
+const SectionCard = ({
+  title,
+  icon: Icon,
+  children,
+  className = "",
+}: {
+  title: string;
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`border rounded-lg bg-white overflow-hidden ${className}`}
+  >
+    <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
+      {Icon && <Icon className="h-3 w-3 text-blue-500" />}
+      <h4 className="text-xs font-semibold text-gray-800">{title}</h4>
+    </div>
+    <div className="p-3">{children}</div>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 const UserProfile = () => {
   const { employeeId, lineId } = useParams();
   const auth = useAuth();
@@ -51,506 +105,329 @@ const UserProfile = () => {
         employeeId as string,
         auth.userId as string,
       ),
+    enabled: !!auth.token && !!employeeId,
     refetchOnMount: false,
-    refetchOnReconnect: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  if (isFetching) {
+  if (isFetching && !user) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner className="h-8 w-8" />
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-2 text-gray-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <p className="text-xs">Loading employee...</p>
+        </div>
       </div>
     );
   }
 
   if (isError || !user) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-destructive">Failed to load user data</p>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <UserX className="h-6 w-6 text-gray-300" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">
+            Employee not found
+          </h3>
+          <p className="text-[10px] text-gray-500">
+            We couldn't load this profile. It may have been removed or you
+            don't have permission.
+          </p>
+        </div>
       </div>
     );
   }
 
-  const getInitials = () => {
-    return `${user.firstName?.[0] || ""}${
-      user.lastName?.[0] || ""
-    }`.toUpperCase();
-  };
+  // ── Derive display values with proper fallbacks ─────────────────────
+  const app = user.submittedApplications;
+  const firstName = app?.firstname ?? user.firstName ?? "";
+  const middleName = app?.middleName ?? user.middleName ?? "";
+  const lastName = app?.lastname ?? user.lastName ?? "";
+  const suffix = user.suffix ?? "";
+  const fullName =
+    [firstName, middleName && `${middleName[0]}.`, lastName, suffix]
+      .filter(Boolean)
+      .join(" ") || "Unnamed";
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const initials = (
+    (firstName?.[0] ?? "") + (lastName?.[0] ?? "")
+  ).toUpperCase() || "?";
 
-  console.log({ user });
+  const accountStatusLabel =
+    user.account?.status !== undefined
+      ? userActiveStatus[user.account.status]
+      : null;
 
   return (
-    <div className="w-full h-full p-6 overflow-auto bg-gray-50">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border-4 border-white shadow-md">
-              {user.userProfilePictures ? (
-                <AvatarImage
-                  src={user.userProfilePictures.file_url}
-                  alt={`${user.firstName} ${user.lastName}`}
-                />
-              ) : null}
-              <AvatarFallback className="text-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {user.submittedApplications?.firstname}{" "}
-                {user.middleName
-                  ? `${user.submittedApplications?.middleName}. `
-                  : ""}{" "}
-                {user.submittedApplications?.lastname} {user.suffix || ""}
-              </h1>
-              <div className="flex items-center gap-3 mt-2">
-                {user.account && (
-                  <Badge
-                    variant={user.status === "active" ? "default" : "secondary"}
-                    className="px-3 py-1"
-                  >
-                    {userActiveStatus[user.account.status]}
-                  </Badge>
-                )}
+    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="p-3 max-w-6xl mx-auto space-y-3">
 
-                <span className="text-sm text-gray-600">
-                  Level {user.level}
-                </span>
-                <span className="text-sm text-gray-600">•</span>
-                <span className="text-sm text-gray-600">
-                  Joined {formatDate(user.createdAt)}
-                </span>
+        {/* ── Header card ─────────────────────────────────────────── */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <div className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar className="h-14 w-14 ring-2 ring-blue-100 flex-shrink-0">
+                {user.userProfilePictures ? (
+                  <AvatarImage
+                    src={user.userProfilePictures.file_url}
+                    alt={fullName}
+                  />
+                ) : null}
+                <AvatarFallback className="text-sm bg-blue-100 text-blue-700">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                  {fullName}
+                </h1>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {accountStatusLabel && (
+                    <Badge
+                      variant={
+                        user.account?.status === 1 ? "default" : "secondary"
+                      }
+                      className="text-[10px] px-1.5 py-0"
+                    >
+                      {accountStatusLabel}
+                    </Badge>
+                  )}
+                  <span className="text-[10px] text-gray-500">
+                    Level {user.level}
+                  </span>
+                  {user.createdAt && (
+                    <>
+                      <span className="text-[10px] text-gray-300">·</span>
+                      <span className="text-[10px] text-gray-500">
+                        Joined {formatDate(user.createdAt)}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <UserProfileAction
-            userId={auth.userId as string}
-            accountId={user.accountId as string}
-            lineId={lineId as string}
-            token={auth.token as string}
-            userName={user.username}
-          />
+            <UserProfileAction
+              userId={auth.userId as string}
+              accountId={user.accountId as string}
+              lineId={lineId as string}
+              token={auth.token as string}
+              userName={user.username}
+            />
+          </div>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="employment">Employment</TabsTrigger>
-            <TabsTrigger value="social">Social Welfare</TabsTrigger>
-            <TabsTrigger value="modules">Modules</TabsTrigger>
+        {/* ── Tabs ────────────────────────────────────────────────── */}
+        <Tabs defaultValue="overview" className="space-y-3">
+          <TabsList className="grid w-full grid-cols-4 h-8">
+            <TabsTrigger value="overview" className="text-xs">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="employment" className="text-xs">
+              Employment
+            </TabsTrigger>
+            <TabsTrigger value="social" className="text-xs">
+              Social Welfare
+            </TabsTrigger>
+            <TabsTrigger value="modules" className="text-xs">
+              Modules
+            </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Personal Information Card */}
-              <Card className="lg:col-span-3">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserIcon className="h-5 w-5 text-blue-600" />
-                    Personal Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Email Address
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Mail className="h-4 w-4 text-gray-400" />
-                          <p className="text-gray-900">
-                            {user.submittedApplications?.email || "N/A"}
-                          </p>
-                        </div>
-                      </div>
+          {/* ── Overview ───────────────────────────────────────── */}
+          <TabsContent value="overview" className="space-y-3 mt-0">
+            <SectionCard title="Personal Information" icon={UserIcon}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3">
+                {/* Contact */}
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                    Contact
+                  </p>
+                  <Field label="Email" value={app?.email} icon={Mail} />
+                  <Field label="Phone" value={app?.mobileNo} icon={Smartphone} />
+                  <Field label="Username" value={user.username && `@${user.username}`} />
+                  {user.birthDate && (
+                    <Field
+                      label="Date of Birth"
+                      value={formatDate(user.birthDate)}
+                      icon={Calendar}
+                    />
+                  )}
+                </div>
 
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Phone number
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Smartphone className="h-4 w-4 text-gray-400" />
-                          <p className="text-gray-900">
-                            {user.submittedApplications?.mobileNo || "N/A"}
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Username
-                        </p>
-                        <p className="text-gray-900">{user.username}</p>
-                      </div>
-                      {user.birthDate && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-500">
-                            Date of Birth
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Calendar className="h-4 w-4 text-gray-400" />
-                            <p className="text-gray-900">
-                              {formatDate(user.birthDate)}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-3">
-                      <p className=" font-medium text-neutral-800">
-                        Residential
-                      </p>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Province
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.resProvince ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Municipality
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.resCity ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Barangay
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.resBarangay ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <p className=" font-medium text-neutral-800">Permanent</p>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Province
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.permaProvince ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Municipality
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.permaCity ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">
-                          Barangay
-                        </p>
-                        <p className="text-gray-900">
-                          {user.submittedApplications?.permaBarangay ||
-                            "Not specified"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                {/* Residential */}
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                    Residential Address
+                  </p>
+                  <Field label="Province" value={app?.resProvince} fallback="Not specified" />
+                  <Field label="Municipality" value={app?.resCity} fallback="Not specified" />
+                  <Field label="Barangay" value={app?.resBarangay} fallback="Not specified" />
+                </div>
+
+                {/* Permanent */}
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                    Permanent Address
+                  </p>
+                  <Field label="Province" value={app?.permaProvince} fallback="Not specified" />
+                  <Field label="Municipality" value={app?.permaCity} fallback="Not specified" />
+                  <Field label="Barangay" value={app?.permaBarangay} fallback="Not specified" />
+                </div>
+              </div>
+            </SectionCard>
           </TabsContent>
 
-          {/* Employment Tab */}
-          <TabsContent value="employment" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Department & Position */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5 text-blue-600" />
-                    Department & Position
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Department
-                      </p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {user.department?.name || "Not assigned"}
+          {/* ── Employment ────────────────────────────────────── */}
+          <TabsContent value="employment" className="space-y-3 mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <SectionCard title="Department & Position" icon={Building}>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[10px] text-gray-500">Department</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {user.department?.name || (
+                          <span className="text-gray-400 italic font-normal">
+                            Not assigned
+                          </span>
+                        )}
                       </p>
                       {user.headedDepartment && (
-                        <Badge variant="secondary" className="mt-2">
-                          Department Head
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0"
+                        >
+                          Head
                         </Badge>
                       )}
                     </div>
-                    <Separator />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Position
-                      </p>
-                      {/* <p className="text-lg font-semibold text-gray-900">
-                        {user.Position?.title || "Not assigned"}
-                      </p> */}
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-[10px] text-gray-500">Position</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {user.Position?.name ||
+                        user.PositionSlot?.pos?.name || (
+                          <span className="text-gray-400 italic font-normal">
+                            Not assigned
+                          </span>
+                        )}
+                    </p>
+                  </div>
+                </div>
+              </SectionCard>
 
-              {/* Salary Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-blue-600" />
-                    Compensation
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">
-                        Salary Grade
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-lg font-semibold text-gray-900">
-                          {user.SalaryGrade?.grade || "Not specified"}
-                        </p>
-                        {/* {user.SalaryGrade?.step && (
-                          <Badge variant="outline">Step {user.SalaryGrade.step}</Badge>
-                        )} */}
-                      </div>
-                      {user.SalaryGrade?.amount && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          ₱{user.SalaryGrade.amount.toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <SectionCard title="Compensation" icon={Award}>
+                <div>
+                  <p className="text-[10px] text-gray-500">Salary Grade</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {user.SalaryGrade?.grade || (
+                      <span className="text-gray-400 italic font-normal">
+                        Not specified
+                      </span>
+                    )}
+                  </p>
+                  {user.SalaryGrade?.amount && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      ₱
+                      {user.SalaryGrade.amount.toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  )}
+                </div>
+              </SectionCard>
             </div>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-800">
-                  Government IDs & Social Welfare
-                </CardTitle>
-                <CardDescription className="text-gray-500">
-                  Official identification numbers and social welfare memberships
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Government IDs Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
-                      Government Identification
-                    </h3>
-
-                    <div className="space-y-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          TIN (Tax Identification Number)
-                        </span>
-                        <div className="flex items-center">
-                          <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.tinNo ? (
-                              user?.submittedApplications?.tinNo
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not provided
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          UMID (Unified Multi-Purpose ID)
-                        </span>
-                        <div className="flex items-center">
-                          <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.umidNo ? (
-                              user?.submittedApplications.umidNo
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not provided
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          PhilSys (Philippine Identification System)
-                        </span>
-                        <div className="flex items-center">
-                          <Fingerprint className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.philSys ? (
-                              user?.submittedApplications.philSys
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not registered
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Social Welfare Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-gray-700 uppercase tracking-wide">
-                      Social Welfare Memberships
-                    </h3>
-
-                    <div className="space-y-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          Pag-IBIG Fund
-                        </span>
-                        <div className="flex items-center">
-                          <Home className="h-4 w-4 text-blue-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.pagIbigNo ? (
-                              user?.submittedApplications.pagIbigNo
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not a member
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          PhilHealth
-                        </span>
-                        <div className="flex items-center">
-                          <Heart className="h-4 w-4 text-red-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.philHealthNo ? (
-                              user?.submittedApplications.philHealthNo
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not a member
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 mb-1">
-                          Agency Number
-                        </span>
-                        <div className="flex items-center">
-                          <Building className="h-4 w-4 text-green-400 mr-2" />
-                          <span className="font-medium">
-                            {user?.submittedApplications?.agencyNo ? (
-                              user?.submittedApplications.agencyNo
-                            ) : (
-                              <span className="text-gray-400 italic">
-                                Not assigned
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          {/* ── Social Welfare ────────────────────────────────── */}
+          <TabsContent value="social" className="space-y-3 mt-0">
+            <SectionCard title="Government IDs & Social Welfare" icon={FileText}>
+              <p className="text-[10px] text-gray-500 mb-3">
+                Official identification numbers and social welfare memberships.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4">
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                    Government Identification
+                  </p>
+                  <Field
+                    label="TIN (Tax Identification Number)"
+                    value={app?.tinNo}
+                    icon={FileText}
+                  />
+                  <Field
+                    label="UMID (Unified Multi-Purpose ID)"
+                    value={app?.umidNo}
+                    icon={CreditCard}
+                  />
+                  <Field
+                    label="PhilSys (Philippine Identification System)"
+                    value={app?.philSys}
+                    icon={Fingerprint}
+                    fallback="Not registered"
+                  />
                 </div>
 
-                {/* Status Summary */}
-                {/* <div className="mt-8 pt-6 border-t">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Membership Status Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 ${tinNo ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span className="text-xs">TIN {tinNo ? 'Registered' : 'Pending'}</span>
-          </div>
-          <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 ${umidNo ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span className="text-xs">UMID {umidNo ? 'Issued' : 'Not Issued'}</span>
-          </div>
-          <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 ${pagIbigNo ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span className="text-xs">Pag-IBIG {pagIbigNo ? 'Active' : 'Inactive'}</span>
-          </div>
-          <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 ${philHealthNo ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span className="text-xs">PhilHealth {philHealthNo ? 'Active' : 'Inactive'}</span>
-          </div>
-          <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 ${philSys ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-            <span className="text-xs">PhilSys {philSys ? 'Registered' : 'Not Registered'}</span>
-          </div>
-        </div>
-      </div> */}
-              </CardContent>
-            </Card>
+                <div className="space-y-2.5">
+                  <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                    Social Welfare Memberships
+                  </p>
+                  <Field
+                    label="Pag-IBIG Fund"
+                    value={app?.pagIbigNo}
+                    icon={Home}
+                    fallback="Not a member"
+                  />
+                  <Field
+                    label="PhilHealth"
+                    value={app?.philHealthNo}
+                    icon={Heart}
+                    fallback="Not a member"
+                  />
+                  <Field
+                    label="Agency Number"
+                    value={app?.agencyNo}
+                    icon={Building}
+                    fallback="Not assigned"
+                  />
+                </div>
+              </div>
+            </SectionCard>
           </TabsContent>
 
-          {/* Modules Tab */}
-          <TabsContent value="modules">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assigned Modules</CardTitle>
-                <CardDescription>
-                  {user.modules?.length || 0} modules assigned to this user
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user.modules && user.modules.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {user.modules.map((module, index) => (
-                      <Card
-                        key={index}
-                        className="hover:shadow-md transition-shadow"
-                      >
-                        <CardContent className="p-1">
-                          <h4 className="font-medium text-gray-900">
-                            {module.moduleName}
-                          </h4>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 text-center py-8">
-                    No modules assigned
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+          {/* ── Modules ───────────────────────────────────────── */}
+          <TabsContent value="modules" className="space-y-3 mt-0">
+            <SectionCard title="Assigned Modules" icon={LayoutGrid}>
+              <p className="text-[10px] text-gray-500 mb-3">
+                {user.modules?.length || 0} module
+                {user.modules?.length !== 1 ? "s" : ""} granted to this user.
+              </p>
+              {user.modules && user.modules.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {user.modules.map((m, i) => (
+                    <div
+                      key={i}
+                      className="border rounded-md bg-gray-50 px-2.5 py-1.5 flex items-center gap-1.5"
+                    >
+                      <LayoutGrid className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                      <span className="text-xs font-medium text-gray-800 truncate capitalize">
+                        {m.moduleName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 italic text-center py-6">
+                  No modules assigned yet
+                </p>
+              )}
+            </SectionCard>
           </TabsContent>
         </Tabs>
       </div>

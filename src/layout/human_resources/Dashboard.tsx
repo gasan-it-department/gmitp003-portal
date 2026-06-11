@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
+
 import { useAuth } from "@/provider/ProtectedRoute";
+import { humanResourcesDashboard } from "@/db/statements/dashboard";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+
 import {
   Users,
   FileText,
@@ -8,303 +15,521 @@ import {
   Building,
   Megaphone,
   FileEdit,
-  // ArrowUp,
-  // ArrowDown,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  LayoutDashboard,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
+  ChevronRight,
+  Activity,
 } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { humanResourcesDashboard } from "@/db/statements/dashboard";
 import type { HumanResourcesDashboardProps } from "@/interface/data";
 
 const Dashboard = () => {
   const { lineId } = useParams();
   const auth = useAuth();
+  const nav = useNavigate();
 
-  const { data, isFetching, error } = useQuery<HumanResourcesDashboardProps>({
-    queryKey: ["human-resources", lineId],
-    queryFn: () =>
-      humanResourcesDashboard(auth.token as string, lineId as string),
-    enabled: !!lineId && !!auth.token,
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-  });
+  const { data, isFetching, isError, error, refetch, dataUpdatedAt } =
+    useQuery<HumanResourcesDashboardProps>({
+      queryKey: ["human-resources", lineId],
+      queryFn: () =>
+        humanResourcesDashboard(auth.token as string, lineId as string),
+      enabled: !!lineId && !!auth.token,
+      refetchInterval: 30_000, // auto-pulse
+      refetchOnWindowFocus: false,
+    });
 
-  if (isFetching) {
-    return <DashboardSkeleton />;
-  }
+  // ── Loading (first paint) ─────────────────────────────────────────
+  if (isFetching && !data) return <DashboardSkeleton lineId={lineId} />;
 
-  if (error) {
+  // ── Error ─────────────────────────────────────────────────────────
+  if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8">
-        <Card className="max-w-md border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-600">
-              Error Loading Dashboard
-            </CardTitle>
-            <CardDescription>
-              Unable to fetch dashboard data. Please try again.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button
-              variant="outline"
-              onClick={() => window.location.reload()}
-              className="w-full"
-            >
-              Retry
-            </Button>
-          </CardFooter>
-        </Card>
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+        <div className="border rounded-lg bg-white p-6 text-center max-w-sm w-full">
+          <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+          </div>
+          <h3 className="text-xs font-semibold text-gray-900 mb-1">
+            Failed to load dashboard
+          </h3>
+          <p className="text-[10px] text-gray-500 mb-3">
+            {(error as any)?.message ?? "Try again later."}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] gap-1.5"
+            onClick={() => refetch()}
+          >
+            <RefreshCw className="h-3 w-3" />
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (!data) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full p-8">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>No Data Available</CardTitle>
-            <CardDescription>
-              Select a line or check your permissions to view dashboard data.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
+  if (!data) return null;
 
-  const stats = [
+  const tiles: Tile[] = [
     {
       title: "Employees",
       value: data.employees,
-      icon: Users,
-      color: "bg-blue-500",
-      description: "Total active employees",
-      trend: 12, // This could be dynamic from API
+      icon: <Users className="h-3 w-3 text-white" />,
+      accent: "from-blue-500 to-blue-600",
+      hoverBorder: "hover:border-blue-300",
+      desc: "Active in this line",
+      trend: data.trends?.employees,
+      onClick: () => nav(`/${lineId}/human-resources/employee`),
     },
     {
       title: "Applications",
       value: data.applications,
-      icon: FileText,
-      color: "bg-green-500",
-      description: "Pending job applications",
-      trend: 8,
+      icon: <FileText className="h-3 w-3 text-white" />,
+      accent: "from-emerald-500 to-emerald-600",
+      hoverBorder: "hover:border-emerald-300",
+      desc: "Pending review",
+      trend: data.trends?.applications,
+      onClick: () => nav(`/${lineId}/human-resources/application`),
     },
     {
       title: "Posted Jobs",
       value: data.postedJobs,
-      icon: Briefcase,
-      color: "bg-purple-500",
-      description: "Active job postings",
-      trend: 5,
+      icon: <Briefcase className="h-3 w-3 text-white" />,
+      accent: "from-purple-500 to-purple-600",
+      hoverBorder: "hover:border-purple-300",
+      desc: "Currently published",
+      trend: data.trends?.postedJobs,
+      onClick: () => nav(`/${lineId}/human-resources/application/post`),
     },
     {
       title: "Vacancies",
       value: data.vacancies,
-      icon: Building,
-      color: "bg-amber-500",
-      description: "Open positions",
-      trend: -3,
+      icon: <Building className="h-3 w-3 text-white" />,
+      accent: "from-amber-500 to-amber-600",
+      hoverBorder: "hover:border-amber-300",
+      desc: "Open position slots",
     },
     {
       title: "Live Announcements",
       value: data.announcementsLive,
-      icon: Megaphone,
-      color: "bg-emerald-500",
-      description: "Published announcements",
-      trend: 2,
+      icon: <Megaphone className="h-3 w-3 text-white" />,
+      accent: "from-teal-500 to-teal-600",
+      hoverBorder: "hover:border-teal-300",
+      desc: "Published & visible",
+      trend: data.trends?.announcements,
+      onClick: () => nav(`/${lineId}/human-resources/announcement`),
     },
     {
       title: "Draft Announcements",
       value: data.announcementDraft,
-      icon: FileEdit,
-      color: "bg-gray-500",
-      description: "Unpublished drafts",
-      trend: 4,
+      icon: <FileEdit className="h-3 w-3 text-white" />,
+      accent: "from-slate-500 to-slate-600",
+      hoverBorder: "hover:border-slate-300",
+      desc: "Not yet published",
+      onClick: () => nav(`/${lineId}/human-resources/announcement`),
     },
   ];
 
+  const lastUpdated = dataUpdatedAt
+    ? new Date(dataUpdatedAt).toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 overflow-auto">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <header className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <LayoutDashboard className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
                 HR Dashboard
               </h1>
-              <p className="text-gray-600 mt-2">
-                Overview of your human resources metrics and activities
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                Auto-refresh every 30 s · last updated {lastUpdated}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-sm">
-                Line: {lineId?.toUpperCase()}
-              </Badge>
-              {/* <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Export Report
-              </Button> */}
-            </div>
           </div>
-        </header>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {stats.map((stat) => (
-            <Card
-              key={stat.title}
-              className="hover:shadow-lg transition-shadow"
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              Line {lineId?.slice(-6).toUpperCase()}
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-[10px] gap-1.5"
+              disabled={isFetching}
+              onClick={() => refetch()}
             >
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  {stat.title}
-                </CardTitle>
-                <div className={`p-2 rounded-lg ${stat.color}`}>
-                  <stat.icon className="h-5 w-5 text-white" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <div className="text-3xl font-bold">{stat.value}</div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {stat.description}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              {isFetching ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              Refresh
+            </Button>
+          </div>
         </div>
+      </div>
 
-        {/* Summary Cards */}
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="max-w-6xl mx-auto space-y-3">
 
-        {/* Activity Section */}
-        {/* <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest updates and changes</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm">
-                View All
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg">
-                <div className="p-2 bg-blue-100 rounded">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">New application received</p>
-                  <p className="text-sm text-gray-500">
-                    Software Engineer position
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">2 hours ago</span>
-              </div>
-              <div className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg">
-                <div className="p-2 bg-green-100 rounded">
-                  <Megaphone className="h-4 w-4 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">Announcement published</p>
-                  <p className="text-sm text-gray-500">
-                    Quarterly meeting schedule
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">1 day ago</span>
-              </div>
-              <div className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg">
-                <div className="p-2 bg-purple-100 rounded">
-                  <Briefcase className="h-4 w-4 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">Job posting closed</p>
-                  <p className="text-sm text-gray-500">
-                    Marketing Manager position
-                  </p>
-                </div>
-                <span className="text-sm text-gray-500">2 days ago</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card> */}
+          {/* Tile grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {tiles.map((t) => (
+              <TileCard key={t.title} tile={t} />
+            ))}
+          </div>
+
+          {/* Activity feed */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <ActivityCard
+              title="Recent Applications"
+              icon={<FileText className="h-3 w-3 text-blue-500" />}
+              empty="No applications yet."
+              onSeeAll={() => nav(`/${lineId}/human-resources/application`)}
+              items={(data.recent?.applications ?? []).map((a) => ({
+                id: a.id,
+                primary:
+                  `${a.firstname ?? ""} ${a.lastname ?? ""}`.trim() ||
+                  "Unnamed",
+                secondary: a.forPosition?.name ?? "—",
+                ts: a.timestamp,
+                badge: appStatusBadge(a.status),
+                onClick: () =>
+                  nav(`/${lineId}/human-resources/application/${a.id}`),
+              }))}
+            />
+
+            <ActivityCard
+              title="Recent Job Posts"
+              icon={<Briefcase className="h-3 w-3 text-blue-500" />}
+              empty="No job posts yet."
+              onSeeAll={() =>
+                nav(`/${lineId}/human-resources/application/post`)
+              }
+              items={(data.recent?.jobs ?? []).map((j) => ({
+                id: j.id,
+                primary: j.position?.name ?? "—",
+                secondary:
+                  j.status === 1
+                    ? "Published"
+                    : j.status === 0
+                      ? "Draft"
+                      : j.status === 3
+                        ? "Paused"
+                        : "Unknown",
+                ts: j.timestamp,
+                badge: jobStatusBadge(j.status),
+              }))}
+            />
+
+            <ActivityCard
+              title="Recent Announcements"
+              icon={<Megaphone className="h-3 w-3 text-blue-500" />}
+              empty="No announcements yet."
+              onSeeAll={() => nav(`/${lineId}/human-resources/announcement`)}
+              items={(data.recent?.announcements ?? []).map((a) => ({
+                id: a.id,
+                primary: a.title || "Untitled",
+                secondary: a.status === 1 ? "Live" : "Draft",
+                ts: a.createdAt,
+                badge:
+                  a.status === 1
+                    ? {
+                        label: "Live",
+                        cls:
+                          "bg-emerald-50 text-emerald-700 border-emerald-200",
+                      }
+                    : {
+                        label: "Draft",
+                        cls: "bg-gray-50 text-gray-600 border-gray-200",
+                      },
+                onClick: () =>
+                  nav(
+                    `/${lineId}/human-resources/announcement/${a.id}`,
+                  ),
+              }))}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-// Skeleton Loader Component
-const DashboardSkeleton = () => (
-  <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-    <div className="max-w-7xl mx-auto">
-      {/* Header Skeleton */}
-      <div className="mb-8">
-        <Skeleton className="h-10 w-64 mb-2" />
-        <Skeleton className="h-4 w-96" />
+// ── Helpers ───────────────────────────────────────────────────────────
+
+interface Tile {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+  accent: string;
+  hoverBorder: string;
+  desc: string;
+  trend?: number;
+  onClick?: () => void;
+}
+
+const TileCard = ({ tile }: { tile: Tile }) => {
+  const trend = tile.trend;
+  const trendIcon =
+    trend === undefined ? null : trend > 0 ? (
+      <ArrowUp className="h-2.5 w-2.5" />
+    ) : trend < 0 ? (
+      <ArrowDown className="h-2.5 w-2.5" />
+    ) : (
+      <Minus className="h-2.5 w-2.5" />
+    );
+  const trendCls =
+    trend === undefined
+      ? ""
+      : trend > 0
+        ? "text-emerald-600"
+        : trend < 0
+          ? "text-red-600"
+          : "text-gray-500";
+
+  return (
+    <button
+      type="button"
+      onClick={tile.onClick}
+      disabled={!tile.onClick}
+      className={`text-left border rounded-md bg-white p-2 transition-colors overflow-hidden ${
+        tile.onClick ? `cursor-pointer ${tile.hoverBorder}` : "cursor-default"
+      }`}
+    >
+      <div
+        className={`h-0.5 bg-gradient-to-r ${tile.accent} rounded-full mb-1.5`}
+      />
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] font-medium text-gray-600 truncate">
+          {tile.title}
+        </p>
+        <div className={`p-1 rounded bg-gradient-to-br ${tile.accent}`}>
+          {tile.icon}
+        </div>
       </div>
-
-      {/* Stats Grid Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-10 rounded-lg" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16 mb-2" />
-              <Skeleton className="h-4 w-32" />
-            </CardContent>
-          </Card>
-        ))}
+      <p className="text-base font-bold text-gray-900 leading-none">
+        {tile.value}
+      </p>
+      <div className="flex items-center justify-between mt-1">
+        <p className="text-[10px] text-gray-400 truncate">{tile.desc}</p>
+        {trend !== undefined && (
+          <span
+            className={`flex items-center gap-0.5 text-[10px] font-medium ${trendCls}`}
+            title="Week-over-week change"
+          >
+            {trendIcon}
+            {Math.abs(trend)}
+          </span>
+        )}
       </div>
+    </button>
+  );
+};
 
-      {/* Summary Cards Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <Skeleton className="h-6 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded-lg" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+interface ActivityItem {
+  id: string;
+  primary: string;
+  secondary?: string;
+  ts: string | Date;
+  badge?: { label: string; cls: string };
+  onClick?: () => void;
+}
 
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-32 mb-2" />
-            <Skeleton className="h-4 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded" />
-              ))}
+const ActivityCard = ({
+  title,
+  icon,
+  items,
+  empty,
+  onSeeAll,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  items: ActivityItem[];
+  empty: string;
+  onSeeAll?: () => void;
+}) => (
+  <div className="border rounded-lg bg-white overflow-hidden">
+    <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5">
+        <Activity className="h-3 w-3 text-blue-500" />
+        <h3 className="text-xs font-semibold text-gray-800">{title}</h3>
+      </div>
+      {onSeeAll && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-1.5 text-[10px] gap-0.5 text-blue-600 hover:bg-blue-50"
+          onClick={onSeeAll}
+        >
+          See all
+          <ChevronRight className="h-2.5 w-2.5" />
+        </Button>
+      )}
+    </div>
+    <div>
+      {items.length === 0 ? (
+        <div className="p-3 text-center">
+          <div className="w-8 h-8 mx-auto mb-1.5 rounded-full bg-gray-100 flex items-center justify-center">
+            {icon}
+          </div>
+          <p className="text-[10px] text-gray-500">{empty}</p>
+        </div>
+      ) : (
+        <ul className="divide-y">
+          {items.map((it) => (
+            <li
+              key={it.id}
+              className={`px-3 py-2 flex items-start justify-between gap-2 ${
+                it.onClick ? "hover:bg-blue-50/40 cursor-pointer" : ""
+              }`}
+              onClick={it.onClick}
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-medium text-gray-900 truncate">
+                  {it.primary}
+                </p>
+                {it.secondary && (
+                  <p className="text-[10px] text-gray-500 truncate">
+                    {it.secondary}
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {formatRelative(it.ts)}
+                </p>
+              </div>
+              {it.badge && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${it.badge.cls}`}
+                >
+                  {it.badge.label}
+                </Badge>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </div>
+);
+
+const appStatusBadge = (s: number) => {
+  if (s === 0)
+    return {
+      label: "Pending",
+      cls: "bg-amber-50 text-amber-700 border-amber-200",
+    };
+  if (s === 1)
+    return {
+      label: "Viewed",
+      cls: "bg-blue-50 text-blue-700 border-blue-200",
+    };
+  return {
+    label: "Concluded",
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  };
+};
+
+const jobStatusBadge = (s: number) => {
+  if (s === 1)
+    return {
+      label: "Live",
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  if (s === 3)
+    return {
+      label: "Paused",
+      cls: "bg-orange-50 text-orange-700 border-orange-200",
+    };
+  return {
+    label: "Draft",
+    cls: "bg-gray-50 text-gray-600 border-gray-200",
+  };
+};
+
+const formatRelative = (input: string | Date) => {
+  const d = typeof input === "string" ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return "—";
+  const diffMs = Date.now() - d.getTime();
+  const sec = Math.round(diffMs / 1000);
+  const min = Math.round(sec / 60);
+  const hr = Math.round(min / 60);
+  const day = Math.round(hr / 24);
+  if (sec < 60) return `${sec}s ago`;
+  if (min < 60) return `${min}m ago`;
+  if (hr < 24) return `${hr}h ago`;
+  if (day < 7) return `${day}d ago`;
+  return d.toLocaleDateString("en-PH", {
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const DashboardSkeleton = ({ lineId }: { lineId?: string }) => (
+  <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+    <div className="bg-white border-b flex-shrink-0">
+      <div className="px-3 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-7 w-7 rounded-md" />
+          <div>
+            <Skeleton className="h-3 w-32 mb-1" />
+            <Skeleton className="h-2.5 w-44" />
+          </div>
+        </div>
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          {lineId ? `Line ${lineId.slice(-6).toUpperCase()}` : "—"}
+        </Badge>
+      </div>
+    </div>
+    <div className="flex-1 overflow-auto p-3">
+      <div className="max-w-6xl mx-auto space-y-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="border rounded-md bg-white p-2 overflow-hidden"
+            >
+              <Skeleton className="h-0.5 w-full rounded-full mb-1.5" />
+              <div className="flex items-center justify-between mb-1">
+                <Skeleton className="h-2.5 w-20" />
+                <Skeleton className="h-5 w-5 rounded" />
+              </div>
+              <Skeleton className="h-5 w-12 mb-1" />
+              <Skeleton className="h-2.5 w-28" />
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="border rounded-lg bg-white overflow-hidden"
+            >
+              <Skeleton className="h-8 w-full" />
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="h-10 w-full" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   </div>

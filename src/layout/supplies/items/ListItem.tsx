@@ -234,10 +234,9 @@ const ListItem = ({
       <Modal
         title="Dispense Item"
         onOpen={onOpen === 3}
-        footer={false}
+        footer={1}
         className="max-w-lg w-[95vw] overflow-auto max-h-[90vh]"
         setOnOpen={() => setOnOpen(0)}
-        cancelTitle="Close"
       >
         <DispenseItem
           queryKey="supply-list"

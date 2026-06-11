@@ -1,10 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams } from "react-router";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { useEffect } from "react";
+import { useDebounce } from "use-debounce";
+
+import { useAuth } from "@/provider/ProtectedRoute";
 import { getAllOfficePersonnel } from "@/db/statement";
 
-// Components and layout
 import {
   Table,
   TableHead,
@@ -13,16 +15,17 @@ import {
   TableCell,
   TableBody,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 
-// Hooks and libs
-import { useAuth } from "@/provider/ProtectedRoute";
-import type { User as UserProps } from "@/interface/data";
-import SWWItem from "../item/SWWItem";
 import PersonnelItem from "./item/PersonnelItem";
 
-// Icons
-import { Loader2, User } from "lucide-react";
+import { Loader2, User, Search, AlertCircle } from "lucide-react";
+
+import type { User as UserProps } from "@/interface/data";
 
 interface ListProps {
   list: UserProps[];
@@ -33,7 +36,9 @@ interface ListProps {
 const OfficePersonnel = () => {
   const { token } = useAuth();
   const { officeID } = useParams();
-  const { ref, inView } = useInView();
+
+  const [text, setText] = useState("");
+  const [query] = useDebounce(text, 400);
 
   const {
     data,
@@ -42,145 +47,159 @@ const OfficePersonnel = () => {
     hasNextPage,
     fetchNextPage,
     isError,
+    error,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["unitPersonnel", officeID],
+    queryKey: ["unitPersonnel", officeID, query],
     queryFn: ({ pageParam }) =>
       getAllOfficePersonnel(
         token as string,
         officeID as string,
         pageParam as string | null,
-        "10",
-        "",
+        "20",
+        query,
       ),
     initialPageParam: null,
-    getNextPageParam: (lastPage) => lastPage.lastCursor,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore ? lastPage.lastCursor : undefined,
+    enabled: !!token && !!officeID,
     refetchOnWindowFocus: false,
   });
 
-  // Trigger fetch when scrolled to bottom
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+  });
 
-  const allPersonnel = data?.pages.flatMap((page) => page.list) || [];
-  const totalCount = allPersonnel.length;
-
-  console.log("Person, ", data);
+  const items = data?.pages.flatMap((p) => p.list) ?? [];
+  const total = items.length;
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Table Container */}
-      <div className="flex-1 overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <Table className="min-w-full">
-            <TableHeader className="bg-gray-50">
+    <div className="w-full h-full flex flex-col overflow-hidden">
+      {/* Toolbar */}
+      <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-shrink-0">
+        <InputGroup className="bg-white flex-1 max-w-xs">
+          <InputGroupAddon>
+            <Search className="h-3 w-3 text-gray-400" />
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="Search by name or email..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="h-7 text-[11px]"
+          />
+        </InputGroup>
+        <span className="ml-auto text-[10px] text-gray-500">
+          {total} member{total !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <Table>
+            <TableHeader className="bg-gray-50 sticky top-0 z-10">
               <TableRow>
-                <TableHead className="w-16 font-semibold text-gray-700">
-                  No.
+                <TableHead className="w-10 text-[10px] font-semibold text-gray-700">
+                  No
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  Lastname
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[140px]">
+                  Last name
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
-                  Firstname
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[140px]">
+                  First name
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700">
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[120px]">
                   Middle
                 </TableHead>
-
-                <TableHead className="font-semibold text-gray-700">
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[150px]">
                   Position
                 </TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y divide-gray-100">
-              {isFetching && !data ? (
+            <TableBody>
+              {isError ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-12">
-                    <div className="flex flex-col items-center justify-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-3" />
-                      <p className="text-gray-600">Loading personnel data...</p>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <p className="text-[10px] font-medium text-red-600">
+                        Failed to load personnel
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {(error as any)?.message ?? "Try again later."}
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : allPersonnel.length > 0 ? (
-                <>
-                  {allPersonnel.map((item, index) => (
-                    <PersonnelItem
-                      key={`${item.id}-${index}`}
-                      item={item}
-                      no={index + 1}
-                    />
-                  ))}
-
-                  {/* Loading row for infinite scroll */}
-                  {(isFetchingNextPage || hasNextPage) && (
-                    <TableRow ref={ref}>
-                      <TableCell colSpan={8} className="py-4">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                          <span className="text-sm text-gray-500">
-                            Loading more...
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              ) : !isError ? (
+              ) : isFetching && total === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-12">
-                    <div className="flex flex-col items-center justify-center">
-                      <User className="w-12 h-12 text-gray-300 mb-3" />
-                      <p className="text-gray-600 font-medium">
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span className="text-[10px]">Loading personnel...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : total === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <User className="h-5 w-5 text-gray-300" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700">
                         No personnel found
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        There are no personnel assigned to this office
+                      <p className="text-[10px] text-gray-500 max-w-[260px]">
+                        {query
+                          ? `No matches for "${query}".`
+                          : "This office doesn't have personnel assigned yet."}
                       </p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
+                items.map((item, i) => (
+                  <PersonnelItem
+                    key={item.id}
+                    item={item}
+                    no={i + 1}
+                  />
+                ))
+              )}
+
+              {hasNextPage && (
+                <TableRow ref={ref}>
+                  <TableCell colSpan={5} className="text-center py-2">
+                    {isFetchingNextPage ? (
+                      <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-[10px]">Loading more...</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">
+                        Scroll to load more
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              )}
+              {!hasNextPage && total > 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>
-                    <SWWItem colSpan={8} />
+                  <TableCell colSpan={5} className="text-center py-2 border-t">
+                    <span className="text-[10px] text-gray-400">
+                      Showing all {total} personnel
+                    </span>
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-      </div>
-
-      {/* Footer Stats */}
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <div className="flex items-center space-x-4">
-          <span className="flex items-center">
-            <User className="w-4 h-4 mr-1" />
-            Showing {totalCount} personnel
-          </span>
-          {isFetchingNextPage && (
-            <span className="flex items-center text-blue-600">
-              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-              Loading more...
-            </span>
-          )}
-        </div>
-        {hasNextPage && !isFetchingNextPage && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchNextPage()}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-          >
-            Load More
-          </Button>
-        )}
       </div>
     </div>
   );

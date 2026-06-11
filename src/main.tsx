@@ -13,11 +13,21 @@ import Unauthorized from "./provider/Unauthorized.tsx";
 import TempAuthProvider from "./provider/TempAuthProvider.tsx";
 //route
 import HrInex from "@/route/human_resources/index.tsx";
+import ModuleGuard from "@/layout/ModuleGuard";
+import AccessDenied from "@/route/AccessDenied.tsx";
 import HrEmployee from "./route/human_resources/Employee.tsx";
 import HrApplication from "./route/human_resources/Application.tsx";
 import AddEmployee from "./route/human_resources/AddEmployee.tsx";
 import Invite from "./route/human_resources/Invite.tsx";
 import SalaryGrade from "./route/human_resources/SalaryGrade.tsx";
+import SalaryGradeDetail from "./route/human_resources/SalaryGradeDetail.tsx";
+import Leaves from "./route/human_resources/Leaves.tsx";
+import Payroll from "./route/human_resources/Payroll.tsx";
+import ServicesIndex from "./route/services/ServicesIndex.tsx";
+import Complaints from "./route/services/Complaints.tsx";
+import ComplaintDetail from "./route/services/ComplaintDetail.tsx";
+import MyLeaves from "./route/services/MyLeaves.tsx";
+import MyPayslips from "./route/services/MyPayslips.tsx";
 import Areas from "./route/human_resources/Areas.tsx";
 import Department from "./route/human_resources/Department.tsx";
 import Office from "./route/human_resources/Office.tsx";
@@ -42,6 +52,9 @@ import JobPost from "./layout/human_resources/JobPost.tsx";
 import JobPostData from "./route/human_resources/JobPostData.tsx";
 import PostPosition from "./route/human_resources/PostPosition.tsx";
 import PostJobForm from "./layout/human_resources/PostJobForm.tsx";
+import PesoIndex from "./route/peso/index.tsx";
+import PesoHome from "./layout/peso/PesoHome.tsx";
+import PesoJobForm from "./layout/peso/PesoJobForm.tsx";
 import ApplicationForm from "./route/human_resources/ApplicationForm.tsx";
 import PublicApplication from "./route/human_resources/PublicApplication.tsx";
 import ApplicationInfo from "./route/human_resources/ApplicationInfo.tsx";
@@ -67,6 +80,11 @@ import Dissemination from "./route/e-sign/Dissemination.tsx";
 import DisseminationIndex from "./route/e-sign/DisseminationIndex.tsx";
 import NewDisseminationRoom from "./route/e-sign/NewDisseminationRoom.tsx";
 import DocSelection from "./layout/e-sign/DocSelection.tsx";
+import DisseminationView from "./route/e-sign/DisseminationView.tsx";
+import SelfSign from "./route/e-sign/SelfSign.tsx";
+import SelfSignEditor from "./route/e-sign/SelfSignEditor.tsx";
+import Verify from "./route/Verify.tsx";
+import { GeoProvider } from "./provider/GeoProvider.tsx";
 import Archive from "./route/e-sign/Archive.tsx";
 import AcrhiveNewDocs from "./route/e-sign/AcrhiveNewDocs.tsx";
 import RoomDetails from "./layout/human_resources/document/RoomDetails.tsx";
@@ -88,6 +106,7 @@ import StorageConfig from "./route/medicine/StorageConfig.tsx";
 import StorageMedUpdate from "./layout/medicine/StorageMedUpdate.tsx";
 import History from "./route/medicine/History.tsx";
 import PrescriptionData from "./route/medicine/PrescriptionData.tsx";
+import MedicineExpiration from "./route/medicine/Expiration.tsx";
 //Prescribe
 import PrescribeIndex from "./route/prescribe/Index.tsx";
 import PrescribeHome from "./route/prescribe/PrescribeHome.tsx";
@@ -105,6 +124,7 @@ import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
 import UserDataRegistration from "./route/UserDataRegistration.tsx";
 import LineUserInfoRegister from "./layout/LineUserInfoRegister.tsx";
 import PositionDetail from "./route/human_resources/PositionDetail.tsx";
+import PositionSelectApplicant from "./route/human_resources/PositionSelectApplicant.tsx";
 import ReuqestDetail from "./layout/human_resources/document/ReuqestDetail.tsx";
 import DocumentRoomProvider from "./provider/DocumentRoomProvider.tsx";
 
@@ -158,6 +178,8 @@ createRoot(document.getElementById("root")!).render(
               path="/job-post/:municipalId/form/:jobPostId"
               element={<ApplicationForm />}
             />
+            {/* Public verification page — opened by QR scanners. */}
+            <Route path="/verify/:id" element={<Verify />} />
             <Route
               element={
                 <Unauthorized>
@@ -166,6 +188,7 @@ createRoot(document.getElementById("root")!).render(
               }
             >
               <Route path="/" element={<Test />} />
+              <Route path="/access-denied" element={<AccessDenied />} />
               <Route path="/:lineId" element={<App />}>
                 <Route index={true} element={<SupplyIndex />} />
                 <Route
@@ -176,8 +199,22 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/:lineId/admin" element={<AdminPage />}>
                 <Route index={true} element={<AdminHome />} />
               </Route>
+              {/* Services portal — open to every line user, no module gate */}
+              <Route path="/:lineId/services" element={<ServicesIndex />}>
+                <Route path="complaints" element={<Complaints />} />
+                <Route path="complaints/:id" element={<ComplaintDetail />} />
+                <Route path="leaves" element={<MyLeaves />} />
+                <Route path="payslips" element={<MyPayslips />} />
+              </Route>
               <Route />
-              <Route path="/:lineId/supplies" element={<Home />}>
+              <Route
+                path="/:lineId/supplies"
+                element={
+                  <ModuleGuard moduleName="supplies">
+                    <Home />
+                  </ModuleGuard>
+                }
+              >
                 <Route index={true} element={<ContainterList />} />
                 <Route
                   path="/:lineId/supplies/inbox/:inboxId"
@@ -233,17 +270,35 @@ createRoot(document.getElementById("root")!).render(
                   element={<SupplyItem />}
                 />
               </Route>
-              <Route path="/:lineId/patients-record" element={<PatientsIndex />}>
+              <Route
+                path="/:lineId/patients-record"
+                element={
+                  <ModuleGuard moduleName="patients-record">
+                    <PatientsIndex />
+                  </ModuleGuard>
+                }
+              >
                 <Route index={true} element={<PatientList />} />
                 <Route path=":patientId" element={<PatientDetail />} />
                 <Route path=":patientId/record/:recordId" element={<PatientRecordDetail />} />
               </Route>
-              <Route path="/:lineId/patient-diagnose" element={<DiagnoseIndex />}>
+              <Route
+                path="/:lineId/patient-diagnose"
+                element={
+                  <ModuleGuard moduleName="patient-diagnose">
+                    <DiagnoseIndex />
+                  </ModuleGuard>
+                }
+              >
                 <Route index={true} element={<DiagnoseHome />} />
               </Route>
               <Route
                 path="/:lineId/prescribe-medicine"
-                element={<PrescribeIndex />}
+                element={
+                  <ModuleGuard moduleName="prescribe-medicine">
+                    <PrescribeIndex />
+                  </ModuleGuard>
+                }
               >
                 <Route index={true} element={<PrescribeHome />} />
                 <Route
@@ -251,11 +306,19 @@ createRoot(document.getElementById("root")!).render(
                   element={<PrescribedData />}
                 />
               </Route>
-              <Route path="/:lineId/medicine" element={<MedicineIndex />}>
+              <Route
+                path="/:lineId/medicine"
+                element={
+                  <ModuleGuard moduleName="medicine">
+                    <MedicineIndex />
+                  </ModuleGuard>
+                }
+              >
                 <Route index={true} element={<StorageList />} />
                 <Route path="storage/:storageId" element={<Storage />} />
                 <Route path="config" element={<StorageConfig />} />
                 <Route path="logs" element={<History />} />
+                <Route path="expiration" element={<MedicineExpiration />} />
                 <Route
                   path="prescription/:prescriptionId"
                   element={<PrescriptionData />}
@@ -265,7 +328,14 @@ createRoot(document.getElementById("root")!).render(
                   element={<StorageMedUpdate />}
                 />
               </Route>
-              <Route path="/:lineId/human-resources" element={<HrInex />}>
+              <Route
+                path="/:lineId/human-resources"
+                element={
+                  <ModuleGuard moduleName="human-resources">
+                    <HrInex />
+                  </ModuleGuard>
+                }
+              >
                 <Route path="announcement" element={<Announcement />} />
                 <Route
                   path="announcement/:announcementId"
@@ -290,6 +360,12 @@ createRoot(document.getElementById("root")!).render(
                   element={<ApplicationInfo />}
                 />
                 <Route path="salary" element={<SalaryGrade />} />
+                <Route
+                  path="salary/:salaryGradeId"
+                  element={<SalaryGradeDetail />}
+                />
+                <Route path="leaves" element={<Leaves />} />
+                <Route path="payroll" element={<Payroll />} />
                 <Route path="areas" element={<Areas />} />
                 <Route path="units" element={<Department />} />
                 <Route path="invite" element={<Invite />} />
@@ -312,20 +388,42 @@ createRoot(document.getElementById("root")!).render(
                   path="units/:officeID/position/:positionId"
                   element={<PositionDetail />}
                 />
+                <Route
+                  path="units/:officeID/position/:positionId/select-applicant"
+                  element={<PositionSelectApplicant />}
+                />
                 <Route path="job-post/:jobPostId" element={<JobPostData />} />
+              </Route>
+              <Route
+                path="/:lineId/peso"
+                element={
+                  <ModuleGuard moduleName="peso">
+                    <PesoIndex />
+                  </ModuleGuard>
+                }
+              >
+                <Route index={true} element={<PesoHome />} />
+                <Route path="post" element={<PesoJobForm />} />
+                <Route path="post/:pesoJobId" element={<PesoJobForm />} />
               </Route>
               <Route
                 path="/:lineId/documents"
                 element={
-                  <DocumentRoomProvider>
-                    <EsignIndex />
-                  </DocumentRoomProvider>
+                  <ModuleGuard moduleName="documents">
+                    <DocumentRoomProvider>
+                      <GeoProvider>
+                        <EsignIndex />
+                      </GeoProvider>
+                    </DocumentRoomProvider>
+                  </ModuleGuard>
                 }
               >
                 <Route index={true} element={<EsignHomePannel />} />
                 <Route path="archive" element={<Archive />} />
                 <Route path="archive/:archiveId" element={<ArchiveDetail />} />
                 <Route path="manage-signature" element={<ManageSignature />} />
+                <Route path="self-sign" element={<SelfSign />} />
+                <Route path="self-sign/:docId" element={<SelfSignEditor />} />
                 <Route path="archive/new" element={<AcrhiveNewDocs />} />
                 <Route path="" element={<EsignHome />} />
                 <Route path="dissemination" element={<DisseminationIndex />}>
@@ -337,6 +435,10 @@ createRoot(document.getElementById("root")!).render(
                   <Route
                     path="set-up/:newRoomId"
                     element={<NewDisseminationRoom />}
+                  />
+                  <Route
+                    path="view/:newRoomId"
+                    element={<DisseminationView />}
                   />
                 </Route>
               </Route>

@@ -1,10 +1,9 @@
-import { useEffect, useRef, memo } from "react";
+import { memo } from "react";
 import { useInView } from "react-intersection-observer";
 import { useInfiniteQuery } from "@tanstack/react-query";
-//db and statement
+
 import { salaryGradeList } from "@/db/statement";
 
-//components and layouts
 import {
   Select,
   SelectContent,
@@ -12,117 +11,105 @@ import {
   SelectValue,
   SelectTrigger,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
-//interface/props/schema
 import type { SalaryGrade } from "@/interface/data";
+
 interface Props {
   lineId: string;
   token: string;
   onChange: (...event: any[]) => void;
-  value: string;
+  value?: string;
+  disabled?: boolean;
+  className?: string;
 }
-interface ListPops {
+
+interface ListProps {
   list: SalaryGrade[];
   lastCursor: string | null;
   hasMore: boolean;
 }
 
-const SalaryGradeSelect = ({ lineId, token, onChange }: Props) => {
-  const { ref, inView } = useInView();
-  const contentRef = useRef<HTMLDivElement>(null);
-
+const SalaryGradeSelect = ({
+  lineId,
+  token,
+  onChange,
+  value,
+  disabled,
+  className,
+}: Props) => {
   const { data, isFetchingNextPage, isFetching, fetchNextPage, hasNextPage } =
-    useInfiniteQuery<ListPops>({
+    useInfiniteQuery<ListProps>({
       queryKey: ["salaryGrade", lineId],
       queryFn: ({ pageParam }) =>
         salaryGradeList(token, lineId, pageParam as string | null, "10", ""),
       initialPageParam: null,
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.lastCursor : undefined,
+      enabled: !!token && !!lineId,
+      refetchOnWindowFocus: false,
     });
 
-  // Trigger fetch when the last item is in view
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
+    },
+  });
 
-  // Handle scroll for infinite loading
-  const handleScroll = () => {
-    if (!contentRef.current || !hasNextPage || isFetchingNextPage) return;
-
-    const element = contentRef.current;
-    const scrollBottom =
-      element.scrollHeight - element.scrollTop - element.clientHeight;
-
-    // Load more when within 30px of bottom
-    if (scrollBottom < 30) {
-      fetchNextPage();
-    }
-  };
-
-  const allItems = data?.pages.flatMap((item) => item.list) || [];
-  const totalItems = allItems.length;
+  const items = data?.pages.flatMap((p) => p.list) ?? [];
+  const totalItems = items.length;
   const hasData = totalItems > 0;
-  const isLoading = isFetching && !isFetchingNextPage;
+  const isLoadingInitial = isFetching && !isFetchingNextPage && totalItems === 0;
 
   return (
-    <Select onValueChange={(e) => onChange(e)}>
-      <SelectTrigger disabled={isLoading}>
-        <SelectValue placeholder="Select salary grades" />
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className={`h-8 text-xs ${className ?? ""}`}>
+        <SelectValue placeholder="Select salary grade" />
       </SelectTrigger>
-      <SelectContent
-        ref={contentRef}
-        onScroll={handleScroll}
-        className="max-h-[250px] overflow-auto"
-      >
-        {/* Loading state for initial load */}
-        {isLoading ? (
-          <div className="py-6 text-center">
-            <div className="text-sm text-muted-foreground">Loading...</div>
+      <SelectContent className="max-h-[260px]">
+        {isLoadingInitial ? (
+          <div className="py-3 flex items-center justify-center gap-1.5 text-gray-400">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            <span className="text-[10px]">Loading...</span>
           </div>
         ) : hasData ? (
           <>
-            {allItems.map((item, index) => (
-              <SelectItem
-                key={item.id}
-                value={item.id}
-                ref={index === totalItems - 1 ? ref : null}
-              >
-                {item.grade}
+            {items.map((item) => (
+              <SelectItem key={item.id} value={item.id} className="text-xs">
+                <div className="flex items-center justify-between gap-3 w-full">
+                  <span className="font-mono">{item.grade}</span>
+                  <span className="text-[10px] text-gray-500">
+                    ₱{item.amount.toLocaleString("en-PH")}
+                  </span>
+                </div>
               </SelectItem>
             ))}
 
-            {/* Loading indicator for next page */}
+            {/* Infinite-scroll trigger (rendered last) */}
+            {hasNextPage && <div ref={ref} className="h-1" />}
+
             {isFetchingNextPage && (
-              <div className="sticky bottom-0 bg-background py-2 text-center border-t">
-                <div className="text-xs text-muted-foreground">
-                  Loading more...
-                </div>
+              <div className="sticky bottom-0 bg-white border-t py-1.5 flex items-center justify-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                <span className="text-[10px] text-gray-500">Loading more...</span>
               </div>
             )}
 
-            {/* No more items indicator */}
             {!hasNextPage && totalItems > 5 && (
-              <div className="sticky bottom-0 bg-background py-2 text-center border-t">
-                <div className="text-xs text-muted-foreground">
-                  {totalItems} items loaded
-                </div>
+              <div className="sticky bottom-0 bg-white border-t py-1 text-center">
+                <span className="text-[10px] text-gray-400">
+                  All {totalItems} grades loaded
+                </span>
               </div>
             )}
           </>
         ) : (
-          <SelectItem value="noData" disabled>
-            No Data found
-          </SelectItem>
-        )}
-
-        {/* Error state */}
-        {!isLoading && !hasData && data && (
-          <SelectItem value="error" disabled>
-            Something went wrong
-          </SelectItem>
+          <div className="py-3 text-center">
+            <span className="text-[10px] text-gray-400">
+              No salary grades available
+            </span>
+          </div>
         )}
       </SelectContent>
     </Select>

@@ -15,7 +15,10 @@ import { Bell, AlertCircle, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-import { signatoryRegistry } from "@/db/statements/document";
+import { repairRoomMembership, signatoryRegistry } from "@/db/statements/document";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Loader2, Wrench } from "lucide-react";
 import SignatoryRegistry from "@/layout/e-sign/SignatoryRegistry";
 import { roomRegistration } from "@/utils/helper";
 
@@ -172,6 +175,19 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  // Registration says approved but no ReceivingRoom is actually wired
+  // for this user. Silently passing through would leave every downstream
+  // component with `room.id === undefined`. Show a self-repair button.
+  if (!data.room) {
+    return (
+      <MissingRoomScreen
+        token={auth.token as string}
+        userId={auth.userId as string}
+        queryClient={queryClient}
+      />
+    );
+  }
+
   return (
     <DocumentRoomContext.Provider value={{ room: data.room }}>
       {children}
@@ -187,4 +203,72 @@ export const useRoom = () => {
     throw new Error("useRoom must be used within a DocumentRoomProvider");
   }
   return context;
+};
+
+const MissingRoomScreen = ({
+  token,
+  userId,
+  queryClient,
+}: {
+  token: string;
+  userId: string;
+  queryClient: ReturnType<typeof useQueryClient>;
+}) => {
+  const [pending, setPending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const handleRepair = async () => {
+    setPending(true);
+    setErr(null);
+    try {
+      await repairRoomMembership(token, userId);
+      // Re-fetch the room registration so the provider re-renders with
+      // the freshly-linked room.
+      await queryClient.invalidateQueries({
+        queryKey: ["signatory-registry", userId],
+      });
+    } catch (e: any) {
+      setErr(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Repair failed. Check the API logs.",
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
+      <AlertCircle className="h-8 w-8 text-amber-500 mb-3" />
+      <div className="text-sm font-semibold text-gray-900">
+        Your room membership is missing
+      </div>
+      <p className="text-xs text-gray-600 max-w-md mt-1">
+        Your room registration was approved, but the link between you and a
+        receiving room was never created (a historical approval bug). Click
+        below to repair it — this looks up your approved registration and
+        ensures you're attached to its room.
+      </p>
+      <Button
+        size="sm"
+        className="h-8 text-xs mt-4"
+        onClick={handleRepair}
+        disabled={pending}
+      >
+        {pending ? (
+          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+        ) : (
+          <Wrench className="h-3.5 w-3.5 mr-1.5" />
+        )}
+        Repair my room membership
+      </Button>
+      {err ? (
+        <div className="mt-3 text-[10px] text-rose-600 max-w-md">{err}</div>
+      ) : null}
+      <div className="mt-4 text-[10px] text-gray-400 font-mono">
+        userId: <span className="select-all">{userId}</span>
+      </div>
+    </div>
+  );
 };

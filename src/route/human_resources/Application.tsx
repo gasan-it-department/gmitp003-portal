@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
-import { useAuth } from "@/provider/ProtectedRoute";
-import { useDebounce } from "use-debounce";
 import { useInView } from "react-intersection-observer";
+import { useDebounce } from "use-debounce";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-//db and statement
+
+import { useAuth } from "@/provider/ProtectedRoute";
 import { lineApplications } from "@/db/statement";
 import { deleteSelctedApplication } from "@/db/statements/application";
-//layout/components
+
 import {
   Table,
   TableBody,
@@ -23,10 +23,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import SWWItem from "@/layout/item/SWWItem";
-import ApplicationItem from "@/layout/human_resources/item/ApplicationItem";
-import ContactApplicant from "@/layout/human_resources/ContactApplicant";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverTrigger,
@@ -48,11 +45,10 @@ import {
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
 import PositionSelect from "@/layout/human_resources/PositionSelect";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import FormTags from "@/layout/FormTags";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-//icons
+import ApplicationItem from "@/layout/human_resources/item/ApplicationItem";
+import ContactApplicant from "@/layout/human_resources/ContactApplicant";
+
 import {
   FolderPlus,
   Search,
@@ -68,9 +64,10 @@ import {
   FileText,
   Briefcase,
   Trash2,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
-//
 import type { SubmittedApplicationProps } from "@/interface/data";
 import { RefineApplicationSchema } from "@/interface/zod";
 
@@ -80,54 +77,60 @@ interface ListProps {
   lastCursor: string | null;
 }
 
+interface FilterValues {
+  dateFrom: string;
+  dateTo: string;
+  positionId: string;
+  tags: { tag: string; cont: string }[];
+}
+
 const Application = () => {
   const { lineId } = useParams();
-  const [text, setText] = useState("");
-  const [onOpen, setOnOpen] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [onMultiSelect, setOnMultiSelect] = useState(false);
-  const [query] = useDebounce(text, 1000);
-
   const auth = useAuth();
   const nav = useNavigate();
   const queryClient = useQueryClient();
 
-  const { ref, inView } = useInView();
+  const [text, setText] = useState("");
+  const [onOpen, setOnOpen] = useState(0);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [onMultiSelect, setOnMultiSelect] = useState(false);
+  const [query] = useDebounce(text, 600);
 
-  const form = useForm({
+  const form = useForm<FilterValues>({
     resolver: zodResolver(RefineApplicationSchema),
     defaultValues: {
       dateFrom: "",
       dateTo: "",
-      tags: [],
       positionId: "",
+      tags: [],
     },
   });
+  const { handleSubmit, control, setValue, watch } = form;
 
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-    control,
-    setError,
-    getValues,
-    setValue,
-  } = form;
+  const tags = useFieldArray({ control, name: "tags" });
+  const dateFrom = watch("dateFrom");
+  const dateTo = watch("dateTo");
+  const position = watch("positionId");
+  const allTags = watch("tags");
 
-  const allTags = getValues("tags");
-  const dateTo = getValues("dateTo");
-  const dateFrom = getValues("dateFrom");
-  const position = getValues("positionId");
+  // Filters live in queryKey so cache stays consistent without manual refetches.
+  const [appliedFilters, setAppliedFilters] = useState<FilterValues>({
+    dateFrom: "",
+    dateTo: "",
+    positionId: "",
+    tags: [],
+  });
 
   const {
     data,
     isFetchingNextPage,
     isFetching,
     fetchNextPage,
-    refetch,
     hasNextPage,
     isError,
+    error,
   } = useInfiniteQuery<ListProps>({
-    queryKey: ["applications", lineId],
+    queryKey: ["applications", lineId, query, appliedFilters],
     queryFn: ({ pageParam }) =>
       lineApplications(
         auth.token as string,
@@ -135,75 +138,67 @@ const Application = () => {
         pageParam as string | null,
         "20",
         query,
-        allTags.map((item) => item.tag),
-        dateFrom,
-        dateTo,
-        position,
+        appliedFilters.tags.map((t) => t.tag),
+        appliedFilters.dateFrom || undefined,
+        appliedFilters.dateTo || undefined,
+        appliedFilters.positionId || undefined,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    enabled: !!auth.token && !!lineId,
     refetchOnWindowFocus: false,
   });
 
-  const tags = useFieldArray({
-    control,
-    name: "tags",
+  const { ref } = useInView({
+    threshold: 0.5,
+    onChange: (inView) => {
+      if (inView && hasNextPage && !isFetching && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
   });
 
-  const handleRemoveTags = (index: number) => {
-    tags.remove(index);
-  };
-
-  const handleCheckSelected = (id: string) => {
-    return selected.includes(id);
-  };
-
-  const handleAddSelected = (id: string) => {
-    setSelected((prev) => {
-      const isSelected = prev.includes(id);
-      if (isSelected) {
-        return prev.filter((item) => item !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-  };
+  const handleCheckSelected = (id: string) => selected.includes(id);
+  const handleAddSelected = (id: string) =>
+    setSelected((p) =>
+      p.includes(id) ? p.filter((x) => x !== id) : [...p, id],
+    );
 
   const handleCheckTags = (tag: string) => {
-    const index = tags.fields.findIndex((item) => item.tag === tag);
-    if (index !== -1) return { res: true, index };
-    return { res: false, index };
+    const index = tags.fields.findIndex((t) => t.tag === tag);
+    return { res: index !== -1, index };
   };
-
   const handleAddTags = (tag: string, cont: string) => {
-    const index = handleCheckTags(tag);
-    if (index.res) {
-      return handleRemoveTags(index.index);
-    }
-    tags.append({ cont, tag });
+    const { res, index } = handleCheckTags(tag);
+    if (res) tags.remove(index);
+    else tags.append({ cont, tag });
   };
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setValue("dateFrom", "");
     setValue("dateTo", "");
     setValue("positionId", "");
     setValue("tags", []);
-    refetch();
+    setAppliedFilters({
+      dateFrom: "",
+      dateTo: "",
+      positionId: "",
+      tags: [],
+    });
   };
 
-  const onSubmit = async () => {
-    try {
-      refetch();
-      setOnOpen(0);
-    } catch (error) {
-      setError("root", { message: "Failed to submit" });
-    }
+  const applyFilters = (data: FilterValues) => {
+    setAppliedFilters({
+      dateFrom: data.dateFrom,
+      dateTo: data.dateTo,
+      positionId: data.positionId,
+      tags: data.tags,
+    });
+    setOnOpen(0);
   };
 
-  const { mutateAsync, isPending } = useMutation({
+  const deleteMut = useMutation({
     mutationFn: () =>
       deleteSelctedApplication(
         auth.token as string,
@@ -213,502 +208,513 @@ const Application = () => {
       ),
     onSuccess: () => {
       setSelected([]);
+      setOnMultiSelect(false);
       setOnOpen(0);
-      queryClient.invalidateQueries({
-        queryKey: ["applications", lineId],
-      });
+      queryClient.invalidateQueries({ queryKey: ["applications", lineId] });
     },
-    onError: (error) => {
-      console.error("Error deleting selected applications:", error);
+    onError: (err: any) => {
+      // Errors here would be useful to show.
+      console.error("Error deleting applications:", err);
     },
   });
 
-  useEffect(() => {
-    refetch();
-  }, [query, refetch]);
+  const items = data?.pages.flatMap((p) => p.list) ?? [];
+  const hasActiveFilters =
+    !!(appliedFilters.dateFrom ||
+      appliedFilters.dateTo ||
+      appliedFilters.positionId ||
+      appliedFilters.tags.length);
 
-  useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const allApplications = data?.pages.flatMap((item) => item.list) || [];
-  const totalCount = allApplications.length;
+  const statusColor = (s: number) => {
+    if (s === 0) return "bg-amber-50 text-amber-700 border-amber-200";
+    if (s === 1) return "bg-blue-50 text-blue-700 border-blue-200";
+    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  };
 
   return (
-    <div className="w-full h-full flex flex-col">
-      {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 p-6 bg-gradient-to-r from-blue-50 to-white rounded-xl shadow-sm border">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <FileText className="w-6 h-6 text-blue-600" />
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <FileText className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                Applications
+              </h1>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                {items.length} loaded
+                {isFetching && items.length > 0 && " · refreshing..."}
+                {selected.length > 0 && ` · ${selected.length} selected`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Applications</h1>
-            <p className="text-gray-600">
-              {totalCount} applications found
-              {isFetching && " • Updating..."}
-              {selected.length > 0 && ` • ${selected.length} selected`}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <InputGroup className="lg:w-80">
-            <InputGroupAddon>
-              <Search className="w-4 h-4" />
-            </InputGroupAddon>
-            <InputGroupInput
-              placeholder="Search by name, position, or email..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </InputGroup>
-
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant={onMultiSelect ? "default" : "outline"}
-              onClick={() => {
-                setOnMultiSelect(!onMultiSelect);
-                if (onMultiSelect) setSelected([]);
-              }}
-              className="gap-2"
-            >
-              {onMultiSelect ? (
-                <SquareCheckBig className="w-4 h-4" />
-              ) : (
-                <Square className="w-4 h-4" />
-              )}
-              {onMultiSelect ? "Cancel Select" : "Select"}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setOnOpen(1)}
-              className="gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              Filter
-            </Button>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button size="sm" variant="outline">
-                  <EllipsisVertical className="w-4 h-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48">
-                <div className="space-y-1">
-                  {selected.length > 0 && (
-                    <Button
-                      className="w-full justify-start"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setOnOpen(2)}
-                    >
-                      <PhoneForwarded className="w-4 h-4 mr-2" />
-                      Contact ({selected.length})
-                    </Button>
-                  )}
-                  <Button
-                    className="w-full justify-start"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => nav("post")}
-                  >
-                    <FolderPlus className="w-4 h-4 mr-2" />
-                    New Posting
-                  </Button>
-                  <Button
-                    disabled={selected.length === 0}
-                    className="w-full justify-start"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setOnOpen(3)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete selected
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {items.length} record{items.length !== 1 ? "s" : ""}
+          </Badge>
         </div>
       </div>
 
-      {/* Active Filters Badges */}
-      {(dateFrom || dateTo || position || allTags.length > 0) && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-700">
-              Active filters:
-            </span>
-            {dateFrom && dateTo && (
-              <Badge variant="secondary" className="gap-1">
-                <CalendarArrowDown className="w-3 h-3" />
-                {dateFrom} to {dateTo}
-              </Badge>
-            )}
-            {position && (
-              <Badge variant="secondary">
-                <Briefcase className="w-3 h-3 mr-1" />
-                Position
-              </Badge>
-            )}
-            {allTags.map((tag, index) => (
-              <Badge key={index} variant="secondary">
-                {tag.tag}
-              </Badge>
-            ))}
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleReset}
-              className="h-6 px-2 text-xs"
+      {/* Toolbar */}
+      <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-wrap flex-shrink-0">
+        <InputGroup className="bg-white flex-1 min-w-[180px] max-w-sm">
+          <InputGroupAddon>
+            <Search className="h-3 w-3 text-gray-400" />
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="Search by name..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="h-7 text-[11px]"
+          />
+        </InputGroup>
+
+        <Button
+          size="sm"
+          variant={onMultiSelect ? "default" : "outline"}
+          onClick={() => {
+            setOnMultiSelect((v) => !v);
+            if (onMultiSelect) setSelected([]);
+          }}
+          className="h-7 text-[10px] gap-1.5"
+        >
+          {onMultiSelect ? (
+            <SquareCheckBig className="h-3 w-3" />
+          ) : (
+            <Square className="h-3 w-3" />
+          )}
+          {onMultiSelect ? "Cancel" : "Select"}
+        </Button>
+
+        <Button
+          size="sm"
+          variant={hasActiveFilters ? "default" : "outline"}
+          onClick={() => setOnOpen(1)}
+          className="h-7 text-[10px] gap-1.5"
+        >
+          <Filter className="h-3 w-3" />
+          Filter
+          {hasActiveFilters && (
+            <Badge
+              variant="secondary"
+              className="h-3.5 px-1 text-[9px] leading-none ml-0.5"
             >
-              <ListRestart className="w-3 h-3 mr-1" />
-              Clear all
+              on
+            </Badge>
+          )}
+        </Button>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 w-7 p-0">
+              <EllipsisVertical className="h-3 w-3" />
             </Button>
-          </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-1" align="end">
+            <div className="space-y-0.5">
+              <Button
+                className="w-full justify-start h-7 text-[10px] gap-1.5"
+                size="sm"
+                variant="ghost"
+                disabled={selected.length === 0}
+                onClick={() => setOnOpen(2)}
+              >
+                <PhoneForwarded className="h-3 w-3" />
+                Contact ({selected.length})
+              </Button>
+              <Button
+                className="w-full justify-start h-7 text-[10px] gap-1.5"
+                size="sm"
+                variant="ghost"
+                onClick={() => nav("post")}
+              >
+                <FolderPlus className="h-3 w-3" />
+                New Posting
+              </Button>
+              <Button
+                className="w-full justify-start h-7 text-[10px] gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                size="sm"
+                variant="ghost"
+                disabled={selected.length === 0}
+                onClick={() => setOnOpen(3)}
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete selected
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Active filter chips */}
+      {hasActiveFilters && (
+        <div className="bg-white border-b px-3 py-1.5 flex items-center gap-1.5 flex-wrap flex-shrink-0">
+          <span className="text-[10px] text-gray-500">Filters:</span>
+          {(appliedFilters.dateFrom || appliedFilters.dateTo) && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200"
+            >
+              <CalendarArrowDown className="h-2.5 w-2.5 mr-0.5" />
+              {appliedFilters.dateFrom || "…"} → {appliedFilters.dateTo || "…"}
+            </Badge>
+          )}
+          {appliedFilters.positionId && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200"
+            >
+              <Briefcase className="h-2.5 w-2.5 mr-0.5" />
+              Position
+            </Badge>
+          )}
+          {appliedFilters.tags.map((t) => (
+            <Badge
+              key={t.tag}
+              variant="outline"
+              className="text-[10px] px-1.5 py-0"
+            >
+              {t.tag}
+            </Badge>
+          ))}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleReset}
+            className="h-5 px-1.5 text-[10px] gap-1"
+          >
+            <ListRestart className="h-2.5 w-2.5" />
+            Clear
+          </Button>
         </div>
       )}
 
-      {/* Table Container */}
-      <Card className="flex-1 overflow-hidden">
-        <CardContent className="p-0 h-full">
-          <ScrollArea className="h-full">
-            <div className="min-w-full">
-              <Table>
-                <TableHeader className="bg-gray-50 sticky top-0 z-10">
-                  <TableRow>
-                    {onMultiSelect && (
-                      <TableHead className="w-12 font-semibold text-gray-700">
-                        <div className="flex items-center">
-                          <SquareCheckBig className="w-4 h-4 mr-1" />
-                          {selected.length}
-                        </div>
-                      </TableHead>
+      {/* Table */}
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <Table>
+            <TableHeader className="bg-gray-50 sticky top-0 z-10">
+              <TableRow>
+                {onMultiSelect && (
+                  <TableHead className="w-10 text-[10px] font-semibold text-gray-700">
+                    <div className="flex items-center gap-1">
+                      <SquareCheckBig className="h-3 w-3" />
+                      {selected.length || ""}
+                    </div>
+                  </TableHead>
+                )}
+                <TableHead className="w-10 text-[10px] font-semibold text-gray-700">
+                  No
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[160px]">
+                  Position
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[160px]">
+                  Applicant
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[110px]">
+                  Date Filed
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-24">
+                  Status
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isError ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={onMultiSelect ? 6 : 5}
+                    className="text-center py-8"
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <p className="text-[10px] font-medium text-red-600">
+                        Failed to load applications
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {(error as any)?.message ?? "Try again later."}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : isFetching && items.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={onMultiSelect ? 6 : 5}
+                    className="text-center py-8"
+                  >
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span className="text-[10px]">Loading applications...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={onMultiSelect ? 6 : 5}
+                    className="text-center py-10"
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-gray-300" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700">
+                        No applications found
+                      </p>
+                      <p className="text-[10px] text-gray-500 max-w-[260px]">
+                        {query || hasActiveFilters
+                          ? "Try clearing search or filters."
+                          : "Post a job to start collecting applications."}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1.5 mt-1"
+                        onClick={() => nav("post")}
+                      >
+                        <FolderPlus className="h-3 w-3" />
+                        New Posting
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((item, i) => (
+                  <ApplicationItem
+                    key={item.id}
+                    item={item}
+                    no={i + 1}
+                    query={query}
+                    onMultiSelect={onMultiSelect}
+                    handleCheckSelected={handleCheckSelected}
+                    handleAddSelected={handleAddSelected}
+                    token={auth.token as string}
+                    userId={auth.userId as string}
+                    lineId={lineId as string}
+                    statusColor={statusColor}
+                  />
+                ))
+              )}
+
+              {hasNextPage && (
+                <TableRow ref={ref}>
+                  <TableCell
+                    colSpan={onMultiSelect ? 6 : 5}
+                    className="text-center py-2"
+                  >
+                    {isFetchingNextPage ? (
+                      <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span className="text-[10px]">Loading more...</span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-400">
+                        Scroll to load more
+                      </span>
                     )}
-                    <TableHead className="w-16 font-semibold text-gray-700">
-                      No.
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700">
-                      Position
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700">
-                      Applicant
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700">
-                      Date Filed
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700">
-                      Status
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-100">
-                  {/* Initial Loading */}
-                  {isFetching && allApplications.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={onMultiSelect ? 6 : 5}
-                        className="py-12"
-                      >
-                        <div className="flex flex-col items-center justify-center">
-                          <Spinner className="w-8 h-8 mb-3" />
-                          <p className="text-gray-600">
-                            Loading applications...
-                          </p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-
-                  {/* Error State */}
-                  {isError ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={onMultiSelect ? 6 : 5}
-                        className="py-12"
-                      >
-                        <SWWItem colSpan={onMultiSelect ? 6 : 5} />
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-
-                  {/* Applications List */}
-                  {allApplications.length > 0 ? (
-                    <>
-                      {allApplications.map((item, index) => (
-                        <ApplicationItem
-                          key={`${item.id}-${index}`}
-                          item={item}
-                          no={index + 1}
-                          query={query}
-                          onMultiSelect={onMultiSelect}
-                          handleCheckSelected={handleCheckSelected}
-                          handleAddSelected={handleAddSelected}
-                          token={auth.token as string}
-                          userId={auth.userId as string}
-                          lineId={lineId as string}
-                        />
-                      ))}
-
-                      {/* Infinite Scroll Loading */}
-                      {isFetchingNextPage && (
-                        <TableRow>
-                          <TableCell
-                            colSpan={onMultiSelect ? 6 : 5}
-                            className="py-4"
-                          >
-                            <div className="flex items-center justify-center space-x-2">
-                              <Spinner className="w-4 h-4" />
-                              <span className="text-sm text-gray-500">
-                                Loading more applications...
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-
-                      {/* Intersection Observer Trigger */}
-                      {hasNextPage && !isFetchingNextPage && (
-                        <TableRow ref={ref}>
-                          <TableCell
-                            colSpan={onMultiSelect ? 6 : 5}
-                            className="h-4 p-0"
-                          ></TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  ) : (
-                    !isFetching && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={onMultiSelect ? 6 : 5}
-                          className="py-12"
-                        >
-                          <div className="flex flex-col items-center justify-center">
-                            <Users className="w-12 h-12 text-gray-300 mb-3" />
-                            <p className="text-lg font-medium text-gray-600">
-                              No applications found
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {query
-                                ? "Try a different search term"
-                                : "Start by creating a new job posting"}
-                            </p>
-                            <Button
-                              variant="outline"
-                              className="mt-4"
-                              onClick={() => nav("post")}
-                            >
-                              <FolderPlus className="w-4 h-4 mr-2" />
-                              Create Job Posting
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* Footer Stats */}
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center">
-            <FileText className="w-4 h-4 mr-1" />
-            Showing {totalCount} applications
-          </span>
-          {isFetchingNextPage && (
-            <span className="flex items-center text-blue-600">
-              <Spinner className="w-3 h-3 mr-1" />
-              Loading more...
-            </span>
-          )}
+                  </TableCell>
+                </TableRow>
+              )}
+              {!hasNextPage && items.length > 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={onMultiSelect ? 6 : 5}
+                    className="text-center py-2 border-t"
+                  >
+                    <span className="text-[10px] text-gray-400">
+                      Showing all {items.length} record
+                      {items.length !== 1 ? "s" : ""}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
-        {hasNextPage && !isFetchingNextPage && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchNextPage()}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-          >
-            Load More Applications
-          </Button>
-        )}
       </div>
 
-      {/* Filter Modal */}
+      {/* Filter modal */}
       <Modal
         title={
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
+          <div className="flex items-center gap-1.5 text-xs">
+            <Filter className="h-3 w-3 text-blue-500" />
             Filter Applications
           </div>
         }
-        children={
-          <div className="space-y-6">
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleReset}
-                disabled={isFetching || isFetchingNextPage || isSubmitting}
-              >
-                <ListRestart className="w-4 h-4 mr-2" />
-                Reset Filters
-              </Button>
-            </div>
+        onOpen={onOpen === 1}
+        className="max-w-2xl max-h-[90vh] overflow-auto"
+        setOnOpen={() => setOnOpen(0)}
+        footer={true}
+        yesTitle="Apply Filters"
+        cancelTitle="Cancel"
+        onFunction={handleSubmit(applyFilters)}
+        loading={isFetching}
+      >
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleReset}
+              className="h-7 text-[10px] gap-1.5"
+            >
+              <ListRestart className="h-3 w-3" />
+              Reset
+            </Button>
+          </div>
 
-            <Form {...form}>
-              <form className="space-y-6">
-                {/* Date Range */}
-                <div>
-                  <FormLabel className="text-base font-medium">
-                    Date Range
-                  </FormLabel>
-                  <div className="grid grid-cols-2 gap-3 mt-2">
-                    <FormField
-                      control={control}
-                      name="dateFrom"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">From</FormLabel>
-                          <FormControl>
-                            <InputGroup>
-                              <InputGroupAddon>
-                                <CalendarArrowDown className="w-4 h-4" />
-                              </InputGroupAddon>
-                              <InputGroupInput type="date" {...field} />
-                            </InputGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name="dateTo"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm">To</FormLabel>
-                          <FormControl>
-                            <InputGroup>
-                              <InputGroupAddon>
-                                <CalendarArrowUp className="w-4 h-4" />
-                              </InputGroupAddon>
-                              <InputGroupInput type="date" {...field} />
-                            </InputGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Position */}
-                <div>
-                  <FormLabel className="text-base font-medium">
-                    Position
-                  </FormLabel>
+          <Form {...form}>
+            <div className="space-y-3">
+              <div>
+                <FormLabel className="text-[10px] font-semibold text-gray-700">
+                  Date Range
+                </FormLabel>
+                <div className="grid grid-cols-2 gap-2 mt-1">
                   <FormField
                     control={control}
-                    name="positionId"
+                    name="dateFrom"
                     render={({ field }) => (
-                      <FormItem className="mt-2">
+                      <FormItem>
                         <FormControl>
-                          <PositionSelect
-                            onChange={field.onChange}
-                            value={field.value as string}
-                            id={lineId as string}
-                            token={auth.token as string}
-                          />
+                          <InputGroup>
+                            <InputGroupAddon>
+                              <CalendarArrowDown className="h-3 w-3" />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              type="date"
+                              className="h-8 text-xs"
+                              {...field}
+                            />
+                          </InputGroup>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="dateTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <InputGroup>
+                            <InputGroupAddon>
+                              <CalendarArrowUp className="h-3 w-3" />
+                            </InputGroupAddon>
+                            <InputGroupInput
+                              type="date"
+                              className="h-8 text-xs"
+                              {...field}
+                            />
+                          </InputGroup>
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
                 </div>
+              </div>
 
-                {/* Tags */}
-                <div>
-                  <FormLabel className="text-base font-medium">Tags</FormLabel>
-                  <div className="mt-2">
-                    <FormTags
-                      handleAddTags={handleAddTags}
-                      handleCheckTags={handleCheckTags}
-                    />
-                  </div>
+              <FormField
+                control={control}
+                name="positionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-semibold text-gray-700">
+                      Position
+                    </FormLabel>
+                    <FormControl>
+                      <PositionSelect
+                        onChange={field.onChange}
+                        value={field.value as string}
+                        id={lineId as string}
+                        token={auth.token as string}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}
+              />
+
+              <div>
+                <FormLabel className="text-[10px] font-semibold text-gray-700">
+                  Skill Tags
+                </FormLabel>
+                <div className="mt-1">
+                  <FormTags
+                    handleAddTags={handleAddTags}
+                    handleCheckTags={handleCheckTags}
+                  />
                 </div>
-              </form>
-            </Form>
-          </div>
-        }
-        onOpen={onOpen === 1}
-        className="min-w-2xl max-h-11/12 overflow-auto"
-        setOnOpen={() => setOnOpen(0)}
-        cancelTitle="Cancel"
-        yesTitle="Apply Filters"
-        footer={true}
-        onFunction={handleSubmit(onSubmit)}
-        loading={isSubmitting || isFetchingNextPage || isFetching}
-      />
+                {allTags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {allTags.map((t) => (
+                      <Badge
+                        key={t.tag}
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {t.tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Form>
+        </div>
+      </Modal>
 
-      {/* Contact Modal */}
+      {/* Contact modal */}
       <Modal
         footer={1}
         title={
-          <div className="flex items-center gap-2">
-            <PhoneForwarded className="w-5 h-5" />
+          <div className="flex items-center gap-1.5 text-xs">
+            <PhoneForwarded className="h-3 w-3 text-blue-500" />
             Contact Applicants ({selected.length})
           </div>
         }
-        children={
-          <div className="w-full">
-            <ContactApplicant
-              token={auth.token as string}
-              setOnOpen={setOnOpen}
-              applicationId={""}
-              ids={selected}
-              many={0}
-            />
-          </div>
-        }
         onOpen={onOpen === 2}
-        className="max-w-2xl max-h-11/12 overflow-auto"
+        className="max-w-2xl max-h-[90vh] overflow-auto"
         setOnOpen={() => setOnOpen(0)}
-      />
+      >
+        <ContactApplicant
+          token={auth.token as string}
+          setOnOpen={setOnOpen}
+          applicationId={""}
+          ids={selected}
+          many={0}
+        />
+      </Modal>
 
+      {/* Delete confirm */}
       <Modal
-        title={`Delete ${selected.length} selected application${selected.length > 1 ? "s" : ""}?`}
-        children={
-          <ConfirmDelete
-            confirmation={"confirm"}
-            setOnOpen={setOnOpen}
-            onFunction={() => {
-              mutateAsync();
-            }}
-            isLoading={isPending}
-          />
-        }
+        title={undefined}
         onOpen={onOpen === 3}
-        className={""}
+        className=""
         setOnOpen={() => {
+          if (deleteMut.isPending) return;
           setOnOpen(0);
         }}
         footer={1}
-      />
+      >
+        <ConfirmDelete
+          title={`Delete ${selected.length} application${selected.length === 1 ? "" : "s"}`}
+          confirmation="confirm"
+          setOnOpen={() => {
+            if (!deleteMut.isPending) setOnOpen(0);
+          }}
+          onFunction={() => {
+            if (!deleteMut.isPending) deleteMut.mutateAsync();
+          }}
+          isLoading={deleteMut.isPending}
+        />
+      </Modal>
     </div>
   );
 };

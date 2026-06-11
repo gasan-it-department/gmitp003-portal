@@ -23,7 +23,9 @@ import {
   HandHelping,
   ClipboardList,
   Stethoscope,
+  Briefcase,
   ChevronRight,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -198,6 +200,23 @@ export const panels = [
     desc: "Record patient diagnoses and register new patients",
     notifications: 0,
   },
+  {
+    // Services is open to every authenticated line user — no per-user
+    // module enrolment required. Listed here so role-checks / icons
+    // resolve, but `ControlPanel` always appends it to the visible grid.
+    title: "Services",
+    path: "services",
+    Icon: Sparkles,
+    desc: "Self-service: file complaints, apply for leave, view payslips",
+    notifications: 0,
+  },
+  {
+    title: "PESO",
+    path: "peso",
+    Icon: Briefcase,
+    desc: "Public Employment Service Office — post & manage external jobs",
+    notifications: 0,
+  },
   // {
   //   title: "Announcement",
   //   path: "announcements",
@@ -226,34 +245,53 @@ const ControlPanel = ({ id, token }: Props) => {
     enabled: !!token || !!id,
   });
 
-  // Solution 1: Map-based O(n) solution (FASTEST)
+  // Build the visible tile grid: assigned modules + the always-open
+  // Services tile (every line user gets it without HR enrolment).
   const modules = useMemo(() => {
-    if (!data) return [];
+    const panelMap = new Map<string, (typeof panels)[number]>();
+    panels.forEach((panel) => panelMap.set(panel.path, panel));
 
-    // Create a Map for O(1) lookups
-    const panelMap = new Map();
-    panels.forEach((panel) => {
-      panelMap.set(panel.path, panel);
-    });
+    const result: Array<{
+      id: string;
+      Icon: LucideIcon;
+      desc?: string;
+      title: string;
+      path: string;
+    }> = [];
 
-    const result = [];
-    for (let i = 0; i < data.length; i++) {
-      const mod = data[i];
-      console.log(mod);
-
-      const module = panelMap.get(mod.moduleName);
-      if (module) {
+    for (let i = 0; i < (data ?? []).length; i++) {
+      const mod = data![i];
+      const panel = panelMap.get(mod.moduleName);
+      if (panel) {
         result.push({
           id: mod.id,
-          Icon: module.Icon,
-          desc: module.desc,
-          title: module.title,
-          path: module.path,
+          Icon: panel.Icon,
+          desc: panel.desc,
+          title: panel.title,
+          path: panel.path,
+        });
+      }
+    }
+
+    // Always-on modules — open to every line user, bypass the Module table.
+    // Services (self-service: complaints, leave, payslips) and Documents
+    // (e-sign / dissemination room) are both accessible without HR enrolment.
+    const ALWAYS_OPEN = ["services", "documents"];
+    for (const path of ALWAYS_OPEN) {
+      if (result.some((m) => m.path === path)) continue;
+      const panel = panelMap.get(path);
+      if (panel) {
+        result.push({
+          id: `${path}-open`,
+          Icon: panel.Icon,
+          desc: panel.desc,
+          title: panel.title,
+          path: panel.path,
         });
       }
     }
     return result;
-  }, [data]); // Add proper dependencies
+  }, [data]);
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
