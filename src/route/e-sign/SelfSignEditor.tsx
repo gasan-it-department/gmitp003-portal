@@ -17,12 +17,21 @@ import {
   getSelfSignDetail,
   saveSelfSignPlacements,
   signSelfSignAll,
+  unsignSelfSign,
+  usersSignature,
 } from "@/db/statements/document";
 import { useGeo } from "@/provider/GeoProvider";
 //
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/custom/Modal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ArrowLeft,
   Loader2,
@@ -35,6 +44,7 @@ import {
   MousePointer2,
   CheckCircle2,
   AlertTriangle,
+  Undo2,
 } from "lucide-react";
 
 // pdf.js worker — same as the other PDF tools.
@@ -83,6 +93,23 @@ const SelfSignEditor = () => {
   const [tool, setTool] = useState<"select" | "draw">("draw");
   const [boxes, setBoxes] = useState<Box[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [undoOpen, setUndoOpen] = useState(false);
+  // Which signature stamps the doc — "active" = the default/active one.
+  const [selectedSigId, setSelectedSigId] = useState<string>("active");
+
+  // The caller's signatures, for the picker in the sign-confirm modal.
+  const { data: sigList } = useQuery({
+    queryKey: ["user-signature", auth.userId, "self-sign-picker"],
+    queryFn: () =>
+      usersSignature(
+        auth.token as string,
+        auth.userId as string,
+        null,
+        "50",
+        "",
+      ),
+    enabled: !!auth.token && !!auth.userId,
+  });
 
   // Hydrate boxes from server when detail loads.
   useEffect(() => {
@@ -163,6 +190,8 @@ const SelfSignEditor = () => {
       return signSelfSignAll(auth.token as string, {
         arrangementId: data?.arrangement?.id as string,
         userId: auth.userId as string,
+        // "active" sentinel = let the backend use the default/active one.
+        signatureId: selectedSigId === "active" ? undefined : selectedSigId,
         geo: fix
           ? { lat: fix.lat, lng: fix.lng, accuracy: fix.accuracy }
           : null,
@@ -170,6 +199,20 @@ const SelfSignEditor = () => {
     },
     onSuccess: () => {
       setConfirmOpen(false);
+      qc.invalidateQueries({ queryKey: ["self-sign", "detail", docId] });
+      qc.invalidateQueries({ queryKey: ["self-sign", "list"] });
+    },
+    onError: (e) => alert(surfaceErr(e)),
+  });
+
+  const unsignMu = useMutation({
+    mutationFn: () =>
+      unsignSelfSign(auth.token as string, {
+        arrangementId: data?.arrangement?.id as string,
+        userId: auth.userId as string,
+      }),
+    onSuccess: () => {
+      setUndoOpen(false);
       qc.invalidateQueries({ queryKey: ["self-sign", "detail", docId] });
       qc.invalidateQueries({ queryKey: ["self-sign", "list"] });
     },
@@ -325,6 +368,27 @@ const SelfSignEditor = () => {
               )}
             </span>
           )}
+          {!isSigned && (
+            <Select value={selectedSigId} onValueChange={setSelectedSigId}>
+              <SelectTrigger
+                className="h-7 w-48 text-[11px]"
+                title="Which signature will be stamped when you sign"
+              >
+                <SelectValue placeholder="Active signature (default)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active" className="text-xs">
+                  Active signature (default)
+                </SelectItem>
+                {(sigList?.list ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id} className="text-xs">
+                    {s.title}
+                    {s.active ? " — active" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -335,19 +399,35 @@ const SelfSignEditor = () => {
             {isSigned ? "Download signed" : "Download"}
           </Button>
           {isSigned ? (
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => archiveMu.mutate()}
-              disabled={archiveMu.isPending}
-            >
-              {archiveMu.isPending ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-              ) : (
-                <ArchiveIcon className="h-3.5 w-3.5 mr-1" />
-              )}
-              Archive to room
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+                onClick={() => setUndoOpen(true)}
+                disabled={unsignMu.isPending}
+              >
+                {unsignMu.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Undo2 className="h-3.5 w-3.5 mr-1" />
+                )}
+                Undo sign
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => archiveMu.mutate()}
+                disabled={archiveMu.isPending}
+              >
+                {archiveMu.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <ArchiveIcon className="h-3.5 w-3.5 mr-1" />
+                )}
+                Archive to room
+              </Button>
+            </>
           ) : (
             <Button
               size="sm"
@@ -427,13 +507,76 @@ const SelfSignEditor = () => {
           <div className="flex items-start gap-2 px-2 py-1.5 rounded border border-amber-200 bg-amber-50 text-[11px]">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
             <div>
-              Your active e-signature will be stamped into every signature
-              box you've drawn. The document will be flattened — boxes can't
-              be edited afterwards. This action can't be undone.
+              The selected e-signature will be stamped into every signature
+              box you've drawn. Boxes are frozen while the document is
+              signed — use "Undo sign" later if you need to edit them again.
             </div>
           </div>
+
+          {/* Signature picker — defaults to the active signature. */}
+          <div className="space-y-1">
+            <div className="text-[11px] font-semibold text-gray-800">
+              Signature to use
+            </div>
+            <Select value={selectedSigId} onValueChange={setSelectedSigId}>
+              <SelectTrigger className="h-8 text-xs w-full">
+                <SelectValue placeholder="Active signature (default)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active" className="text-xs">
+                  Active signature (default)
+                </SelectItem>
+                {(sigList?.list ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id} className="text-xs">
+                    {s.title}
+                    {s.active ? " — active" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(() => {
+              const chosen =
+                selectedSigId === "active"
+                  ? (sigList?.list ?? []).find((s) => s.active) ?? null
+                  : (sigList?.list ?? []).find((s) => s.id === selectedSigId) ??
+                    null;
+              return chosen?.preview ? (
+                <div className="border rounded bg-gray-50 p-1.5 flex items-center justify-center">
+                  <img
+                    src={chosen.preview}
+                    alt={chosen.title}
+                    className="max-h-12 object-contain"
+                  />
+                </div>
+              ) : null;
+            })()}
+          </div>
+
           <div className="text-[11px]">
             <span className="font-semibold">{boxes.length}</span> field{boxes.length === 1 ? "" : "s"} will be signed.
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Undo your signature?"
+        onOpen={undoOpen}
+        setOnOpen={() => setUndoOpen(false)}
+        footer={true}
+        yesTitle="Undo sign"
+        loading={unsignMu.isPending}
+        onFunction={() => unsignMu.mutate()}
+        className=""
+      >
+        <div className="space-y-2 text-xs text-gray-700">
+          <div className="flex items-start gap-2 px-2 py-1.5 rounded border border-amber-200 bg-amber-50 text-[11px]">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              The document goes back to <span className="font-semibold">Draft</span> —
+              the signature stamp is removed, boxes become editable again, and
+              you can re-sign anytime. The signed date and location record will
+              be cleared.
+            </div>
           </div>
         </div>
       </Modal>

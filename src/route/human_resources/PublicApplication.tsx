@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { toast } from "sonner";
 
 import { useTemAuth } from "@/provider/TempAuthProvider";
-import { publicApplicationData } from "@/db/statement";
+import { publicApplicationData, downloadPdsExcel } from "@/db/statement";
+import { Button } from "@/components/ui/button";
 import {
   formatPureDate,
   formatDate,
@@ -33,6 +36,7 @@ import {
   Trophy,
   Calendar,
   Loader2,
+  Download,
 } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
@@ -104,6 +108,19 @@ const PublicApplication = () => {
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
   });
+
+  const [downloading, setDownloading] = useState(false);
+  const handleDownloadPds = async () => {
+    if (!applicationId) return;
+    setDownloading(true);
+    try {
+      await downloadPdsExcel({ applicationId });
+    } catch {
+      toast.error("Failed to download PDS. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (!token) return <OTP id={applicationId} to={0} />;
 
@@ -205,6 +222,20 @@ const PublicApplication = () => {
                 </span>
               </div>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto h-8 text-xs gap-1.5 shrink-0"
+              onClick={handleDownloadPds}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Download PDS (Excel)
+            </Button>
           </div>
         </div>
 

@@ -2192,6 +2192,34 @@ export const getPSGCbarangays = async (municipalId: string) => {
   }
 };
 
+/**
+ * Download a filled CS Form 212 (.xlsx). Pass `applicationId` for an
+ * application, or `userId` for an onboarded employee. Triggers a browser
+ * download with the filename from the response.
+ */
+export const downloadPdsExcel = async (params: {
+  applicationId?: string;
+  userId?: string;
+}) => {
+  const qs = params.applicationId
+    ? `id=${encodeURIComponent(params.applicationId)}`
+    : `userId=${encodeURIComponent(params.userId ?? "")}`;
+  const response = await axios.get(`/application/pds/export?${qs}`, {
+    responseType: "blob",
+  });
+  const blob = response.data as Blob;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cd = response.headers["content-disposition"] as string | undefined;
+  const m = cd ? /filename="?([^"]+)"?/.exec(cd) : null;
+  a.download = m ? m[1] : "PDS.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export const getApplicationData = async (token: string, id: string) => {
   const response = await axios.get("/application/data", {
     headers: {

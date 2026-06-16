@@ -510,7 +510,14 @@ const PesoJobForm = () => {
                             type="number"
                             min={1}
                             disabled={locked}
-                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === ""
+                                  ? undefined
+                                  : Number(e.target.value),
+                              )
+                            }
                           />
                         </FormControl>
                         <FormMessage />

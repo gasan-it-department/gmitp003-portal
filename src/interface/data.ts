@@ -1013,6 +1013,7 @@ export interface SubmittedApplicationProps {
   otherInfo: any[];
   references: any[];
   govId: any;
+  disclosures?: any;
   status: number;
   line: LineProps;
   lineId: string;

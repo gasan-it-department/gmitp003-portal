@@ -1121,6 +1121,8 @@ export const signSelfSignAll = async (
   body: {
     arrangementId: string;
     userId: string;
+    /** Explicit signature to stamp; omit to use the active one. */
+    signatureId?: string | null;
     geo?: { lat: number; lng: number; accuracy?: number | null } | null;
   },
 ) => {
@@ -1132,6 +1134,17 @@ export const signSelfSignAll = async (
     boxes: number;
     signedAt: string;
   };
+};
+
+/** Undo a self-sign: reverts the arrangement to unsigned (status 0). */
+export const unsignSelfSign = async (
+  token: string,
+  body: { arrangementId: string; userId: string },
+) => {
+  const res = await axios.post("/document/self-sign/unsign", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as { message: string };
 };
 
 export const listSelfSignDocs = async (

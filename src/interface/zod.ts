@@ -15,7 +15,7 @@ export const PesoJobSchema = z
     salaryText: z.string().optional(),
     desc: z.string().optional(),
     deadline: z.string().optional(),
-    slot: z.coerce.number().min(1, "At least 1 slot").optional(),
+    slot: z.number().min(1, "At least 1 slot").optional(),
     showApplicationCount: z.boolean().optional(),
     applyMode: z.enum(["INTERNAL", "EXTERNAL"]),
     applyUrl: z.string().optional(),
@@ -141,6 +141,74 @@ export const ReferenceSchema = z.object({
   contact: z.string().optional(),
 });
 
+// ── CS Form 212 (Revised 2025) sections VI–VIII + Page-4 disclosures ──────
+
+// VI. Voluntary Work / involvement in civic / NGO / voluntary orgs (29)
+export const VoluntaryWorkSchema = z.object({
+  id: z.string(),
+  organization: z.string().optional(), // name & address of organization
+  from: z.string().optional(),
+  to: z.string().optional(),
+  hours: z.string().optional(),
+  position: z.string().optional(), // position / nature of work
+});
+
+// VII. Learning & Development / Training programs attended (30)
+export const TrainingSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  hours: z.string().optional(),
+  type: z.string().optional(), // Managerial / Supervisory / Technical / etc.
+  conductedBy: z.string().optional(),
+});
+
+// VIII. Other information (31 skills/hobbies, 32 distinctions, 33 memberships)
+export const OtherInfoSchema = z.object({
+  specialSkills: z.string().optional(),
+  distinctions: z.string().optional(),
+  memberships: z.string().optional(),
+});
+
+// 42. Government-issued ID
+export const GovIdSchema = z.object({
+  type: z.string().optional(),
+  number: z.string().optional(),
+  dateIssuance: z.string().optional(),
+  placeIssuance: z.string().optional(),
+});
+
+// Page 4 — disclosure questionnaire (Q34–40). Each item is a yes/no with
+// an optional details field; criminal charge also carries date/status.
+export const DisclosuresSchema = z.object({
+  relatedThirdDegree: z.boolean().optional(),
+  relatedFourthDegree: z.boolean().optional(),
+  relatedDetails: z.string().optional(),
+  guiltyAdmin: z.boolean().optional(),
+  guiltyAdminDetails: z.string().optional(),
+  criminallyCharged: z.boolean().optional(),
+  criminalDetails: z.string().optional(),
+  criminalDateFiled: z.string().optional(),
+  criminalStatus: z.string().optional(),
+  convicted: z.boolean().optional(),
+  convictedDetails: z.string().optional(),
+  separatedFromService: z.boolean().optional(),
+  separatedDetails: z.string().optional(),
+  candidateLastYear: z.boolean().optional(),
+  candidateDetails: z.string().optional(),
+  resignedToCampaign: z.boolean().optional(),
+  resignedDetails: z.string().optional(),
+  immigrant: z.boolean().optional(),
+  immigrantDetails: z.string().optional(),
+  indigenousMember: z.boolean().optional(),
+  indigenousDetails: z.string().optional(),
+  pwd: z.boolean().optional(),
+  pwdId: z.string().optional(),
+  soloParent: z.boolean().optional(),
+  soloParentId: z.string().optional(),
+});
+
 export const AddUserSchema = z
   .object({
     firstName: z.string().min(1, "First name is required"),
@@ -191,16 +259,13 @@ export const AddUserSchema = z
       }),
     ),
     profilePicture: z.file().optional(),
-    // refOne: ReferenceSchema.optional(),
-    // refTwo: ReferenceSchema.optional(),
-    // refThree: ReferenceSchema.optional(),
-    // govId: z
-    //   .object({
-    //     goveIssuedID: z.string(),
-    //     idNo: z.string(),
-    //     dateIssuance: z.string(),
-    //   })
-    //   .optional(),
+    // CS Form 212 sections VI–VIII, references, gov ID, and disclosures.
+    voluntaryWork: z.array(VoluntaryWorkSchema).optional(),
+    learningDev: z.array(TrainingSchema).optional(),
+    otherInfo: OtherInfoSchema.optional(),
+    references: z.array(ReferenceSchema).optional(),
+    govId: GovIdSchema.optional(),
+    disclosures: DisclosuresSchema.optional(),
   })
   .refine(
     (data) => {

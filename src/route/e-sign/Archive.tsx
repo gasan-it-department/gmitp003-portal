@@ -309,9 +309,12 @@ const Archive = () => {
       <Modal
         title={undefined}
         children={
+          // Search the whole line's archive — the list below is line-wide
+          // (`documents` fetches by lineId only), so the search must match.
+          // Room-scoping made search miss docs archived in other rooms.
           <SearchArchive
             full={false}
-            roomId={room.room?.id ?? ""}
+            roomId=""
             lineId={lineId ?? ""}
             token={auth.token as string}
           />

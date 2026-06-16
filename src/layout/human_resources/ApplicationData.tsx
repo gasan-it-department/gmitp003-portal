@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { toast } from "sonner";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { getApplicationData } from "@/db/statement";
+import { getApplicationData, downloadPdsExcel } from "@/db/statement";
 import {
   formatPureDate,
   formatDate,
@@ -35,6 +36,7 @@ import {
   PhoneOutgoing,
   Loader2,
   Calendar,
+  Download,
 } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
@@ -101,7 +103,20 @@ const TimelineItem = ({
 const ApplicationData = ({ applicationId }: Props) => {
   const [openModal, setOpenModal] = useState<string | null>(null);
   const [onOpen, setOnOpen] = useState(0);
+  const [downloading, setDownloading] = useState(false);
   const auth = useAuth();
+
+  const handleDownloadPds = async () => {
+    if (!applicationId) return;
+    setDownloading(true);
+    try {
+      await downloadPdsExcel({ applicationId });
+    } catch {
+      toast.error("Failed to download PDS. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const { data, isFetching } = useQuery<SubmittedApplicationProps>({
     queryKey: ["application", applicationId],
@@ -249,14 +264,30 @@ const ApplicationData = ({ applicationId }: Props) => {
               </div>
             </div>
 
-            <Button
-              size="sm"
-              onClick={() => setOnOpen(1)}
-              className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700 flex-shrink-0"
-            >
-              <PhoneOutgoing className="h-3 w-3" />
-              Contact Applicant
-            </Button>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDownloadPds}
+                disabled={downloading}
+                className="h-7 text-[10px] gap-1.5"
+              >
+                {downloading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Download className="h-3 w-3" />
+                )}
+                Download PDS
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setOnOpen(1)}
+                className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+              >
+                <PhoneOutgoing className="h-3 w-3" />
+                Contact Applicant
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -497,10 +528,16 @@ const ApplicationData = ({ applicationId }: Props) => {
                     <TimelineItem
                       key={i}
                       accent="border-gray-400"
-                      title={info.specialSkills}
+                      title={info.specialSkills || "Other information"}
                     >
-                      {info.recognition && <p>{info.recognition}</p>}
-                      {info.membership && <p>Membership: {info.membership}</p>}
+                      {(info.distinctions ?? info.recognition) && (
+                        <p>
+                          Distinctions: {info.distinctions ?? info.recognition}
+                        </p>
+                      )}
+                      {(info.memberships ?? info.membership) && (
+                        <p>Membership: {info.memberships ?? info.membership}</p>
+                      )}
                     </TimelineItem>
                   ))}
                 </div>
@@ -518,15 +555,101 @@ const ApplicationData = ({ applicationId }: Props) => {
                     <TimelineItem
                       key={i}
                       accent="border-indigo-500"
-                      title={`${r.name}${r.position ? " — " + r.position : ""}`}
+                      title={r.name || `Reference ${i + 1}`}
                     >
-                      <p className="text-[11px] font-medium text-gray-800">
-                        {r.company}
-                      </p>
-                      {r.address && <p>{r.address}</p>}
-                      {r.telephone && <p>Tel: {r.telephone}</p>}
+                      {(r.residentialAddress ?? r.address) && (
+                        <p>{r.residentialAddress ?? r.address}</p>
+                      )}
+                      {(r.contact ?? r.telephone) && (
+                        <p>Contact: {r.contact ?? r.telephone}</p>
+                      )}
                     </TimelineItem>
                   ))}
+                </div>
+              </Section>
+            )}
+
+            {data.govId && (data.govId.type || data.govId.number) && (
+              <Section
+                icon={<Shield className="h-3 w-3 text-blue-500" />}
+                title="Government-Issued ID"
+              >
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Field label="ID Type" value={data.govId.type} />
+                  <Field label="ID No." value={data.govId.number} />
+                  <Field
+                    label="Date of Issuance"
+                    value={data.govId.dateIssuance}
+                  />
+                  <Field
+                    label="Place of Issuance"
+                    value={data.govId.placeIssuance}
+                  />
+                </div>
+              </Section>
+            )}
+
+            {data.disclosures && (
+              <Section
+                icon={<Shield className="h-3 w-3 text-blue-500" />}
+                title="Disclosure Questionnaire"
+              >
+                <div className="space-y-1.5">
+                  {(
+                    [
+                      ["relatedThirdDegree", "Related (3rd degree) to appointing authority", "relatedDetails"],
+                      ["relatedFourthDegree", "Related (4th degree) to appointing authority", "relatedDetails"],
+                      ["guiltyAdmin", "Found guilty of an administrative offense", "guiltyAdminDetails"],
+                      ["criminallyCharged", "Criminally charged before any court", "criminalDetails"],
+                      ["convicted", "Convicted of any crime", "convictedDetails"],
+                      ["separatedFromService", "Separated from the service", "separatedDetails"],
+                      ["candidateLastYear", "Candidate in last year's election", "candidateDetails"],
+                      ["resignedToCampaign", "Resigned to campaign before election", "resignedDetails"],
+                      ["immigrant", "Immigrant / permanent resident abroad", "immigrantDetails"],
+                      ["indigenousMember", "Member of an indigenous group", "indigenousDetails"],
+                      ["pwd", "Person with disability", "pwdId"],
+                      ["soloParent", "Solo parent", "soloParentId"],
+                    ] as [string, string, string][]
+                  ).map(([k, q, d]) => (
+                    <div
+                      key={k}
+                      className="flex items-start justify-between gap-2 text-xs"
+                    >
+                      <span className="text-gray-700 flex-1 leading-snug">
+                        {q}
+                      </span>
+                      <span className="flex flex-col items-end shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${
+                            data.disclosures[k]
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-gray-50 text-gray-500"
+                          }`}
+                        >
+                          {data.disclosures[k] ? "Yes" : "No"}
+                        </Badge>
+                        {data.disclosures[k] && data.disclosures[d] && (
+                          <span className="text-[10px] text-gray-500 mt-0.5 text-right max-w-[160px] break-words">
+                            {data.disclosures[d]}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                  {data.disclosures.criminallyCharged &&
+                    (data.disclosures.criminalDateFiled ||
+                      data.disclosures.criminalStatus) && (
+                      <p className="text-[10px] text-gray-500 pt-1 border-t">
+                        Criminal case
+                        {data.disclosures.criminalDateFiled
+                          ? ` — filed ${data.disclosures.criminalDateFiled}`
+                          : ""}
+                        {data.disclosures.criminalStatus
+                          ? `, status: ${data.disclosures.criminalStatus}`
+                          : ""}
+                      </p>
+                    )}
                 </div>
               </Section>
             )}
