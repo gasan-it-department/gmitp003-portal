@@ -70,12 +70,20 @@ HR Team
   } = form;
 
   const onSubmit = async (data: ContactApplicationProps) => {
-    const url =
-      many === 1
-        ? "/application/contact-applicant"
-        : "/application/contact-applicant/bulk";
+    const isBulk = many !== 1;
 
-    const idList = many === 1 ? applicationId : ids;
+    // The backend processes at most 100 recipients per transaction.
+    if (isBulk && (ids?.length ?? 0) > 100) {
+      toast.error("You can contact at most 100 applicants per transaction.", {
+        position: "top-right",
+      });
+      return;
+    }
+
+    const url = isBulk
+      ? "/application/contact-applicant/bulk"
+      : "/application/contact-applicant";
+    const idList = isBulk ? ids : applicationId;
     try {
       const response = await axios.post(
         url,
@@ -83,6 +91,7 @@ HR Team
           message: data.message,
           subject: data.subject,
           applicationId: idList,
+          sendTo: data.sendTo,
         },
         {
           headers: {
@@ -134,9 +143,9 @@ HR Team
                       <label htmlFor="phoneNumber">Phone number only</label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem value="Email" id="Email" />
+                      <RadioGroupItem value="email" id="email" />
 
-                      <label htmlFor="Email">Email only</label>
+                      <label htmlFor="email">Email only</label>
                     </div>
                   </RadioGroup>
                 </FormControl>
