@@ -17,7 +17,6 @@ import {
   Wallet,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
-import SideBarProfile from "./SideBarProfile";
 
 export const menuList = [
   { title: "Dashboard",    path: "dashboard",    Icon: Home,          children: [], accord: false },
@@ -98,11 +97,6 @@ const SideBar = () => {
           />
         ))}
       </nav>
-
-      {/* ── Profile footer ─────────────────────────────────────────── */}
-      <div className="p-2 border-t">
-        <SideBarProfile collapsed={collapsed} />
-      </div>
     </aside>
   );
 };
