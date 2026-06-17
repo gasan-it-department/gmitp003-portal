@@ -155,7 +155,7 @@ const JobPostItem = ({ item, query, onApply }: Props) => {
             {item.deadline && (
               <span className="flex items-center gap-0.5">
                 <Clock className="h-2.5 w-2.5" />
-                Deadline {formatDate(item.deadline)}
+                Deadline {formatDate(String(item.deadline))}
               </span>
             )}
             {item.unitPos?.unit?.name && (
@@ -248,7 +248,7 @@ const JobPostItem = ({ item, query, onApply }: Props) => {
                 {item.deadline && (
                   <span className="flex items-center gap-0.5">
                     <Clock className="h-2.5 w-2.5" />
-                    Deadline {formatDate(item.deadline)}
+                    Deadline {formatDate(String(item.deadline))}
                   </span>
                 )}
                 {item.unitPos?.unit?.name && (

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -59,6 +60,8 @@ const ApplicationForm = () => {
   const uniqueId = useId();
   const workExpId = useId();
   const eligibityId = useId();
+  const voluntaryId = useId();
+  const trainingId = useId();
 
   const { data, isFetching } = useQuery<JobPostProps>({
     queryKey: ["jobPost", jobPostId],
@@ -146,6 +149,43 @@ const ApplicationForm = () => {
       },
       assets: [],
       profilePicture: undefined,
+      // CS Form 212 sections VI–VIII, references, gov ID, disclosures.
+      voluntaryWork: [],
+      learningDev: [],
+      otherInfo: { specialSkills: "", distinctions: "", memberships: "" },
+      references: [
+        { name: "", residentialAddress: "", contact: "" },
+        { name: "", residentialAddress: "", contact: "" },
+        { name: "", residentialAddress: "", contact: "" },
+      ],
+      govId: { type: "", number: "", dateIssuance: "", placeIssuance: "" },
+      disclosures: {
+        relatedThirdDegree: false,
+        relatedFourthDegree: false,
+        relatedDetails: "",
+        guiltyAdmin: false,
+        guiltyAdminDetails: "",
+        criminallyCharged: false,
+        criminalDetails: "",
+        criminalDateFiled: "",
+        criminalStatus: "",
+        convicted: false,
+        convictedDetails: "",
+        separatedFromService: false,
+        separatedDetails: "",
+        candidateLastYear: false,
+        candidateDetails: "",
+        resignedToCampaign: false,
+        resignedDetails: "",
+        immigrant: false,
+        immigrantDetails: "",
+        indigenousMember: false,
+        indigenousDetails: "",
+        pwd: false,
+        pwdId: "",
+        soloParent: false,
+        soloParentId: "",
+      },
     },
   });
 
@@ -197,8 +237,19 @@ const ApplicationForm = () => {
     formData.append("positionId", data.positionId ?? "");
     formData.append("profilePicture", formInput.profilePicture!);
 
+    // Objects the backend parses as JSON strings (not nested form keys).
+    // otherInfo is stored as a single-element Json[] to match the column.
+    formData.append("govId", JSON.stringify(formInput.govId ?? {}));
+    formData.append("disclosures", JSON.stringify(formInput.disclosures ?? {}));
+    formData.append(
+      "otherInfo",
+      JSON.stringify(formInput.otherInfo ? [formInput.otherInfo] : []),
+    );
+
     Object.entries(formInput).forEach(([key, value]) => {
       if (key === "assets") return;
+      if (key === "govId" || key === "disclosures" || key === "otherInfo")
+        return;
 
       if (value instanceof Date) {
         formData.append(key, value.toISOString());
@@ -282,6 +333,24 @@ const ApplicationForm = () => {
     control,
     name: "assets",
   });
+
+  const {
+    fields: voluntaryFields,
+    append: appendVoluntary,
+    remove: removeVoluntary,
+  } = useFieldArray({ control, name: "voluntaryWork" });
+
+  const {
+    fields: trainingFields,
+    append: appendTraining,
+    remove: removeTraining,
+  } = useFieldArray({ control, name: "learningDev" });
+
+  const {
+    fields: referenceFields,
+    append: appendReference,
+    remove: removeReference,
+  } = useFieldArray({ control, name: "references" });
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -394,6 +463,51 @@ const ApplicationForm = () => {
       licenceValidity: undefined,
     });
   };
+
+  // Renders one Page-4 disclosure: a Yes/No checkbox + a details input that
+  // appears only when checked. `name`/`detailsName` are paths under `disclosures`.
+  const discItem = (
+    name: string,
+    label: string,
+    detailsName: string,
+    detailPlaceholder = "If YES, give details",
+  ) => (
+    <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+      <FormField
+        control={control}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        name={`disclosures.${name}` as any}
+        render={({ field }) => (
+          <FormItem className="flex items-start gap-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={!!field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <FormLabel className="text-sm font-normal leading-snug text-gray-700">
+              {label}
+            </FormLabel>
+          </FormItem>
+        )}
+      />
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {watch(`disclosures.${name}` as any) && (
+        <FormField
+          control={control}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          name={`disclosures.${detailsName}` as any}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Input placeholder={detailPlaceholder} {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
+    </div>
+  );
 
   const handleCheckTags = (tag: string) => {
     const check = tagFields.findIndex((item) => item.tag === tag);
@@ -2133,6 +2247,727 @@ const ApplicationForm = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Eligibility
                 </Button>
+              </Section>
+
+              {/* VI. Voluntary Work */}
+              <Section title="Voluntary Work">
+                <FormDescription className="mb-6">
+                  Involvement in civic / non-government / people / voluntary
+                  organizations. Leave blank if not applicable.
+                </FormDescription>
+                <div className="space-y-6">
+                  {voluntaryFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="border border-gray-200 rounded-lg p-6 bg-white"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          Organization {index + 1}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeVoluntary(index)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={control}
+                          name={`voluntaryWork.${index}.organization`}
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel className="text-gray-700">
+                                Name &amp; Address of Organization
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="Organization name and address"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`voluntaryWork.${index}.from`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">From</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`voluntaryWork.${index}.to`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">To</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`voluntaryWork.${index}.hours`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Number of Hours
+                              </FormLabel>
+                              <FormControl>
+                                <Input type="number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`voluntaryWork.${index}.position`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Position / Nature of Work
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={() =>
+                    appendVoluntary({
+                      id: `${voluntaryId}-${voluntaryFields.length}`,
+                      organization: "",
+                      from: "",
+                      to: "",
+                      hours: "",
+                      position: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Voluntary Work
+                </Button>
+              </Section>
+
+              {/* VII. Learning & Development / Trainings */}
+              <Section title="Learning & Development (Trainings)">
+                <FormDescription className="mb-6">
+                  Training programs and L&amp;D interventions attended. Leave
+                  blank if not applicable.
+                </FormDescription>
+                <div className="space-y-6">
+                  {trainingFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="border border-gray-200 rounded-lg p-6 bg-white"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          Training {index + 1}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeTraining(index)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.title`}
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel className="text-gray-700">
+                                Title of Training Program
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.from`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">From</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.to`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">To</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.hours`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Number of Hours
+                              </FormLabel>
+                              <FormControl>
+                                <Input type="number" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.type`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Type (Managerial/Supervisory/Technical/etc.)
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`learningDev.${index}.conductedBy`}
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel className="text-gray-700">
+                                Conducted / Sponsored By
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={() =>
+                    appendTraining({
+                      id: `${trainingId}-${trainingFields.length}`,
+                      title: "",
+                      from: "",
+                      to: "",
+                      hours: "",
+                      type: "",
+                      conductedBy: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Training
+                </Button>
+              </Section>
+
+              {/* VIII. Other Information */}
+              <Section title="Other Information">
+                <div className="grid grid-cols-1 gap-6">
+                  <FormField
+                    control={control}
+                    name="otherInfo.specialSkills"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Special Skills &amp; Hobbies
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className="min-h-[80px]"
+                            placeholder="List your special skills and hobbies"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="otherInfo.distinctions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Non-Academic Distinctions / Recognition
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className="min-h-[80px]"
+                            placeholder="List non-academic distinctions and recognitions"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="otherInfo.memberships"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Membership in Association / Organization
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className="min-h-[80px]"
+                            placeholder="List memberships in associations/organizations"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </Section>
+
+              {/* References */}
+              <Section title="References">
+                <FormDescription className="mb-6">
+                  Persons not related by consanguinity or affinity to you.
+                </FormDescription>
+                <div className="space-y-6">
+                  {referenceFields.map((field, index) => (
+                    <div
+                      key={field.id}
+                      className="border border-gray-200 rounded-lg p-6 bg-white"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-800">
+                          Reference {index + 1}
+                        </h4>
+                        {referenceFields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeReference(index)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField
+                          control={control}
+                          name={`references.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`references.${index}.residentialAddress`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Office / Residential Address
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name={`references.${index}.contact`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700">
+                                Contact No. and/or Email
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-4"
+                  onClick={() =>
+                    appendReference({
+                      name: "",
+                      residentialAddress: "",
+                      contact: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Reference
+                </Button>
+              </Section>
+
+              {/* Government-Issued ID */}
+              <Section title="Government-Issued ID">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={control}
+                    name="govId.type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Government Issued ID (Passport, GSIS, SSS, PRC,
+                          Driver's License, etc.)
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="govId.number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          ID / License / Passport No.
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="govId.dateIssuance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Date of Issuance
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
+                    name="govId.placeIssuance"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Place of Issuance
+                        </FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </Section>
+
+              {/* Page 4 — Disclosure Questionnaire */}
+              <Section title="Disclosure Questionnaire">
+                <FormDescription className="mb-6">
+                  Tick the box if your answer is YES, then provide the details.
+                </FormDescription>
+                <div className="space-y-4">
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+                    <p className="text-sm text-gray-700">
+                      34. Are you related by consanguinity or affinity to the
+                      appointing or recommending authority, or to the chief of
+                      bureau/office or to the person who has immediate
+                      supervision over you in the office where you will be
+                      appointed?
+                    </p>
+                    <FormField
+                      control={control}
+                      name="disclosures.relatedThirdDegree"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal text-gray-700">
+                            a. within the third degree
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="disclosures.relatedFourthDegree"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal text-gray-700">
+                            b. within the fourth degree (for LGU career
+                            employees)
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    {(watch("disclosures.relatedThirdDegree") ||
+                      watch("disclosures.relatedFourthDegree")) && (
+                      <FormField
+                        control={control}
+                        name="disclosures.relatedDetails"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                placeholder="If YES, give details"
+                                {...field}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  {discItem(
+                    "guiltyAdmin",
+                    "35a. Have you ever been found guilty of any administrative offense?",
+                    "guiltyAdminDetails",
+                  )}
+
+                  {/* 35b — criminal charge with extra date/status */}
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+                    <FormField
+                      control={control}
+                      name="disclosures.criminallyCharged"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal leading-snug text-gray-700">
+                            35b. Have you been criminally charged before any
+                            court?
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    {watch("disclosures.criminallyCharged") && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <FormField
+                          control={control}
+                          name="disclosures.criminalDetails"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-3">
+                              <FormControl>
+                                <Input placeholder="Details" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name="disclosures.criminalDateFiled"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs text-gray-600">
+                                Date Filed
+                              </FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={control}
+                          name="disclosures.criminalStatus"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel className="text-xs text-gray-600">
+                                Status of Case/s
+                              </FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {discItem(
+                    "convicted",
+                    "36. Have you ever been convicted of any crime or violation of any law, decree, ordinance or regulation by any court or tribunal?",
+                    "convictedDetails",
+                  )}
+                  {discItem(
+                    "separatedFromService",
+                    "37. Have you ever been separated from the service in any of the following modes: resignation, retirement, dropped from the rolls, dismissal, termination, end of term, finished contract or phased out (abolition) in the public or private sector?",
+                    "separatedDetails",
+                  )}
+                  {discItem(
+                    "candidateLastYear",
+                    "38a. Have you ever been a candidate in a national or local election held within the last year (except Barangay election)?",
+                    "candidateDetails",
+                  )}
+                  {discItem(
+                    "resignedToCampaign",
+                    "38b. Have you resigned from the government service during the three (3)-month period before the last election to promote/actively campaign for a national or local candidate?",
+                    "resignedDetails",
+                  )}
+                  {discItem(
+                    "immigrant",
+                    "39. Have you acquired the status of an immigrant or permanent resident of another country?",
+                    "immigrantDetails",
+                    "If YES, give details (country)",
+                  )}
+                  {discItem(
+                    "indigenousMember",
+                    "40a. Are you a member of any indigenous group?",
+                    "indigenousDetails",
+                    "If YES, please specify",
+                  )}
+
+                  {/* 40b — PWD (ID instead of details) */}
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+                    <FormField
+                      control={control}
+                      name="disclosures.pwd"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal leading-snug text-gray-700">
+                            40b. Are you a person with disability?
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    {watch("disclosures.pwd") && (
+                      <FormField
+                        control={control}
+                        name="disclosures.pwdId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="If YES, ID No." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  {/* 40c — Solo parent (ID instead of details) */}
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+                    <FormField
+                      control={control}
+                      name="disclosures.soloParent"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={!!field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal leading-snug text-gray-700">
+                            40c. Are you a solo parent?
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    {watch("disclosures.soloParent") && (
+                      <FormField
+                        control={control}
+                        name="disclosures.soloParentId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="If YES, ID No." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+                </div>
               </Section>
 
               {/* Tags */}

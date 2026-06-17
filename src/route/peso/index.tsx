@@ -20,7 +20,7 @@ const PesoIndex = () => {
       </div>
 
       {/* Content */}
-      <div className="h-[calc(100%-49px)] overflow-auto">
+      <div className="h-[calc(100%-57px)] overflow-auto">
         <Outlet />
       </div>
     </div>

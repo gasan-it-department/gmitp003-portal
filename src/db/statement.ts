@@ -231,6 +231,58 @@ export const getAllMunicipalitiesBarangay = async (code: string) => {
   return response.data;
 };
 
+// ── PSGC code → place-name resolution (for DISPLAYING stored addresses) ─────
+// Address selects store PSGC codes (e.g. "174003000"), not names. Resolve a
+// single code to its place name via the same public PSGC API the selects use.
+// Non-code values (already a name / free text) are returned unchanged.
+const psgcNameCache = new Map<string, string>();
+const isPsgcCode = (v?: string | null) =>
+  !!v && /^\d{6,}$/.test(String(v).trim());
+
+export const psgcName = async (
+  code: string | null | undefined,
+  kinds: string[],
+): Promise<string> => {
+  const v = (code ?? "").toString().trim();
+  if (!isPsgcCode(v)) return v;
+  if (psgcNameCache.has(v)) return psgcNameCache.get(v)!;
+  for (const kind of kinds) {
+    try {
+      const res = await fetch(`https://psgc.gitlab.io/api/${kind}/${v}/`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.name) {
+          psgcNameCache.set(v, json.name);
+          return json.name;
+        }
+      }
+    } catch {
+      /* try the next kind */
+    }
+  }
+  return v; // unresolved → fall back to the raw code
+};
+
+export interface ResolvedPlaceNames {
+  province: string;
+  city: string;
+  barangay: string;
+}
+
+// Resolve a province / city-municipality / barangay code-triple to names.
+export const resolveAddressNames = async (a: {
+  province?: string | null;
+  city?: string | null;
+  barangay?: string | null;
+}): Promise<ResolvedPlaceNames> => {
+  const [province, city, barangay] = await Promise.all([
+    psgcName(a.province, ["provinces"]),
+    psgcName(a.city, ["municipalities", "cities"]),
+    psgcName(a.barangay, ["barangays"]),
+  ]);
+  return { province, city, barangay };
+};
+
 export const getAllOfficePersonnel = async (
   token: string,
   id: string,
@@ -2190,6 +2242,34 @@ export const getPSGCbarangays = async (municipalId: string) => {
   } catch (err) {
     throw new Error(err instanceof Error ? err.message : String(err));
   }
+};
+
+/**
+ * Download a filled CS Form 212 (.xlsx). Pass `applicationId` for an
+ * application, or `userId` for an onboarded employee. Triggers a browser
+ * download with the filename from the response.
+ */
+export const downloadPdsExcel = async (params: {
+  applicationId?: string;
+  userId?: string;
+}) => {
+  const qs = params.applicationId
+    ? `id=${encodeURIComponent(params.applicationId)}`
+    : `userId=${encodeURIComponent(params.userId ?? "")}`;
+  const response = await axios.get(`/application/pds/export?${qs}`, {
+    responseType: "blob",
+  });
+  const blob = response.data as Blob;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cd = response.headers["content-disposition"] as string | undefined;
+  const m = cd ? /filename="?([^"]+)"?/.exec(cd) : null;
+  a.download = m ? m[1] : "PDS.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 export const getApplicationData = async (token: string, id: string) => {

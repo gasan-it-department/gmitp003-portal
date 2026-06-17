@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuth } from "@/provider/ProtectedRoute";
 
 import { getUserData } from "@/db/statements/user";
+import { downloadPdsExcel } from "@/db/statement";
 import { userActiveStatus } from "@/utils/helper";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -24,6 +28,7 @@ import {
   Loader2,
   UserX,
   LayoutGrid,
+  Download,
 } from "lucide-react";
 
 import type { User } from "@/interface/data";
@@ -110,6 +115,19 @@ const UserProfile = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  const [downloading, setDownloading] = useState(false);
+  const handleDownloadPds = async () => {
+    if (!employeeId) return;
+    setDownloading(true);
+    try {
+      await downloadPdsExcel({ userId: employeeId });
+    } catch {
+      toast.error("Failed to download PDS. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isFetching && !user) {
     return (
@@ -223,7 +241,7 @@ const UserProfile = () => {
 
         {/* ── Tabs ────────────────────────────────────────────────── */}
         <Tabs defaultValue="overview" className="space-y-3">
-          <TabsList className="grid w-full grid-cols-4 h-8">
+          <TabsList className="grid w-full grid-cols-5 h-8">
             <TabsTrigger value="overview" className="text-xs">
               Overview
             </TabsTrigger>
@@ -232,6 +250,9 @@ const UserProfile = () => {
             </TabsTrigger>
             <TabsTrigger value="social" className="text-xs">
               Social Welfare
+            </TabsTrigger>
+            <TabsTrigger value="pds" className="text-xs">
+              PDS
             </TabsTrigger>
             <TabsTrigger value="modules" className="text-xs">
               Modules
@@ -399,6 +420,210 @@ const UserProfile = () => {
                 </div>
               </div>
             </SectionCard>
+          </TabsContent>
+
+          {/* ── PDS (CS Form 212 — from the registration application) ── */}
+          <TabsContent value="pds" className="space-y-3 mt-0">
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5"
+                onClick={handleDownloadPds}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Download PDS (Excel)
+              </Button>
+            </div>
+            {!app ? (
+              <SectionCard title="Personal Data Sheet" icon={FileText}>
+                <p className="text-xs text-gray-400 italic text-center py-6">
+                  No PDS / application record is linked to this employee.
+                </p>
+              </SectionCard>
+            ) : (
+              <>
+                {app.voluntaryWork && app.voluntaryWork.length > 0 && (
+                  <SectionCard title="Voluntary Work" icon={Heart}>
+                    <div className="space-y-2">
+                      {app.voluntaryWork.map((w: any, i: number) => (
+                        <div key={i} className="border rounded-md bg-gray-50 p-2">
+                          <p className="text-xs font-medium text-gray-800">
+                            {w.organization || "—"}
+                          </p>
+                          {w.position && (
+                            <p className="text-[11px] text-gray-600">
+                              {w.position}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500">
+                            {w.from} — {w.to || "Present"}
+                            {w.hours ? ` · ${w.hours} hrs` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {app.learningDev && app.learningDev.length > 0 && (
+                  <SectionCard title="Learning & Development" icon={Award}>
+                    <div className="space-y-2">
+                      {app.learningDev.map((t: any, i: number) => (
+                        <div key={i} className="border rounded-md bg-gray-50 p-2">
+                          <p className="text-xs font-medium text-gray-800">
+                            {t.title || "—"}
+                          </p>
+                          {t.conductedBy && (
+                            <p className="text-[11px] text-gray-600">
+                              {t.conductedBy}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500">
+                            {t.from} — {t.to || "Present"}
+                            {t.hours ? ` · ${t.hours} hrs` : ""}
+                            {t.type ? ` · ${t.type}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {app.otherInfo && app.otherInfo.length > 0 && (
+                  <SectionCard title="Other Information" icon={FileText}>
+                    <div className="space-y-2.5">
+                      <Field
+                        label="Special Skills & Hobbies"
+                        value={app.otherInfo[0]?.specialSkills}
+                      />
+                      <Field
+                        label="Non-Academic Distinctions"
+                        value={
+                          app.otherInfo[0]?.distinctions ??
+                          app.otherInfo[0]?.recognition
+                        }
+                      />
+                      <Field
+                        label="Membership in Organizations"
+                        value={
+                          app.otherInfo[0]?.memberships ??
+                          app.otherInfo[0]?.membership
+                        }
+                      />
+                    </div>
+                  </SectionCard>
+                )}
+
+                {app.references && app.references.length > 0 && (
+                  <SectionCard title="References" icon={Building}>
+                    <div className="space-y-2">
+                      {app.references.map((r: any, i: number) => (
+                        <div key={i} className="border rounded-md bg-gray-50 p-2">
+                          <p className="text-xs font-medium text-gray-800">
+                            {r.name || `Reference ${i + 1}`}
+                          </p>
+                          {(r.residentialAddress ?? r.address) && (
+                            <p className="text-[11px] text-gray-600">
+                              {r.residentialAddress ?? r.address}
+                            </p>
+                          )}
+                          {(r.contact ?? r.telephone) && (
+                            <p className="text-[10px] text-gray-500">
+                              Contact: {r.contact ?? r.telephone}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {app.govId && (app.govId.type || app.govId.number) && (
+                  <SectionCard title="Government-Issued ID" icon={CreditCard}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                      <Field label="ID Type" value={app.govId.type} />
+                      <Field label="ID No." value={app.govId.number} />
+                      <Field
+                        label="Date of Issuance"
+                        value={app.govId.dateIssuance}
+                      />
+                      <Field
+                        label="Place of Issuance"
+                        value={app.govId.placeIssuance}
+                      />
+                    </div>
+                  </SectionCard>
+                )}
+
+                {app.disclosures && (
+                  <SectionCard title="Disclosure Questionnaire" icon={FileText}>
+                    <div className="space-y-1.5">
+                      {(
+                        [
+                          ["relatedThirdDegree", "Related (3rd degree) to appointing authority", "relatedDetails"],
+                          ["relatedFourthDegree", "Related (4th degree) to appointing authority", "relatedDetails"],
+                          ["guiltyAdmin", "Found guilty of an administrative offense", "guiltyAdminDetails"],
+                          ["criminallyCharged", "Criminally charged before any court", "criminalDetails"],
+                          ["convicted", "Convicted of any crime", "convictedDetails"],
+                          ["separatedFromService", "Separated from the service", "separatedDetails"],
+                          ["candidateLastYear", "Candidate in last year's election", "candidateDetails"],
+                          ["resignedToCampaign", "Resigned to campaign before election", "resignedDetails"],
+                          ["immigrant", "Immigrant / permanent resident abroad", "immigrantDetails"],
+                          ["indigenousMember", "Member of an indigenous group", "indigenousDetails"],
+                          ["pwd", "Person with disability", "pwdId"],
+                          ["soloParent", "Solo parent", "soloParentId"],
+                        ] as [string, string, string][]
+                      ).map(([k, q, d]) => (
+                        <div
+                          key={k}
+                          className="flex items-start justify-between gap-2 text-xs"
+                        >
+                          <span className="text-gray-700 flex-1 leading-snug">
+                            {q}
+                          </span>
+                          <span className="flex flex-col items-end shrink-0">
+                            <span
+                              className={`text-[10px] px-1.5 py-0 rounded border ${
+                                app.disclosures[k]
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-gray-50 text-gray-500 border-gray-200"
+                              }`}
+                            >
+                              {app.disclosures[k] ? "Yes" : "No"}
+                            </span>
+                            {app.disclosures[k] && app.disclosures[d] && (
+                              <span className="text-[10px] text-gray-500 mt-0.5 text-right max-w-[160px] break-words">
+                                {app.disclosures[d]}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                )}
+
+                {!app.voluntaryWork?.length &&
+                  !app.learningDev?.length &&
+                  !app.otherInfo?.length &&
+                  !app.references?.length &&
+                  !(app.govId?.type || app.govId?.number) &&
+                  !app.disclosures && (
+                    <SectionCard title="Personal Data Sheet" icon={FileText}>
+                      <p className="text-xs text-gray-400 italic text-center py-6">
+                        No additional PDS sections were provided on this
+                        application.
+                      </p>
+                    </SectionCard>
+                  )}
+              </>
+            )}
           </TabsContent>
 
           {/* ── Modules ───────────────────────────────────────── */}

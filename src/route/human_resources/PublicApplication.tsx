@@ -1,8 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { toast } from "sonner";
 
 import { useTemAuth } from "@/provider/TempAuthProvider";
-import { publicApplicationData } from "@/db/statement";
+import {
+  publicApplicationData,
+  downloadPdsExcel,
+  resolveAddressNames,
+} from "@/db/statement";
+import { Button } from "@/components/ui/button";
 import {
   formatPureDate,
   formatDate,
@@ -33,6 +40,7 @@ import {
   Trophy,
   Calendar,
   Loader2,
+  Download,
 } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
@@ -105,6 +113,47 @@ const PublicApplication = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Stored addresses hold PSGC codes, not names — resolve them for display.
+  const { data: addr } = useQuery({
+    queryKey: [
+      "psgc-address-names",
+      applicationId,
+      data?.resProvince,
+      data?.resCity,
+      data?.resBarangay,
+      data?.permaProvince,
+      data?.permaCity,
+      data?.permaBarangay,
+    ],
+    enabled: !!data,
+    staleTime: Infinity,
+    queryFn: async () => ({
+      res: await resolveAddressNames({
+        province: data?.resProvince,
+        city: data?.resCity,
+        barangay: data?.resBarangay,
+      }),
+      perma: await resolveAddressNames({
+        province: data?.permaProvince,
+        city: data?.permaCity,
+        barangay: data?.permaBarangay,
+      }),
+    }),
+  });
+
+  const [downloading, setDownloading] = useState(false);
+  const handleDownloadPds = async () => {
+    if (!applicationId) return;
+    setDownloading(true);
+    try {
+      await downloadPdsExcel({ applicationId });
+    } catch {
+      toast.error("Failed to download PDS. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (!token) return <OTP id={applicationId} to={0} />;
 
   if (isFetching && !data) {
@@ -147,9 +196,9 @@ const PublicApplication = () => {
     data.reshouseBlock,
     data.resStreet,
     data.resSub,
-    data.resBarangay,
-    data.resCity,
-    data.resProvince,
+    addr?.res.barangay ?? data.resBarangay,
+    addr?.res.city ?? data.resCity,
+    addr?.res.province ?? data.resProvince,
     data.resZipCode,
   ]
     .filter(Boolean)
@@ -159,9 +208,9 @@ const PublicApplication = () => {
     data.permahouseBlock,
     data.permaStreet,
     data.permaSub,
-    data.permaBarangay,
-    data.permaCity,
-    data.permaProvince,
+    addr?.perma.barangay ?? data.permaBarangay,
+    addr?.perma.city ?? data.permaCity,
+    addr?.perma.province ?? data.permaProvince,
     data.permaZipCode,
   ]
     .filter(Boolean)
@@ -205,6 +254,20 @@ const PublicApplication = () => {
                 </span>
               </div>
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto h-8 text-xs gap-1.5 shrink-0"
+              onClick={handleDownloadPds}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Download PDS (Excel)
+            </Button>
           </div>
         </div>
 

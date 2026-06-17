@@ -130,6 +130,11 @@ const OTP = ({ id, title, to = 1, note }: Props) => {
       localStorage.setItem("temp_auth", id);
       // Clear cooldown on successful verification
       clearStoredCooldown();
+      toast.success("Verified successfully", { position: "top-right" });
+      // The auth gate (TempAuthProvider) only reads the token cookie on mount,
+      // so reload to re-evaluate it and render the protected content instead of
+      // staying on this OTP screen.
+      window.location.reload();
     } catch (error) {
       console.log(error);
 
