@@ -1,9 +1,13 @@
 import { io, Socket } from "socket.io-client";
+import { getUrl } from "./axios";
 
-// Same baseURL convention as our axios instance — keep them aligned so
-// the WebSocket connects to the API that serves REST.
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ?? "http://127.0.0.1:3000";
+// The WebSocket lives on the SAME server as REST, so resolve its URL the
+// exact same way axios does (getUrl() reads VITE_STATUS / VITE_DOMAIN /
+// VITE_SERVER_URL). VITE_SOCKET_URL still overrides if explicitly set.
+// The previous hardcoded "127.0.0.1:3000" fallback meant the deployed site
+// tried to reach localhost and the socket never connected — so chat worked
+// (REST) but was never real-time.
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || getUrl();
 
 let socket: Socket | null = null;
 
