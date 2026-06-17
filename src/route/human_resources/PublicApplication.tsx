@@ -4,7 +4,11 @@ import { useParams } from "react-router";
 import { toast } from "sonner";
 
 import { useTemAuth } from "@/provider/TempAuthProvider";
-import { publicApplicationData, downloadPdsExcel } from "@/db/statement";
+import {
+  publicApplicationData,
+  downloadPdsExcel,
+  resolveAddressNames,
+} from "@/db/statement";
 import { Button } from "@/components/ui/button";
 import {
   formatPureDate,
@@ -109,6 +113,34 @@ const PublicApplication = () => {
     refetchOnWindowFocus: false,
   });
 
+  // Stored addresses hold PSGC codes, not names — resolve them for display.
+  const { data: addr } = useQuery({
+    queryKey: [
+      "psgc-address-names",
+      applicationId,
+      data?.resProvince,
+      data?.resCity,
+      data?.resBarangay,
+      data?.permaProvince,
+      data?.permaCity,
+      data?.permaBarangay,
+    ],
+    enabled: !!data,
+    staleTime: Infinity,
+    queryFn: async () => ({
+      res: await resolveAddressNames({
+        province: data?.resProvince,
+        city: data?.resCity,
+        barangay: data?.resBarangay,
+      }),
+      perma: await resolveAddressNames({
+        province: data?.permaProvince,
+        city: data?.permaCity,
+        barangay: data?.permaBarangay,
+      }),
+    }),
+  });
+
   const [downloading, setDownloading] = useState(false);
   const handleDownloadPds = async () => {
     if (!applicationId) return;
@@ -164,9 +196,9 @@ const PublicApplication = () => {
     data.reshouseBlock,
     data.resStreet,
     data.resSub,
-    data.resBarangay,
-    data.resCity,
-    data.resProvince,
+    addr?.res.barangay ?? data.resBarangay,
+    addr?.res.city ?? data.resCity,
+    addr?.res.province ?? data.resProvince,
     data.resZipCode,
   ]
     .filter(Boolean)
@@ -176,9 +208,9 @@ const PublicApplication = () => {
     data.permahouseBlock,
     data.permaStreet,
     data.permaSub,
-    data.permaBarangay,
-    data.permaCity,
-    data.permaProvince,
+    addr?.perma.barangay ?? data.permaBarangay,
+    addr?.perma.city ?? data.permaCity,
+    addr?.perma.province ?? data.permaProvince,
     data.permaZipCode,
   ]
     .filter(Boolean)
