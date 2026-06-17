@@ -283,6 +283,46 @@ export const resolveAddressNames = async (a: {
   return { province, city, barangay };
 };
 
+// ── Provisional (temporary/contract) staff ─────────────────────────────────
+// Designations = non-plantilla UnitPositions on the line; personnel = Users
+// whose status is a provisional category. Both cursor-paginated.
+const provHeaders = (token: string) => ({
+  Authorization: `Bearer ${token}`,
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  "X-Requested-With": "XMLHttpRequest",
+});
+
+export const provisionalDesignations = async (
+  token: string,
+  lineId: string,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/provisional/designations", {
+    headers: provHeaders(token),
+    params: { id: lineId, lastCursor, limit, query },
+  });
+  if (response.status !== 200) throw new Error("Failed to load designations");
+  return response.data;
+};
+
+export const provisionalPersonnel = async (
+  token: string,
+  lineId: string,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/provisional/personnel", {
+    headers: provHeaders(token),
+    params: { id: lineId, lastCursor, limit, query },
+  });
+  if (response.status !== 200) throw new Error("Failed to load personnel");
+  return response.data;
+};
+
 export const getAllOfficePersonnel = async (
   token: string,
   id: string,

@@ -238,6 +238,9 @@ export const inviteFromApplication = async (
     userId: string;
     lineId: string;
     message?: string | null;
+    // Provisional hiring (optional): employment type + contract end date.
+    empType?: string | null;
+    term?: string | null;
   },
 ) => {
   const response = await axios.post<{

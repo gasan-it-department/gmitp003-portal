@@ -17,6 +17,7 @@ import ModuleGuard from "@/layout/ModuleGuard";
 import AccessDenied from "@/route/AccessDenied.tsx";
 import HrEmployee from "./route/human_resources/Employee.tsx";
 import HrApplication from "./route/human_resources/Application.tsx";
+import Provisional from "./route/human_resources/Provisional.tsx";
 import AddEmployee from "./route/human_resources/AddEmployee.tsx";
 import Invite from "./route/human_resources/Invite.tsx";
 import SalaryGrade from "./route/human_resources/SalaryGrade.tsx";
@@ -345,6 +346,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="employee" element={<HrEmployee />} />
                 <Route path="employee/:employeeId" element={<UserProfile />} />
                 <Route path="employees/add" element={<AddEmployee />} />
+                <Route path="provisional" element={<Provisional />} />
                 <Route path="application" element={<HrApplication />} />
                 <Route path="module" element={<ModuleHome />} />
                 <Route

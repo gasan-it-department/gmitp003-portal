@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   useInfiniteQuery,
   useMutation,
@@ -100,6 +100,14 @@ const PositionSelectApplicant = () => {
   const [slotId, setSlotId] = useState<string>("");
   const [message, setMessage] = useState<string>("");
 
+  // Provisional hire: when arriving from the Provisional module (?provisional=1)
+  // the invite also carries an employment type + contract end date, so the
+  // registered user becomes temp/contract instead of regular plantilla.
+  const [searchParams] = useSearchParams();
+  const isProvisional = searchParams.get("provisional") === "1";
+  const [empType, setEmpType] = useState("Contract");
+  const [term, setTerm] = useState("");
+
   // Position context so we know which slots are open + display a clear
   // header — same data the PositionDetail page consumes.
   const position = useQuery<PositionDetailLike>({
@@ -174,6 +182,8 @@ const PositionSelectApplicant = () => {
         userId: auth.userId,
         lineId: effectiveLineId,
         message: message.trim() || null,
+        empType: isProvisional ? empType : undefined,
+        term: isProvisional && term ? term : undefined,
       });
     },
     onSuccess: (data) => {
@@ -443,6 +453,37 @@ const PositionSelectApplicant = () => {
                 Only open slots are shown.
               </p>
             </div>
+
+            {isProvisional && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-gray-700">
+                    Employment type *
+                  </label>
+                  <select
+                    value={empType}
+                    onChange={(e) => setEmpType(e.target.value)}
+                    className="w-full h-8 text-xs border rounded-md px-2 bg-white"
+                  >
+                    <option value="Contract">Contract</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Job Order">Job Order</option>
+                    <option value="Temporary">Temporary</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-gray-700">
+                    Contract end date
+                  </label>
+                  <input
+                    type="date"
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    className="w-full h-8 text-xs border rounded-md px-2 bg-white"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-700">

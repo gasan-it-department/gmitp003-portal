@@ -15,27 +15,43 @@ import {
   PanelLeftOpen,
   CalendarDays,
   Wallet,
+  Clock4,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
 
-export const menuList = [
-  { title: "Dashboard",    path: "dashboard",    Icon: Home,          children: [], accord: false },
-  { title: "Announcement", path: "announcement", Icon: Megaphone,     children: [], accord: false },
-  { title: "Employees",    path: "employee",     Icon: IdCardLanyard, children: [], accord: false },
-  { title: "Applications", path: "application",  Icon: File,          children: [], accord: false },
+// Grouped sidebar. Each group renders a small section header followed by its
+// leaf items. (Replaces the old flat list + single "Management" accordion.)
+export const menuGroups = [
   {
-    title: "Management",
-    path: "human-resources/management",
-    Icon: Building2,
-    accord: true,
-    children: [
-      { title: "Module",        path: "module",   Icon: Component,    children: [], accord: true },
-      { title: "Salary Grades", path: "salary",   Icon: Landmark,     children: [], accord: true },
-      { title: "Leaves",        path: "leaves",   Icon: CalendarDays, children: [], accord: true },
-      { title: "Payroll",       path: "payroll",  Icon: Wallet,       children: [], accord: true },
-      { title: "Units",         path: "units",    Icon: Blocks,       children: [], accord: true },
-      { title: "Document Room", path: "document", Icon: FileText,     children: [], accord: true },
-      { title: "Invite Users",  path: "invite",   Icon: Link,         children: [], accord: true },
+    section: "Overview",
+    items: [
+      { title: "Dashboard",    path: "dashboard",    Icon: Home,      children: [], accord: false },
+      { title: "Announcement", path: "announcement", Icon: Megaphone, children: [], accord: false },
+    ],
+  },
+  {
+    section: "Recruitment",
+    items: [
+      { title: "Applications", path: "application", Icon: File, children: [], accord: false },
+      { title: "Invite Users", path: "invite",      Icon: Link, children: [], accord: false },
+    ],
+  },
+  {
+    section: "Workforce",
+    items: [
+      { title: "Employees",     path: "employee",    Icon: IdCardLanyard, children: [], accord: false },
+      { title: "Provisional",   path: "provisional", Icon: Clock4,        children: [], accord: false },
+      { title: "Units",         path: "units",       Icon: Blocks,        children: [], accord: false },
+      { title: "Salary Grades", path: "salary",      Icon: Landmark,      children: [], accord: false },
+    ],
+  },
+  {
+    section: "Operations",
+    items: [
+      { title: "Leaves",        path: "leaves",   Icon: CalendarDays, children: [], accord: false },
+      { title: "Payroll",       path: "payroll",  Icon: Wallet,       children: [], accord: false },
+      { title: "Document Room", path: "document", Icon: FileText,     children: [], accord: false },
+      { title: "Modules",       path: "module",   Icon: Component,    children: [], accord: false },
     ],
   },
 ];
@@ -86,15 +102,24 @@ const SideBar = () => {
         </button>
       </div>
 
-      {/* ── Navigation ─────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        {menuList.map((item, index) => (
-          <SIdeBarItem
-            key={index}
-            {...item}
-            lineId={lineId}
-            collapsed={collapsed}
-          />
+      {/* ── Navigation (grouped sections) ──────────────────────────── */}
+      <nav className="flex-1 overflow-y-auto p-2 space-y-2">
+        {menuGroups.map((group) => (
+          <div key={group.section} className="space-y-0.5">
+            {!collapsed && (
+              <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                {group.section}
+              </p>
+            )}
+            {group.items.map((item, index) => (
+              <SIdeBarItem
+                key={index}
+                {...item}
+                lineId={lineId}
+                collapsed={collapsed}
+              />
+            ))}
+          </div>
         ))}
       </nav>
     </aside>
