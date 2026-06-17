@@ -246,7 +246,7 @@ const PublicApplication = () => {
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                  {applicantionStatus[data.status + 1] ?? "—"}
+                  {applicantionStatus[data.status] ?? "—"}
                 </Badge>
                 <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
                   <Calendar className="h-2.5 w-2.5" />

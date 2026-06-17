@@ -9,7 +9,7 @@ import {
   formatDate,
   calculateExperienceDuration,
 } from "@/utils/date";
-import { calculateAge, applicantionStatus } from "@/utils/helper";
+import { calculateAge, applicationStatus } from "@/utils/helper";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -254,7 +254,7 @@ const ApplicationData = ({ applicationId }: Props) => {
                     variant="outline"
                     className="text-[10px] px-1.5 py-0"
                   >
-                    {applicantionStatus[data.status + 1] ?? "—"}
+                    {applicationStatus[data.status] ?? "—"}
                   </Badge>
                   <span className="text-[10px] text-gray-500 flex items-center gap-0.5">
                     <Calendar className="h-2.5 w-2.5" />
