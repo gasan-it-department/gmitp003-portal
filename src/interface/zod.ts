@@ -67,14 +67,15 @@ export const AddUnitSchema = z.object({
   description: z.string().optional(),
 });
 
+// Education is fully optional — applicants may leave any/all levels blank.
 export const EducationalSchema = z.object({
   name: z.string().optional(),
-  from: z.string(),
-  to: z.string(),
-  course: z.string(),
-  highestAttained: z.string(),
-  yearGraduate: z.string(),
-  records: z.string(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  course: z.string().optional(),
+  highestAttained: z.string().optional(),
+  yearGraduate: z.string().optional(),
+  records: z.string().optional(),
 });
 
 export const ParentSchema = z.object({
@@ -248,7 +249,7 @@ export const AddUserSchema = z
     secondary: EducationalSchema.optional(),
     vocational: EducationalSchema.optional(),
     college: EducationalSchema.optional(),
-    graduateCollege: EducationalSchema,
+    graduateCollege: EducationalSchema.optional(),
     civiService: z.array(EligibilitySchema).optional(),
     experience: z.array(WorkExprienceSchema).optional(),
     tags: z.array(ApplicantTagsSchema),
