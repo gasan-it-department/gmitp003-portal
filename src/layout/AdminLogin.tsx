@@ -23,10 +23,9 @@ import {
   User,
   Eye,
   EyeOff,
-  Shield,
-  Building,
+  ShieldCheck,
   ArrowRight,
-  KeyRound,
+  AlertCircle,
 } from "lucide-react";
 
 const AdminLogin = () => {
@@ -36,10 +35,7 @@ const AdminLogin = () => {
 
   const form = useForm<AdminLoginProps>({
     resolver: zodResolver(AdminLoginSchema),
-    defaultValues: {
-      password: "",
-      username: "",
-    },
+    defaultValues: { password: "", username: "" },
   });
 
   const {
@@ -56,194 +52,154 @@ const AdminLogin = () => {
         password: data.password,
       });
 
-      if (response.status === 200 && response.data.error === 1) {
+      // Any error code (1 not found, 2 wrong password, 9 server) is a failure —
+      // the old code only handled `error === 1` and then crashed destructuring
+      // the missing `admin` object on the other codes.
+      if (response.data?.error) {
         setError("root", { message: response.data.message });
-        toast.error("Login Failed", {
-          description: response.data.message,
-        });
+        toast.error("Login failed", { description: response.data.message });
         setIsLoading(false);
         return;
       }
 
       const { admin } = response.data;
-      console.log({ admin });
-
       setCookie(`auth_admin_token-${admin.id}`, admin.token, 1);
       localStorage.setItem("auth_admin", admin.id);
 
-      // Small delay for better UX
-      setTimeout(() => {
-        nav("/admin-panel");
-      }, 1000);
+      toast.success("Welcome back, admin");
+      setTimeout(() => nav("/admin-panel", { replace: true }), 600);
     } catch (error: any) {
-      console.log(error);
-      toast.error("Login Failed", {
-        description:
-          error?.response?.data?.message || "An unexpected error occurred",
-      });
-      setError("root", {
-        message:
-          error?.response?.data?.message || "Login failed. Please try again.",
-      });
+      const message =
+        error?.response?.data?.message || "An unexpected error occurred";
+      toast.error("Login failed", { description: message });
+      setError("root", { message });
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Header Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl shadow-lg mb-4">
-            <Shield className="w-8 h-8 text-white" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-blue-600/20 blur-3xl" />
+
+      <div className="w-full max-w-sm relative">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-900/40 mb-3">
+            <ShieldCheck className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Admin Portal</h1>
-          <p className="text-blue-200 text-sm">
-            Secure access to system administration
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            Admin Console
+          </h1>
+          <p className="text-slate-400 text-xs mt-1">
+            Restricted access · authorized personnel only
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-2xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Building className="w-5 h-5 text-blue-300" />
-            <h2 className="text-xl font-semibold text-white">
-              Sign in to continue
-            </h2>
-          </div>
-
+        {/* Card */}
+        <div className="rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-2xl p-6">
           <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Root Error Display */}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {errors.root && (
                 <Alert
                   variant="destructive"
-                  className="border-red-400/50 bg-red-500/10"
+                  className="border-red-400/40 bg-red-500/10"
                 >
-                  <AlertDescription className="text-red-200">
+                  <AlertCircle className="h-4 w-4 text-red-300" />
+                  <AlertDescription className="text-red-200 text-xs">
                     {errors.root.message}
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Username Field */}
               <FormField
                 name="username"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-300 text-sm font-medium">
+                    <FormLabel className="text-slate-300 text-xs font-medium">
                       Username
                     </FormLabel>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-blue-400" />
-                      </div>
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="Enter your username"
-                          className="pl-10 bg-white/5 border-gray-600 text-white placeholder:text-gray-400 h-12 focus:border-blue-500 focus:ring-blue-500"
+                          placeholder="admin"
+                          autoComplete="username"
+                          className="pl-9 h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-indigo-400 focus-visible:ring-indigo-500/30"
                           disabled={isLoading}
                         />
                       </FormControl>
                     </div>
-                    {errors.username && (
-                      <FormMessage className="text-red-300">
-                        {errors.username.message}
-                      </FormMessage>
-                    )}
+                    <FormMessage className="text-red-300 text-xs" />
                   </FormItem>
                 )}
               />
 
-              {/* Password Field */}
               <FormField
                 name="password"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-300 text-sm font-medium">
+                    <FormLabel className="text-slate-300 text-xs font-medium">
                       Password
                     </FormLabel>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-blue-400" />
-                      </div>
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                       <FormControl>
                         <Input
                           {...field}
                           type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          className="pl-10 pr-10 bg-white/5 border-gray-600 text-white placeholder:text-gray-400 h-12 focus:border-blue-500 focus:ring-blue-500"
+                          placeholder="••••••••"
+                          autoComplete="current-password"
+                          className="pl-9 pr-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus-visible:border-indigo-400 focus-visible:ring-indigo-500/30"
                           disabled={isLoading}
                         />
                       </FormControl>
                       <button
                         type="button"
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                        onClick={() => setShowPassword((s) => !s)}
                         disabled={isLoading}
+                        tabIndex={-1}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                          <EyeOff className="h-4 w-4" />
                         ) : (
-                          <Eye className="h-5 w-5 text-gray-400 hover:text-gray-300" />
+                          <Eye className="h-4 w-4" />
                         )}
                       </button>
                     </div>
-                    {errors.password && (
-                      <FormMessage className="text-red-300">
-                        {errors.password.message}
-                      </FormMessage>
-                    )}
+                    <FormMessage className="text-red-300 text-xs" />
                   </FormItem>
                 )}
               />
 
-              {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all duration-300 shadow-lg hover:shadow-blue-500/25"
+                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-medium shadow-lg shadow-indigo-900/30"
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Authenticating...</span>
-                  </div>
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Authenticating…
+                  </span>
                 ) : (
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Sign in</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </div>
+                  <span className="flex items-center gap-2">
+                    Sign in <ArrowRight className="w-4 h-4" />
+                  </span>
                 )}
               </Button>
             </form>
           </Form>
-
-          {/* Security Note */}
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <div className="flex items-start gap-3">
-              <KeyRound className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-gray-400">
-                This is a secure admin portal. Access is restricted to
-                authorized personnel only. All activities are logged and
-                monitored.
-              </p>
-            </div>
-          </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-400">
-            © {new Date().getFullYear()} Admin Portal v1.0 • All rights reserved
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For technical support, contact system administrator
-          </p>
-        </div>
+        <p className="text-center text-[11px] text-slate-500 mt-5">
+          © {new Date().getFullYear()} Gasan LGU Portal · Admin Console
+        </p>
       </div>
     </div>
   );

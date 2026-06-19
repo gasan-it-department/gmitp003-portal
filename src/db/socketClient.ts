@@ -109,6 +109,36 @@ export const joinLineRoom = (
   };
 };
 
+/**
+ * Subscribe to a server-initiated force logout for this user (e.g. an admin
+ * suspended or deleted the account). Joins the user room so the room-scoped
+ * `auth:force-logout` reaches this client, then fires `onLogout(reason)`.
+ */
+export const subscribeForceLogout = (
+  userId: string,
+  onLogout: (reason: string) => void,
+): (() => void) => {
+  const s = getSocket();
+  const join = () => s.emit("user:join", userId);
+  if (s.connected) join();
+  else s.once("connect", join);
+
+  const handler = (payload: { reason?: string }) =>
+    onLogout(payload?.reason ?? "Your account has been suspended.");
+  s.on("auth:force-logout", handler);
+  return () => {
+    s.off("auth:force-logout", handler);
+  };
+};
+
+/** Tear down the shared socket (used on logout so a kicked session ends). */
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+};
+
 export const joinChatRoom = (
   applicationId: string,
   onMessage: (msg: ChatMessagePayload) => void,

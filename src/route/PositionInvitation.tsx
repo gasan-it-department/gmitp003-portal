@@ -168,7 +168,9 @@ const PositionInvitation = () => {
                   Position Registration
                 </h1>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {data?.unitPoistion?.position?.name || "Position"}{" "}
+                  {data?.unitPoistion?.position?.name ||
+                    data?.provisionalPosition?.title ||
+                    "Position"}{" "}
                   Registration
                 </p>
               </div>
@@ -177,17 +179,24 @@ const PositionInvitation = () => {
         </Card>
 
         {/* Position Info Card */}
-        {data?.unitPoistion && (
+        {(data?.unitPoistion || data?.provisionalPosition) && (
           <Card className="border shadow-sm mb-4 bg-blue-50/50 border-blue-100">
             <CardContent className="p-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Building2 className="h-4 w-4 text-blue-500" />
                 <span className="text-sm font-medium text-gray-700">
                   Applying for:
                 </span>
                 <Badge className="text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">
-                  {data.unitPoistion.position.name}
+                  {data?.unitPoistion?.position?.name ||
+                    data?.provisionalPosition?.title}
                 </Badge>
+                {data?.provisionalPosition && (
+                  <Badge variant="outline" className="text-xs">
+                    {data.provisionalPosition.empType} ·{" "}
+                    {data.provisionalPosition.termMonths} mo
+                  </Badge>
+                )}
               </div>
               {positionInviteLinkId && (
                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100">
@@ -354,7 +363,9 @@ const PositionInvitation = () => {
                     Position:
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {data?.unitPoistion?.position?.name || "N/A"}
+                    {data?.unitPoistion?.position?.name ||
+                      data?.provisionalPosition?.title ||
+                      "N/A"}
                   </Badge>
                 </div>
               </CardContent>

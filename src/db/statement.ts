@@ -293,18 +293,55 @@ const provHeaders = (token: string) => ({
   "X-Requested-With": "XMLHttpRequest",
 });
 
-export const provisionalDesignations = async (
+export const provisionalPositionsList = async (
   token: string,
   lineId: string,
   lastCursor: string | null,
   limit: string,
   query: string,
 ) => {
-  const response = await axios.get("/provisional/designations", {
+  const response = await axios.get("/provisional/positions", {
     headers: provHeaders(token),
     params: { id: lineId, lastCursor, limit, query },
   });
-  if (response.status !== 200) throw new Error("Failed to load designations");
+  if (response.status !== 200) throw new Error("Failed to load positions");
+  return response.data;
+};
+
+export const createProvisionalPosition = async (
+  token: string,
+  payload: {
+    title: string;
+    empType: string;
+    termMonths: number;
+    slots: number;
+    description?: string | null;
+    lineId: string;
+    userId?: string;
+  },
+) => {
+  const response = await axios.post("/provisional/position", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to create position");
+  return response.data;
+};
+
+export const provisionalInvite = async (
+  token: string,
+  payload: {
+    applicationIds: string[];
+    provisionalPositionId: string;
+    unitId: string;
+    userId: string;
+    lineId: string;
+    message?: string | null;
+  },
+) => {
+  const response = await axios.post("/provisional/invite", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to send invite");
   return response.data;
 };
 
@@ -314,12 +351,121 @@ export const provisionalPersonnel = async (
   lastCursor: string | null,
   limit: string,
   query: string,
+  status?: string,
+  term?: string,
+  tags?: string[],
 ) => {
   const response = await axios.get("/provisional/personnel", {
     headers: provHeaders(token),
-    params: { id: lineId, lastCursor, limit, query },
+    params: {
+      id: lineId,
+      lastCursor,
+      limit,
+      query,
+      status: status ?? "",
+      term: term ?? "",
+      tags: tags ?? [],
+    },
   });
   if (response.status !== 200) throw new Error("Failed to load personnel");
+  return response.data;
+};
+
+export const provisionalTransfer = async (
+  token: string,
+  payload: {
+    userIds: string[];
+    unitId: string;
+    actorId: string;
+    lineId: string;
+  },
+) => {
+  const response = await axios.post("/provisional/transfer", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to transfer");
+  return response.data;
+};
+
+export const provisionalRemove = async (
+  token: string,
+  payload: {
+    userIds: string[];
+    actorId: string;
+    lineId: string;
+    message?: string | null;
+  },
+) => {
+  const response = await axios.post("/provisional/remove", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to remove");
+  return response.data;
+};
+
+export const provisionalRenew = async (
+  token: string,
+  payload: {
+    userIds: string[];
+    months: number;
+    actorId: string;
+    lineId: string;
+  },
+) => {
+  const response = await axios.post("/provisional/renew", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to renew");
+  return response.data;
+};
+
+// Downloads the (filtered) provisional personnel list as an .xlsx and triggers
+// a browser download. Passes the same status/term/search filters as the list.
+export const downloadProvisionalPersonnelExcel = async (
+  token: string,
+  lineId: string,
+  query: string,
+  status?: string,
+  term?: string,
+  tags?: string[],
+) => {
+  const response = await axios.get("/provisional/personnel/excel", {
+    headers: provHeaders(token),
+    params: {
+      id: lineId,
+      query,
+      status: status ?? "",
+      term: term ?? "",
+      tags: tags ?? [],
+    },
+    responseType: "blob",
+  });
+  const blob = response.data as Blob;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cd = response.headers["content-disposition"] as string | undefined;
+  const m = cd ? /filename="?([^"]+)"?/.exec(cd) : null;
+  a.download = m ? m[1] : "provisional-personnel.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Admin panel — audit logs. `type` selects the log model (hr, medicine, ...).
+export const getAdminLogs = async (
+  token: string | undefined,
+  type: string,
+  lastCursor: string | null,
+  limit: number,
+  query?: string,
+) => {
+  const response = await axios.get("/admin/logs", {
+    headers: provHeaders(token as string),
+    params: { type, lastCursor, limit, query: query ?? "" },
+  });
+  if (response.status !== 200) throw new Error("Failed to load logs");
   return response.data;
 };
 
@@ -413,12 +559,14 @@ export const getAccounts = async (
   lastCursor: string | null,
   limit: number,
   query?: string,
+  filter?: string,
 ) => {
   const response = await axios.get("/accounts", {
     params: {
       lastCursor,
       limit,
       query,
+      filter: filter ?? "",
     },
     headers: {
       Authorization: `Bearer ${token}`,
@@ -432,6 +580,32 @@ export const getAccounts = async (
   if (response.status !== 200) {
     throw new Error(`${response.data}`);
   }
+  return response.data;
+};
+
+export const setAccountStatus = async (
+  token: string | undefined,
+  accountId: string,
+  active: boolean,
+) => {
+  const response = await axios.patch(
+    "/account/status",
+    { accountId, active },
+    { headers: provHeaders(token as string) },
+  );
+  if (response.status !== 200) throw new Error("Failed to update status");
+  return response.data;
+};
+
+export const deleteAccount = async (
+  token: string | undefined,
+  accountId: string,
+) => {
+  const response = await axios.delete("/account/delete", {
+    headers: provHeaders(token as string),
+    data: { accountId },
+  });
+  if (response.status !== 200) throw new Error("Failed to delete account");
   return response.data;
 };
 

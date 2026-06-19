@@ -19,6 +19,12 @@ const PersonnelItem = ({ item, no }: Props) => {
     (item as any).PositionSlot?.pos?.name ??
     null;
 
+  // Provisional (temp/contract) staff have no plantilla Position — surface their
+  // employment type (User.status, e.g. "Job Order") instead of "No position".
+  const status = (item as any).status as string | undefined;
+  const term = (item as any).term as string | undefined;
+  const isProvisional = !position && !!status && status !== "Regular";
+
   return (
     <TableRow className="hover:bg-blue-50/40">
       <TableCell className="text-[10px] text-gray-500">{no}</TableCell>
@@ -39,6 +45,25 @@ const PersonnelItem = ({ item, no }: Props) => {
           >
             {position}
           </Badge>
+        ) : isProvisional ? (
+          <span className="inline-flex items-center gap-1">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-700 border-indigo-200"
+              title={
+                term
+                  ? `Provisional · ends ${new Date(term).toLocaleDateString()}`
+                  : "Provisional"
+              }
+            >
+              {status}
+            </Badge>
+            {term && (
+              <span className="text-[9px] text-gray-400">
+                ends {new Date(term).toLocaleDateString()}
+              </span>
+            )}
+          </span>
         ) : (
           <span className="text-[10px] text-gray-400 italic">No position</span>
         )}

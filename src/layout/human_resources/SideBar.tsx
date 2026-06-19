@@ -40,7 +40,7 @@ export const menuGroups = [
     section: "Workforce",
     items: [
       { title: "Employees",     path: "employee",    Icon: IdCardLanyard, children: [], accord: false },
-      { title: "Provisional",   path: "provisional", Icon: Clock4,        children: [], accord: false },
+      { title: "Non-Plantilla", path: "provisional", Icon: Clock4,        children: [], accord: false },
       { title: "Units",         path: "units",       Icon: Blocks,        children: [], accord: false },
       { title: "Salary Grades", path: "salary",      Icon: Landmark,      children: [], accord: false },
     ],

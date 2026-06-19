@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useParams, useNavigate } from "react-router";
@@ -9,9 +10,15 @@ import { useInView } from "react-intersection-observer";
 import { useDebounce } from "use-debounce";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 import { useAuth } from "@/provider/ProtectedRoute";
-import { lineApplications } from "@/db/statement";
+import {
+  lineApplications,
+  provisionalInvite,
+  provisionalPositionsList,
+  getLinetUnits,
+} from "@/db/statement";
 import { deleteSelctedApplication } from "@/db/statements/application";
 
 import {
@@ -48,6 +55,14 @@ import PositionSelect from "@/layout/human_resources/PositionSelect";
 import FormTags from "@/layout/FormTags";
 import ApplicationItem from "@/layout/human_resources/item/ApplicationItem";
 import ContactApplicant from "@/layout/human_resources/ContactApplicant";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   FolderPlus,
@@ -57,6 +72,7 @@ import {
   Square,
   CalendarArrowDown,
   CalendarArrowUp,
+  Clock4,
   ListRestart,
   EllipsisVertical,
   PhoneForwarded,
@@ -218,6 +234,82 @@ const Application = () => {
     },
   });
 
+  // ── Assign selected applicants to a non-plantilla position ───────────────
+  const [assignPositionId, setAssignPositionId] = useState("");
+  const [assignUnitId, setAssignUnitId] = useState("");
+  const [assignMessage, setAssignMessage] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
+  const provPositions = useQuery<{
+    list: {
+      id: string;
+      title: string;
+      empType: string;
+      termMonths: number;
+      slots: number;
+      open: number;
+    }[];
+  }>({
+    queryKey: ["np-positions-for-assign", lineId],
+    queryFn: () =>
+      provisionalPositionsList(
+        auth.token as string,
+        lineId as string,
+        null,
+        "100",
+        "",
+      ),
+    enabled: !!auth.token && !!lineId && onOpen === 5,
+    refetchOnWindowFocus: false,
+  });
+
+  const assignUnits = useQuery<{
+    list: { id: string; name?: string | null }[];
+  }>({
+    queryKey: ["units-for-assign", lineId],
+    queryFn: () =>
+      getLinetUnits(auth.token as string, lineId as string, null, "100", ""),
+    enabled: !!auth.token && !!lineId && onOpen === 5,
+    refetchOnWindowFocus: false,
+  });
+
+  const submitAssign = async () => {
+    if (!assignPositionId || !assignUnitId) {
+      toast.error("Pick a position and a unit");
+      return;
+    }
+    setAssigning(true);
+    try {
+      const res = await provisionalInvite(auth.token as string, {
+        applicationIds: selected,
+        provisionalPositionId: assignPositionId,
+        unitId: assignUnitId,
+        userId: auth.userId as string,
+        lineId: lineId as string,
+        message: assignMessage.trim() || null,
+      });
+      toast.success(
+        `${res?.invited ?? selected.length} applicant(s) invited to ${res?.position ?? "the position"}`,
+        {
+          description: res?.skipped
+            ? `${res.skipped} skipped (already registered or invited).`
+            : undefined,
+        },
+      );
+      setOnOpen(0);
+      setAssignPositionId("");
+      setAssignUnitId("");
+      setAssignMessage("");
+      setSelected([]);
+      setOnMultiSelect(false);
+      queryClient.invalidateQueries({ queryKey: ["applications", lineId] });
+    } catch (e) {
+      toast.error("Failed to assign", { description: `${e}` });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const items = data?.pages.flatMap((p) => p.list) ?? [];
   const hasActiveFilters =
     !!(appliedFilters.dateFrom ||
@@ -324,6 +416,16 @@ const Application = () => {
               >
                 <PhoneForwarded className="h-3 w-3" />
                 Contact ({selected.length})
+              </Button>
+              <Button
+                className="w-full justify-start h-7 text-[10px] gap-1.5 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50"
+                size="sm"
+                variant="ghost"
+                disabled={selected.length === 0}
+                onClick={() => setOnOpen(5)}
+              >
+                <Clock4 className="h-3 w-3" />
+                Assign to Non-Plantilla ({selected.length})
               </Button>
               <Button
                 className="w-full justify-start h-7 text-[10px] gap-1.5"
@@ -714,6 +816,99 @@ const Application = () => {
           }}
           isLoading={deleteMut.isPending}
         />
+      </Modal>
+
+      {/* Assign to Non-Plantilla */}
+      <Modal
+        title={
+          <div className="flex items-center gap-1.5 text-xs">
+            <Clock4 className="h-3 w-3 text-indigo-500" />
+            Assign {selected.length} applicant{selected.length === 1 ? "" : "s"}{" "}
+            to a Non-Plantilla position
+          </div>
+        }
+        onOpen={onOpen === 5}
+        className="max-w-md max-h-[90vh] overflow-auto"
+        setOnOpen={() => setOnOpen(0)}
+        onFunction={submitAssign}
+        loading={assigning}
+        yesTitle="Send invitations"
+        cancelTitle="Cancel"
+        footer={true}
+      >
+        <div className="space-y-3">
+          <p className="text-[11px] text-gray-600">
+            Each selected applicant gets a registration link for the chosen
+            position + unit. Already-registered or already-invited applicants are
+            skipped.
+          </p>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-gray-700">
+              Non-Plantilla position *
+            </label>
+            <Select value={assignPositionId} onValueChange={setAssignPositionId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue
+                  placeholder={
+                    provPositions.isFetching
+                      ? "Loading positions..."
+                      : "Select a position"
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {(provPositions.data?.list ?? []).map((p) => (
+                  <SelectItem
+                    key={p.id}
+                    value={p.id}
+                    className="text-xs"
+                    disabled={p.open <= 0}
+                  >
+                    {p.title} · {p.empType} ({p.open}/{p.slots} open)
+                  </SelectItem>
+                ))}
+                {!provPositions.isFetching &&
+                  (provPositions.data?.list ?? []).length === 0 && (
+                    <div className="px-2 py-3 text-[11px] text-gray-400 text-center">
+                      No non-plantilla positions. Create one in the Non-Plantilla
+                      module first.
+                    </div>
+                  )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-gray-700">
+              Assign to unit *
+            </label>
+            <Select value={assignUnitId} onValueChange={setAssignUnitId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Select a unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {(assignUnits.data?.list ?? []).map((u) => (
+                  <SelectItem key={u.id} value={u.id} className="text-xs">
+                    {u.name ?? u.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-gray-700">
+              Message (optional)
+            </label>
+            <Textarea
+              placeholder="Add a note to the invitation email..."
+              value={assignMessage}
+              onChange={(e) => setAssignMessage(e.target.value)}
+              className="text-xs min-h-[50px]"
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   );

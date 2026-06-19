@@ -15,15 +15,6 @@ import {
   FormField,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import PsgcRegion from "../PsgcRegion";
 import PublicProvinceSelect from "../PublicProvinceSelect";
 import PublicMunicipalSelect from "../PublicMunicipalSelect";
@@ -41,6 +32,7 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
+  Loader2,
 } from "lucide-react";
 //
 import { copyToClipboard } from "@/utils/clipboard";
@@ -115,294 +107,219 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
         queryKey: ["line-list"],
         refetchType: "active",
       });
-      console.log("response: ", { result: response.data });
 
       setLink(response.data.link);
       reset();
       setOpen(2);
     } catch (error) {
-      // console.log(error);
-      toast.error("FAILED TO SUBMIT", {
-        description: `${error}`,
-      });
+      toast.error("FAILED TO SUBMIT", { description: `${error}` });
     }
   };
-  console.log({ link });
+
+  const SectionLabel = ({
+    icon: Icon,
+    children,
+  }: {
+    icon: typeof Tag;
+    children: React.ReactNode;
+  }) => (
+    <div className="flex items-center gap-2">
+      <div className="p-1 rounded-md bg-indigo-100">
+        <Icon className="w-3.5 h-3.5 text-indigo-600" />
+      </div>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        {children}
+      </h3>
+    </div>
+  );
 
   return (
-    <div className="w-full h-full">
-      <Card className="max-w-2xl mx-auto border shadow-lg">
-        <CardHeader className="space-y-1 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-sm">
-              <Navigation className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold text-gray-900">
-                Create New Line
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Define a new geographical line for your organization
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
+    <div className="w-full">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 shadow-sm">
+          <Navigation className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 leading-tight">
+            Create New Line
+          </h2>
+          <p className="text-xs text-gray-500">
+            Define a new geographical line for your organization
+          </p>
+        </div>
+      </div>
 
-        <Separator />
+      <Form {...form}>
+        <div className="mt-5 space-y-6 max-h-[62vh] overflow-auto pr-1">
+          {/* Line Information */}
+          <section className="space-y-3">
+            <SectionLabel icon={Tag}>Line Information</SectionLabel>
 
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <div className="space-y-5">
-              {/* Line Information Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-md bg-blue-100">
-                    <Tag className="w-3.5 h-3.5 text-blue-600" />
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-900">
-                    Line Information
-                  </h3>
-                </div>
-
-                <FormField
-                  control={control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                        <Building2 className="w-3 h-3" />
-                        Line Label
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            placeholder="e.g., Main Office, Branch Location"
-                            {...field}
-                            className="pl-8 h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                          />
-                          <Building2 className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Enter a descriptive name for this line/office
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name="defaultUserEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                        <Mail className="w-3 h-3" />
-                        Default User Email
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            type="email"
-                            placeholder="e.g., manager@example.com"
-                            {...field}
-                            className="pl-8 h-9 text-sm border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                          />
-                          <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Email address for the default line user/manager
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Location Details Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-md bg-blue-100">
-                    <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-900">
-                    Location Details
-                  </h3>
-                </div>
-
-                <div className="text-xs text-gray-600 p-2.5 bg-blue-50 rounded-md border border-blue-100">
-                  <p className="font-medium text-blue-800 mb-0.5">Note:</p>
-                  <p className="text-xs">
-                    Select locations in hierarchical order: Region → Province →
-                    Municipal → Barangay
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <FormField
-                    control={control}
-                    name="region"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                          <Globe className="w-3 h-3" />
-                          Region
-                        </FormLabel>
-                        <FormControl>
-                          <PsgcRegion
-                            onChange={field.onChange}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="province"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                          <MapPin className="w-3 h-3" />
-                          Province
-                        </FormLabel>
-                        <FormControl>
-                          <PublicProvinceSelect
-                            onChange={field.onChange}
-                            regionId={regionId}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        {!regionId && (
-                          <FormDescription className="text-xs text-amber-600">
-                            Select region first
-                          </FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="municipal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                          <Navigation className="w-3 h-3" />
-                          Municipality
-                        </FormLabel>
-                        <FormControl>
-                          <PublicMunicipalSelect
-                            provinceId={provinceId}
-                            onChange={field.onChange}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        {!provinceId && (
-                          <FormDescription className="text-xs text-amber-600">
-                            Select province first
-                          </FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={control}
-                    name="barangay"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
-                          <Home className="w-3 h-3" />
-                          Barangay
-                        </FormLabel>
-                        <FormControl>
-                          <PublicBarangaySelect
-                            municipalityId={municipal}
-                            onChange={field.onChange}
-                            value={field.value}
-                          />
-                        </FormControl>
-                        {!municipal && (
-                          <FormDescription className="text-xs text-amber-600">
-                            Select municipality first
-                          </FormDescription>
-                        )}
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* Location Preview */}
-              {(regionId ||
-                provinceId ||
-                municipal ||
-                watch("barangay") ||
-                watch("name") ||
-                watch("defaultUserEmail")) && (
-                <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                  <h4 className="font-medium text-gray-800 text-xs mb-2">
-                    Location Preview
-                  </h4>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    {watch("barangay") && (
-                      <p>
-                        Barangay:{" "}
-                        <span className="font-medium text-gray-800">
-                          {watch("barangay")}
-                        </span>
-                      </p>
-                    )}
-                    {municipal && (
-                      <p>
-                        Municipality:{" "}
-                        <span className="font-medium text-gray-800">
-                          {municipal}
-                        </span>
-                      </p>
-                    )}
-                    {provinceId && (
-                      <p>
-                        Province:{" "}
-                        <span className="font-medium text-gray-800">
-                          {provinceId}
-                        </span>
-                      </p>
-                    )}
-                    {regionId && (
-                      <p>
-                        Region:{" "}
-                        <span className="font-medium text-gray-800">
-                          {regionId}
-                        </span>
-                      </p>
-                    )}
-                    {watch("name") && (
-                      <p className="text-blue-700 font-medium text-xs">
-                        Line: {watch("name")}
-                      </p>
-                    )}
-                    {watch("defaultUserEmail") && (
-                      <p className="text-blue-700 font-medium text-xs">
-                        Email: {watch("defaultUserEmail")}
-                      </p>
-                    )}
-                  </div>
-                </div>
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium text-gray-700">
+                    Line Label
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="e.g., Main Office, Branch Location"
+                        {...field}
+                        className="pl-9 h-10 text-sm"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription className="text-[11px] text-gray-400">
+                    A descriptive name for this line/office.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
-          </Form>
-        </CardContent>
+            />
 
-        <CardFooter className="flex justify-end gap-2 pt-4 border-t">
+            <FormField
+              control={control}
+              name="defaultUserEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-medium text-gray-700">
+                    Default User Email
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        type="email"
+                        placeholder="e.g., manager@example.com"
+                        {...field}
+                        className="pl-9 h-10 text-sm"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription className="text-[11px] text-gray-400">
+                    The invitation link is sent here for the HRMO to register.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          {/* Location Details */}
+          <section className="space-y-3">
+            <SectionLabel icon={MapPin}>Location</SectionLabel>
+            <p className="text-[11px] text-gray-400">
+              Select in order: Region → Province → Municipality → Barangay.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormField
+                control={control}
+                name="region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <Globe className="w-3 h-3" />
+                      Region
+                    </FormLabel>
+                    <FormControl>
+                      <PsgcRegion onChange={field.onChange} value={field.value} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="province"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <MapPin className="w-3 h-3" />
+                      Province
+                    </FormLabel>
+                    <FormControl>
+                      <PublicProvinceSelect
+                        onChange={field.onChange}
+                        regionId={regionId}
+                        value={field.value}
+                      />
+                    </FormControl>
+                    {!regionId && (
+                      <FormDescription className="text-[11px] text-amber-600">
+                        Select region first
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="municipal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <Navigation className="w-3 h-3" />
+                      Municipality
+                    </FormLabel>
+                    <FormControl>
+                      <PublicMunicipalSelect
+                        provinceId={provinceId}
+                        onChange={field.onChange}
+                        value={field.value}
+                      />
+                    </FormControl>
+                    {!provinceId && (
+                      <FormDescription className="text-[11px] text-amber-600">
+                        Select province first
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="barangay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1.5 text-xs font-medium text-gray-700">
+                      <Home className="w-3 h-3" />
+                      Barangay
+                    </FormLabel>
+                    <FormControl>
+                      <PublicBarangaySelect
+                        municipalityId={municipal}
+                        onChange={field.onChange}
+                        value={field.value}
+                      />
+                    </FormControl>
+                    {!municipal && (
+                      <FormDescription className="text-[11px] text-amber-600">
+                        Select municipality first
+                      </FormDescription>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </section>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 pt-4 mt-4 border-t">
           <Button
+            type="button"
             variant="outline"
             onClick={() => setOpen(0)}
             disabled={isSubmitting}
@@ -411,14 +328,21 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
             Cancel
           </Button>
           <Button
+            type="button"
             onClick={handleSubmit(onSubmit)}
             disabled={isSubmitting}
-            className="h-9 text-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            className="h-9 text-sm bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500"
           >
-            {isSubmitting ? "Creating..." : "Create Line"}
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Creating…
+              </span>
+            ) : (
+              "Create Line"
+            )}
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </Form>
 
       {/* Success Modal with Copy Link */}
       <Modal
@@ -436,10 +360,9 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
               Your new line has been created. Share this invitation link with
-              users:
+              the HRMO:
             </p>
 
-            {/* Copy Link Card */}
             <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
               <div className="p-1.5 rounded-md bg-blue-100 flex-shrink-0">
                 <LinkIcon className="h-3.5 w-3.5 text-blue-600" />

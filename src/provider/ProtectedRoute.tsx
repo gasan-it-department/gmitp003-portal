@@ -2,9 +2,11 @@ import ModuleAuthProvider from "./ModuleAuthProvider";
 // ProtectedRoute.tsx
 import { createContext, useState, useEffect, useContext } from "react";
 import { useNavigate, Outlet } from "react-router";
+import { toast } from "sonner";
 
 //utils
-import { getCookie } from "@/utils/cookies";
+import { getCookie, removeCookie } from "@/utils/cookies";
+import { subscribeForceLogout, disconnectSocket } from "@/db/socketClient";
 
 //
 import NotificationProvider from "./NotificationProvider";
@@ -42,6 +44,19 @@ const ProtectedRoute = () => {
     }
     setLoading(false);
   }, [navigate]);
+
+  // Real-time force logout: when an admin suspends/deletes this account, the
+  // server emits `auth:force-logout` to the user's room — clear the session.
+  useEffect(() => {
+    if (!isAuthenticated || !userId) return;
+    return subscribeForceLogout(userId, (reason) => {
+      removeCookie(`auth_token-${userId}`);
+      localStorage.removeItem("user");
+      disconnectSocket();
+      toast.error("Signed out", { description: reason });
+      navigate("/auth", { replace: true });
+    });
+  }, [isAuthenticated, userId, navigate]);
 
   if (loading) {
     return <div>Loading...</div>;

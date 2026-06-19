@@ -1,229 +1,181 @@
 import { useSearchParams } from "react-router";
-import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, type ReactNode } from "react";
+
+import { useAdminAuth } from "@/provider/AdminRouter";
 import { Button } from "@/components/ui/button";
-// import { Separator } from "@/components/ui/separator";
-// import { Badge } from "@/components/ui/badge";
 import {
   BookUser,
-  // Component,
-  // Gauge,
-  // LandPlot,
   Server,
-  // Logs,
-  Shield,
-  //Settings,
-  Bell,
-  Menu,
-  X,
-  //Home,
+  ShieldCheck,
   DatabaseBackup,
+  ScrollText,
+  LogOut,
+  Menu,
 } from "lucide-react";
 
-//tabs
-// import Dashboard from "./admin-panel/Dashboard";
-// import Areas from "./admin-panel/Areas";
 import Account from "./admin-panel/Account";
 import Lines from "./admin-panel/Lines";
+import Logs from "./admin-panel/Logs";
+
+// Placeholder until the backup tooling lands.
+const Backup = () => (
+  <div className="w-full p-6">
+    <div className="max-w-md mx-auto text-center border border-dashed rounded-xl bg-white p-10">
+      <div className="mx-auto w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
+        <DatabaseBackup className="h-6 w-6 text-slate-400" />
+      </div>
+      <p className="text-sm font-semibold text-gray-800">Backups</p>
+      <p className="text-xs text-gray-500 mt-1">
+        Database backup &amp; restore tools are coming soon.
+      </p>
+    </div>
+  </div>
+);
+
+type TabValue = "account" | "line" | "logs" | "backup";
+
+const TABS: {
+  value: TabValue;
+  label: string;
+  icon: typeof BookUser;
+  component: ReactNode;
+}[] = [
+  { value: "account", label: "Accounts", icon: BookUser, component: <Account /> },
+  { value: "line", label: "Lines", icon: Server, component: <Lines /> },
+  {
+    value: "logs",
+    label: "Audit Logs",
+    icon: ScrollText,
+    component: <Logs />,
+  },
+  {
+    value: "backup",
+    label: "Backups",
+    icon: DatabaseBackup,
+    component: <Backup />,
+  },
+];
 
 const AdminPanel = () => {
   const [params, setParams] = useSearchParams({ tab: "account" });
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { userId, logout } = useAdminAuth();
 
-  const currentTab = params.get("tab") || "account";
+  const raw = params.get("tab") || "account";
+  const currentTab = (TABS.some((t) => t.value === raw) ? raw : "account") as TabValue;
+  const active = TABS.find((t) => t.value === currentTab) ?? TABS[0];
 
-  const handleChangeParams = (key: string, value: string) => {
+  const selectTab = (value: TabValue) => {
     setParams(
       (prev) => {
-        prev.set(key, value);
+        prev.set("tab", value);
         return prev;
       },
       { replace: true },
     );
-    setIsMobileMenuOpen(false);
+    setMobileOpen(false);
   };
 
-  // Tabs configuration with icons and badges
-  const tabs = [
-    // {
-    //   value: "dashboard",
-    //   label: "Dashboard",
-    //   icon: Gauge,
-    //   badge: notifications.dashboard,
-    //   component: <Dashboard />,
-    // },
-    {
-      value: "account",
-      label: "Account",
-      icon: BookUser,
-      component: <Account />,
-    },
-    // {
-    //   value: "module",
-    //   label: "Modules",
-    //   icon: Component,
-    //   badge: notifications.module,
-    //   component: <div className="p-6">Modules Content</div>,
-    // },
-    {
-      value: "line",
-      label: "Lines",
-      icon: Server,
-      component: <Lines />,
-    },
-    // {
-    //   value: "area",
-    //   label: "Areas",
-    //   icon: LandPlot,
-    //   badge: notifications.area,
-    //   component: <Areas />,
-    // },
-    // {
-    //   value: "logs",
-    //   label: "Audit Logs",
-    //   icon: Logs,
-    //   badge: notifications.logs,
-    //   component: <div className="p-6">Audit Logs Content</div>,
-    // },
-    {
-      value: "line",
-      label: "Backup",
-      icon: Server,
-      component: <DatabaseBackup />,
-    },
-  ];
+  const NavItems = () => (
+    <nav className="flex-1 px-3 py-4 space-y-1">
+      {TABS.map((tab) => {
+        const isActive = tab.value === currentTab;
+        return (
+          <button
+            key={tab.value}
+            onClick={() => selectTab(tab.value)}
+            className={
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+              (isActive
+                ? "bg-indigo-600 text-white shadow-sm"
+                : "text-slate-300 hover:bg-white/5 hover:text-white")
+            }
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
 
-  // const activeTab = tabs.find((tab) => tab.value === currentTab);
+  const SidebarBody = () => (
+    <>
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 px-4 h-16 border-b border-white/10">
+        <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600">
+          <ShieldCheck className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-white leading-tight">
+            Admin Console
+          </p>
+          <p className="text-[10px] text-slate-400 leading-tight">
+            System administration
+          </p>
+        </div>
+      </div>
+
+      <NavItems />
+
+      {/* Footer / logout */}
+      <div className="px-3 py-3 border-t border-white/10">
+        <div className="px-2 pb-2 text-[10px] text-slate-500 truncate">
+          ID: {userId ?? "—"}
+        </div>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-300 hover:bg-red-500/10 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </button>
+      </div>
+    </>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo and Title */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg">
-                  <Shield className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">
-                    Admin Panel
-                  </h1>
-                  <p className="text-xs text-gray-500">System Administration</p>
-                </div>
-              </div>
-            </div>
+    <div className="flex h-screen bg-gradient-to-b from-gray-50 to-gray-100 overflow-hidden">
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-60 flex-col bg-slate-900 flex-none">
+        <SidebarBody />
+      </aside>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="hidden sm:flex">
-                <Bell className="h-4 w-4 mr-2" />
-                <span className="hidden lg:inline">Notifications</span>
-                {/* <Badge
-                  variant="destructive"
-                  className="ml-2 h-5 w-5 p-0 text-xs"
-                >
-                  12
-                </Badge> */}
-              </Button>
-              {/* 
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                <span className="hidden lg:inline">Settings</span>
-              </Button> */}
-
-              {/* Mobile Menu Toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="relative w-60 flex flex-col bg-slate-900">
+            <SidebarBody />
+          </aside>
         </div>
+      )}
 
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 bg-white">
-            <div className="px-4 py-2">
-              <TabsList className="w-full flex flex-col h-auto bg-transparent gap-1">
-                {tabs.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    onClick={() => handleChangeParams("tab", tab.value)}
-                    className="w-full justify-start px-4 py-3 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"
-                  >
-                    <div className="flex items-center gap-3">
-                      <tab.icon className="h-4 w-4" />
-                      <span>{tab.label}</span>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Topbar */}
+        <header className="flex-none h-16 bg-white border-b border-gray-200 flex items-center gap-3 px-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-0">
+            <active.icon className="h-5 w-5 text-indigo-600" />
+            <h1 className="text-base font-semibold text-gray-900 truncate">
+              {active.label}
+            </h1>
           </div>
-        )}
-      </header>
+        </header>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Desktop Tabs */}
-          <div className="hidden md:block mb-6">
-            <Tabs
-              value={currentTab}
-              onValueChange={(value) => handleChangeParams("tab", value)}
-              className="w-full"
-            >
-              <TabsList className="w-full justify-start bg-white border border-gray-200 p-1 rounded-lg">
-                {tabs.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="px-6 py-2.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-blue-700 data-[state=active]:text-white data-[state=active]:shadow-sm relative"
-                  >
-                    <div className="flex items-center gap-2">
-                      <tab.icon className="h-4 w-4" />
-                      <span className="font-medium">{tab.label}</span>
-                    </div>
-                    {currentTab === tab.value && (
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* Content Area */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <Tabs
-              value={currentTab}
-              onValueChange={(value) => handleChangeParams("tab", value)}
-              className="w-full"
-            >
-              {tabs.map((tab) => (
-                <TabsContent
-                  key={tab.value}
-                  value={tab.value}
-                  className="m-0 p-0 focus-visible:outline-none focus-visible:ring-0"
-                >
-                  {/* Main Content */}
-                  <div className="p-2">{tab.component}</div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </div>
-        </div>
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-auto">{active.component}</main>
       </div>
     </div>
   );

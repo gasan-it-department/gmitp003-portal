@@ -148,6 +148,7 @@ export interface AccountProps {
   User: User | null;
   username: string;
   status: number;
+  active?: boolean;
 }
 // User Interface
 export interface User {
@@ -1310,6 +1311,19 @@ export interface FillPositionInvitationProps {
   positionSlotId: string;
   step: number;
   submittedApplicationId?: string;
+  expiresAt?: string | null;
+  // Provisional (temporary/contract) hiring
+  empType?: string | null;
+  term?: string | null;
+  provisionalPositionId?: string | null;
+  departmentId?: string | null;
+  provisionalPosition?: {
+    id: string;
+    title: string;
+    empType: string;
+    termMonths: number;
+  } | null;
+  department?: { id: string; name: string | null } | null;
 }
 
 export interface LineInvitationProps {
