@@ -111,8 +111,14 @@ const NewLineForm = ({ setOpen, onOpen }: Props) => {
       setLink(response.data.link);
       reset();
       setOpen(2);
-    } catch (error) {
-      toast.error("FAILED TO SUBMIT", { description: `${error}` });
+    } catch (error: any) {
+      // Surface the backend's real reason (e.g. "Line with this name already
+      // exists", "INVALID AREA", "INVALID CLIENT URL") instead of a generic
+      // "AxiosError: status 400".
+      const msg =
+        error?.response?.data?.message ||
+        (error instanceof Error ? error.message : "Failed to submit");
+      toast.error("Failed to create line", { description: msg });
     }
   };
 
