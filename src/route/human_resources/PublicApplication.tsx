@@ -19,7 +19,6 @@ import { calculateAge, applicantionStatus } from "@/utils/helper";
 
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import OTP from "@/layout/OTP";
 import PublicApplicationContact from "@/layout/PublicApplicationContact";
 
 import {
@@ -106,8 +105,10 @@ const PublicApplication = () => {
   const { data, isFetching } = useQuery<SubmittedApplicationProps>({
     queryKey: ["public-application-data", applicationId],
     queryFn: () =>
-      publicApplicationData(token as string, applicationId as string),
-    enabled: !!applicationId && !!token,
+      publicApplicationData(token ?? "", applicationId as string),
+    // The applicationId (a UUID, emailed only to the applicant) is the access
+    // token now — no OTP gate. The endpoint is public and ignores the bearer.
+    enabled: !!applicationId,
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
@@ -153,8 +154,6 @@ const PublicApplication = () => {
       setDownloading(false);
     }
   };
-
-  if (!token) return <OTP id={applicationId} to={0} />;
 
   if (isFetching && !data) {
     return (
