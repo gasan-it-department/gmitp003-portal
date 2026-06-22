@@ -88,7 +88,9 @@ const DispensaryMedItem = ({ no, item, control, status }: Props) => {
   const currentQuantity = parseInt(item.currentStock);
   const isLowStock = currentQuantity <= 10;
   const isCompleted = status === 2;
-  const isDisabled = isCompleted || isLowStock;
+  // Low stock is only a warning indicator now — it no longer blocks dispensing.
+  // (Out-of-stock is still gated per-stock-row by `currentStock === 0`.)
+  const isDisabled = isCompleted;
   const { watch } = useFormContext();
 
   const getStockStatus = () => {

@@ -66,6 +66,27 @@ export const transferMedicineStock = async (
   return response.data;
 };
 
+export const updateMedicineThreshold = async (
+  token: string,
+  body: {
+    medicineId: string;
+    storageId: string;
+    threshold: number;
+    lineId: string;
+    userId: string;
+  },
+) => {
+  const response = await axios.patch("/medicine/threshold", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  return response.data;
+};
+
 export const updateMedicine = async (
   token: string,
   body: {

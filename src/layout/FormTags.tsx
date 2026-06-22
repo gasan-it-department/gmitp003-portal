@@ -161,7 +161,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 ">
+      <div className="flex-1 min-h-0">
         {filteredTags ? (
           // Search Results View
           <ScrollArea className="h-full p-4">
@@ -187,7 +187,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
                       {items.length}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 ">
+                  <div className="flex flex-wrap gap-2">
                     {items.map((item, i) => (
                       <FormTagsItem
                         handleCheckTags={handleCheckTags}
@@ -288,9 +288,9 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </ScrollArea>
             </div>
 
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 min-h-0 overflow-auto">
               <TabsContent value="fields" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {fieldTags.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -304,7 +304,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="adminSupport" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {adminSupport.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -318,7 +318,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="infoTech" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {itRoles.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -332,7 +332,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="creativeDesign" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {creativeDesign.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -346,7 +346,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="customerService" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {customerService.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -360,7 +360,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="management" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {management.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -374,7 +374,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="marketSales" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {marketSales.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -388,7 +388,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="educationTraining" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {educationTraining.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -402,7 +402,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="humanResources" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {humanResources.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}
@@ -416,7 +416,7 @@ const ApplicantTagsSelect = ({ handleAddTags, handleCheckTags }: Props) => {
               </TabsContent>
 
               <TabsContent value="financeAccountng" className="h-full p-4 m-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {financeAccountng.map((item, i) => (
                     <FormTagsItem
                       handleCheckTags={handleCheckTags}

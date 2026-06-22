@@ -19,6 +19,8 @@ import {
   provisionalTransfer,
   provisionalRemove,
   provisionalRenew,
+  updateProvisionalPosition,
+  updateProvisionalPersonnel,
   getLinetUnits,
   lineApplications,
 } from "@/db/statement";
@@ -42,6 +44,7 @@ import {
 import Modal from "@/components/custom/Modal";
 import FormTags from "@/layout/FormTags";
 import { Checkbox } from "@/components/ui/checkbox";
+import SalaryGradeSelect from "@/layout/human_resources/SalaryGradeSelect";
 
 import {
   ArrowLeftRight,
@@ -53,6 +56,7 @@ import {
   Filter,
   ListRestart,
   Loader2,
+  Pencil,
   Plus,
   Search,
   Send,
@@ -88,6 +92,7 @@ interface ProvPosition {
   filled: number;
   pending: number;
   open: number;
+  salaryGrade?: { id: string; grade: number; amount: number } | null;
 }
 interface Personnel {
   id: string;
@@ -98,6 +103,7 @@ interface Personnel {
   status: string;
   term?: string | null;
   department?: { name?: string | null } | null;
+  SalaryGrade?: { id: string; grade: number; amount: number } | null;
   submittedApplications?: {
     ApplicationSkillTags?: { id: string; tags: string | null }[];
   } | null;
@@ -159,7 +165,15 @@ const Provisional = () => {
   const [termMonths, setTermMonths] = useState(3);
   const [slots, setSlots] = useState(1);
   const [description, setDescription] = useState("");
+  const [posSalaryGradeId, setPosSalaryGradeId] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // ── Edit-personnel modal state ───────────────────────────────────────────
+  const [editPers, setEditPers] = useState<Personnel | null>(null);
+  const [editPersStatus, setEditPersStatus] = useState("");
+  const [editPersSG, setEditPersSG] = useState("");
+  const [savingPers, setSavingPers] = useState(false);
 
   // ── Hire modal state ─────────────────────────────────────────────────────
   const [hireFor, setHireFor] = useState<ProvPosition | null>(null);
@@ -262,6 +276,24 @@ const Provisional = () => {
     setTermMonths(3);
     setSlots(1);
     setDescription("");
+    setPosSalaryGradeId("");
+  };
+
+  const openCreate = () => {
+    setEditingId(null);
+    resetCreate();
+    setNewOpen(true);
+  };
+
+  const openEditPosition = (p: ProvPosition) => {
+    setEditingId(p.id);
+    setTitle(p.title);
+    setEmpType(p.empType);
+    setTermMonths(p.termMonths);
+    setSlots(p.slots);
+    setDescription(p.description ?? "");
+    setPosSalaryGradeId(p.salaryGrade?.id ?? "");
+    setNewOpen(true);
   };
 
   const submitCreate = async () => {
@@ -271,23 +303,72 @@ const Provisional = () => {
     }
     setCreating(true);
     try {
-      await createProvisionalPosition(token, {
-        title: title.trim(),
-        empType,
-        termMonths,
-        slots,
-        description: description.trim() || null,
-        lineId: lineId as string,
-        userId: auth.userId as string,
-      });
-      toast.success("Non-plantilla position created");
+      if (editingId) {
+        await updateProvisionalPosition(token, {
+          positionId: editingId,
+          title: title.trim(),
+          empType,
+          termMonths,
+          slots,
+          description: description.trim() || null,
+          salaryGradeId: posSalaryGradeId || null,
+          lineId: lineId as string,
+          userId: auth.userId as string,
+        });
+        toast.success("Position updated");
+      } else {
+        await createProvisionalPosition(token, {
+          title: title.trim(),
+          empType,
+          termMonths,
+          slots,
+          description: description.trim() || null,
+          lineId: lineId as string,
+          salaryGradeId: posSalaryGradeId || null,
+          userId: auth.userId as string,
+        });
+        toast.success("Non-plantilla position created");
+      }
       setNewOpen(false);
+      setEditingId(null);
       resetCreate();
       queryClient.invalidateQueries({ queryKey: ["provisional-positions"] });
     } catch (e) {
-      toast.error("Failed to create position", { description: `${e}` });
+      toast.error(
+        editingId ? "Failed to update position" : "Failed to create position",
+        { description: `${e}` },
+      );
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEditPersonnel = (u: Personnel) => {
+    setEditPers(u);
+    setEditPersStatus(u.status);
+    setEditPersSG(u.SalaryGrade?.id ?? "");
+  };
+
+  const submitEditPersonnel = async () => {
+    if (!editPers) return;
+    setSavingPers(true);
+    try {
+      await updateProvisionalPersonnel(token, {
+        userId: editPers.id,
+        status: editPersStatus,
+        salaryGradeId: editPersSG || null,
+        actorId: auth.userId as string,
+        lineId: lineId as string,
+      });
+      toast.success(
+        `${editPers.firstName} ${editPers.lastName} updated`,
+      );
+      setEditPers(null);
+      queryClient.invalidateQueries({ queryKey: ["provisional-personnel"] });
+    } catch (e) {
+      toast.error("Failed to update personnel", { description: `${e}` });
+    } finally {
+      setSavingPers(false);
     }
   };
 
@@ -533,7 +614,7 @@ const Provisional = () => {
               <Button
                 size="sm"
                 className="h-7 text-[10px] gap-1.5 bg-indigo-600 hover:bg-indigo-700"
-                onClick={() => setNewOpen(true)}
+                onClick={openCreate}
               >
                 <Plus className="h-3.5 w-3.5" /> New position
               </Button>
@@ -577,6 +658,15 @@ const Provisional = () => {
                         >
                           {p.termMonths} mo
                         </Badge>
+                        {p.salaryGrade && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2 bg-emerald-50 text-emerald-700 border-emerald-200"
+                          >
+                            SG {p.salaryGrade.grade} · ₱
+                            {p.salaryGrade.amount.toLocaleString("en-PH")}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <Badge
@@ -590,6 +680,15 @@ const Provisional = () => {
                       <Users className="h-2.5 w-2.5 mr-1" />
                       {p.open} open / {p.slots}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px] gap-1 px-2 bg-white"
+                      onClick={() => openEditPosition(p)}
+                      title="Edit position"
+                    >
+                      <Pencil className="h-3 w-3 text-gray-600" /> Edit
+                    </Button>
                     <Button
                       size="sm"
                       className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
@@ -886,6 +985,16 @@ const Provisional = () => {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="h-7 text-[10px] gap-1 px-2 bg-white"
+                            onClick={() => openEditPersonnel(u)}
+                            title="Edit employment type / salary grade"
+                          >
+                            <Pencil className="h-3 w-3 text-gray-600" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-7 text-[10px] gap-1 px-2 bg-white text-emerald-700 hover:bg-emerald-50"
                             onClick={() => openRenew(rowTarget(u))}
                             title="Renew contract term"
@@ -931,20 +1040,27 @@ const Provisional = () => {
         </Tabs>
       </div>
 
-      {/* ── New position modal ──────────────────────────────────────────── */}
+      {/* ── New / edit position modal ───────────────────────────────────── */}
       <Modal
         title={
           <div className="flex items-center gap-1.5 text-xs">
-            <Plus className="h-3 w-3 text-indigo-500" />
-            New non-plantilla position
+            {editingId ? (
+              <Pencil className="h-3 w-3 text-indigo-500" />
+            ) : (
+              <Plus className="h-3 w-3 text-indigo-500" />
+            )}
+            {editingId ? "Edit non-plantilla position" : "New non-plantilla position"}
           </div>
         }
         onOpen={newOpen}
         className="max-w-lg"
-        setOnOpen={() => setNewOpen(false)}
+        setOnOpen={() => {
+          setNewOpen(false);
+          setEditingId(null);
+        }}
         onFunction={submitCreate}
         loading={creating}
-        yesTitle="Create position"
+        yesTitle={editingId ? "Save changes" : "Create position"}
         cancelTitle="Cancel"
         footer={true}
       >
@@ -1003,19 +1119,32 @@ const Provisional = () => {
             </div>
           </div>
 
-          <div className="space-y-1 w-32">
-            <label className="text-[11px] font-semibold text-gray-700">
-              Slots *
-            </label>
-            <InputGroup className="bg-white">
-              <InputGroupInput
-                type="number"
-                min={1}
-                value={slots}
-                onChange={(e) => setSlots(Math.max(1, Number(e.target.value)))}
-                className="h-8 text-xs"
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">
+                Slots *
+              </label>
+              <InputGroup className="bg-white">
+                <InputGroupInput
+                  type="number"
+                  min={1}
+                  value={slots}
+                  onChange={(e) => setSlots(Math.max(1, Number(e.target.value)))}
+                  className="h-8 text-xs"
+                />
+              </InputGroup>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">
+                Salary grade
+              </label>
+              <SalaryGradeSelect
+                lineId={lineId as string}
+                token={token}
+                value={posSalaryGradeId}
+                onChange={(v) => setPosSalaryGradeId(v as string)}
               />
-            </InputGroup>
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -1196,7 +1325,7 @@ const Provisional = () => {
               </Button>
             </div>
           )}
-          <div className="mt-1">
+          <div className="mt-1 h-[58vh] rounded-lg border overflow-hidden">
             <FormTags
               handleAddTags={handleAddTags}
               handleCheckTags={handleCheckTags}
@@ -1377,6 +1506,64 @@ const Provisional = () => {
             notified by email + in-app.
           </p>
         </div>
+      </Modal>
+
+      {/* ── Edit personnel modal ────────────────────────────────────────── */}
+      <Modal
+        title={
+          <div className="flex items-center gap-1.5 text-xs">
+            <Pencil className="h-3 w-3 text-indigo-500" />
+            Edit employment details
+          </div>
+        }
+        onOpen={!!editPers}
+        className="max-w-md"
+        setOnOpen={() => setEditPers(null)}
+        onFunction={submitEditPersonnel}
+        loading={savingPers}
+        yesTitle="Save changes"
+        cancelTitle="Cancel"
+        footer={true}
+      >
+        {editPers && (
+          <div className="space-y-3">
+            <p className="text-[11px] text-gray-600">
+              Update{" "}
+              <span className="font-semibold text-gray-900">
+                {editPers.firstName} {editPers.lastName}
+              </span>
+              's employment type and salary grade. They'll be notified.
+            </p>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">
+                Employment type *
+              </label>
+              <Select value={editPersStatus} onValueChange={setEditPersStatus}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EMP_TYPES.map((t) => (
+                    <SelectItem key={t} value={t} className="text-xs">
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-gray-700">
+                Salary grade
+              </label>
+              <SalaryGradeSelect
+                lineId={lineId as string}
+                token={token}
+                value={editPersSG}
+                onChange={(v) => setEditPersSG(v as string)}
+              />
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

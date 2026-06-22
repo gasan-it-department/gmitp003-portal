@@ -308,6 +308,44 @@ export const provisionalPositionsList = async (
   return response.data;
 };
 
+export const updateProvisionalPosition = async (
+  token: string,
+  payload: {
+    positionId: string;
+    title?: string;
+    empType?: string;
+    termMonths?: number;
+    slots?: number;
+    description?: string | null;
+    salaryGradeId?: string | null;
+    lineId: string;
+    userId?: string;
+  },
+) => {
+  const response = await axios.patch("/provisional/position", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to update position");
+  return response.data;
+};
+
+export const updateProvisionalPersonnel = async (
+  token: string,
+  payload: {
+    userId: string;
+    status?: string;
+    salaryGradeId?: string | null;
+    actorId: string;
+    lineId: string;
+  },
+) => {
+  const response = await axios.patch("/provisional/personnel", payload, {
+    headers: provHeaders(token),
+  });
+  if (response.status !== 200) throw new Error("Failed to update personnel");
+  return response.data;
+};
+
 export const createProvisionalPosition = async (
   token: string,
   payload: {
@@ -317,6 +355,7 @@ export const createProvisionalPosition = async (
     slots: number;
     description?: string | null;
     lineId: string;
+    salaryGradeId?: string | null;
     userId?: string;
   },
 ) => {

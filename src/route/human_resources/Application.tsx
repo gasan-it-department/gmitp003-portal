@@ -744,28 +744,35 @@ const Application = () => {
               />
 
               <div>
-                <FormLabel className="text-[10px] font-semibold text-gray-700">
-                  Skill Tags
-                </FormLabel>
-                <div className="mt-1">
-                  <FormTags
-                    handleAddTags={handleAddTags}
-                    handleCheckTags={handleCheckTags}
-                  />
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-[10px] font-semibold text-gray-700">
+                    Skill Tags
+                  </FormLabel>
+                  {allTags.length > 0 && (
+                    <span className="text-[10px] text-gray-400">
+                      {allTags.length} selected
+                    </span>
+                  )}
                 </div>
                 {allTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="flex flex-wrap gap-1 mt-1 mb-1.5">
                     {allTags.map((t) => (
                       <Badge
                         key={t.tag}
                         variant="outline"
-                        className="text-[10px] px-1.5 py-0"
+                        className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200"
                       >
                         {t.tag}
                       </Badge>
                     ))}
                   </div>
                 )}
+                <div className="h-52 rounded-lg border overflow-hidden bg-white">
+                  <FormTags
+                    handleAddTags={handleAddTags}
+                    handleCheckTags={handleCheckTags}
+                  />
+                </div>
               </div>
             </div>
           </Form>

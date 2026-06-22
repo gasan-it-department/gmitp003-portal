@@ -1,6 +1,4 @@
 import { memo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "@/db/axios";
 import { useParams } from "react-router";
@@ -9,23 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormItem,
-  FormMessage,
-  FormLabel,
-  FormField,
-} from "@/components/ui/form";
 import Modal from "@/components/custom/Modal";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-  SelectTrigger,
-} from "@/components/ui/select";
 import {
   Mail,
   Building,
@@ -35,11 +17,10 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { addModuleUserPrevilege, getInitials } from "@/utils/helper";
+import { getInitials } from "@/utils/helper";
 import { searchedChar } from "@/utils/element";
 
-import { AddModuleUserSchema } from "@/interface/zod";
-import type { User as UserProps, AddModuleUserProps } from "@/interface/data";
+import type { User as UserProps } from "@/interface/data";
 
 interface Props {
   item: UserProps;
@@ -59,28 +40,18 @@ const EmployeeItem = ({
   currUserId,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const { moduleId } = useParams();
 
-  const form = useForm<AddModuleUserProps>({
-    resolver: zodResolver(AddModuleUserSchema),
-    defaultValues: { previlege: "" },
-  });
-  const {
-    handleSubmit,
-    formState: { isSubmitting },
-    control,
-    reset,
-  } = form;
-
-  const onSubmit = async (data: AddModuleUserProps) => {
+  const grant = async () => {
+    setSubmitting(true);
     try {
       const response = await axios.post(
         "/module/add/acces",
         {
           userId: item.id,
-          privilege: parseInt(data.previlege, 10),
-          lineId: lineId,
+          lineId,
           module,
           currUserId,
         },
@@ -100,7 +71,6 @@ const EmployeeItem = ({
         return;
       }
       toast.success("Module access granted");
-      reset();
       setOnOpen(0);
 
       // Refresh the module-users list so the new user shows up immediately
@@ -112,6 +82,8 @@ const EmployeeItem = ({
         err?.response?.data?.message ??
         (err instanceof Error ? err.message : "Failed to submit");
       toast.error(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -180,18 +152,16 @@ const EmployeeItem = ({
         }
         onOpen={onOpen === 1}
         setOnOpen={() => {
-          if (isSubmitting) return;
+          if (submitting) return;
           setOnOpen(0);
-          reset();
         }}
         className="max-w-sm"
         footer={true}
-        onFunction={handleSubmit(onSubmit)}
-        loading={isSubmitting}
+        onFunction={grant}
+        loading={submitting}
         yesTitle="Grant Access"
       >
         <div className="space-y-3 p-1">
-
           {/* User card */}
           <div className="border rounded-lg bg-gray-50 p-3 flex items-center gap-2.5">
             <Avatar className="h-10 w-10">
@@ -222,52 +192,12 @@ const EmployeeItem = ({
             </div>
           </div>
 
-          {/* Privilege select */}
-          <Form {...form}>
-            <FormField
-              control={control}
-              name="previlege"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-semibold text-gray-700 flex items-center gap-1">
-                    <Shield className="h-2.5 w-2.5 text-blue-500" />
-                    Privilege Level *
-                  </FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select privilege" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {addModuleUserPrevilege.map((opt, i) => (
-                          <SelectItem
-                            key={i}
-                            value={i.toString()}
-                            className="text-xs"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  i === 0 ? "bg-blue-500" : "bg-amber-500"
-                                }`}
-                              />
-                              {opt}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormDescription className="text-[10px] text-gray-500">
-                    Higher privilege levels grant more access to module features
-                  </FormDescription>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )}
-            />
-          </Form>
+          <p className="text-[11px] text-gray-500">
+            This grants <span className="font-medium capitalize">{module}</span>{" "}
+            module access to {fullName || "this user"}.
+          </p>
 
-          {isSubmitting && (
+          {submitting && (
             <div className="flex items-center justify-center gap-1.5 py-1 text-gray-400">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-[10px]">Granting access...</span>

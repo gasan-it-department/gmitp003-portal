@@ -13,13 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Modal from "@/components/custom/Modal";
 import UnitSelection from "../medicine/item/UnitSelection";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
 import ApplicantTagsSelect from "../FormTags";
 
 import { ListFilterPlus, Search, UserPlus, Users, X } from "lucide-react";
@@ -156,37 +149,56 @@ const EmployeeSearch = ({
             <div className="p-1.5 bg-blue-50 rounded-md">
               <ListFilterPlus className="h-3.5 w-3.5 text-blue-600" />
             </div>
-            <span className="text-sm font-semibold">Advanced Filters</span>
-          </div>
-        }
-        children={
-          <div className="p-1">
-            <Form {...form}>
-              <FormField
-                name="tags"
-                control={form.control}
-                render={() => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] font-semibold text-gray-700">
-                      Tags
-                    </FormLabel>
-                    <FormControl>
-                      <ApplicantTagsSelect
-                        handleAddTags={handleAddTag}
-                        handleCheckTags={handleCheckTags}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </Form>
+            <span className="text-sm font-semibold">Filter by skill tags</span>
           </div>
         }
         onOpen={onOpen}
-        className="min-w-5xl max-h-[95vh] overflow-auto"
+        className="max-w-2xl max-h-[90vh] overflow-auto"
         footer={true}
+        yesTitle="Apply"
+        cancelTitle="Close"
+        onFunction={() => setOnOpen(false)}
         setOnOpen={() => setOnOpen(false)}
-      />
+      >
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-gray-500">
+              Select skill tags to narrow the employee list.
+            </p>
+            {tagFields.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeTag()}
+                className="h-6 px-2 text-[10px] gap-1"
+              >
+                <X className="h-3 w-3" /> Clear
+              </Button>
+            )}
+          </div>
+
+          {tagFields.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {tagFields.map((t) => (
+                <Badge
+                  key={t.id}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200"
+                >
+                  {t.tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="h-52 rounded-lg border overflow-hidden bg-white">
+            <ApplicantTagsSelect
+              handleAddTags={handleAddTag}
+              handleCheckTags={handleCheckTags}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

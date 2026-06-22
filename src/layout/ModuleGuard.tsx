@@ -17,9 +17,12 @@ interface Props {
   moduleName: string;
   /**
    * Module slugs that are open to every authenticated line user (no
-   * per-user enrolment required). Defaults to `["services"]`. If the
-   * `moduleName` prop matches one of these, the guard renders the child
-   * tree without hitting the API.
+   * per-user enrolment required). Defaults to `["services", "documents"]`
+   * — kept in sync with `ControlPanel`'s `ALWAYS_OPEN` so the launcher and
+   * the route guard agree. "documents" is reachable by every line user
+   * (the e-sign room is still gated by its own room registration/approval
+   * in `DocumentRoomProvider`). If the `moduleName` prop matches one of
+   * these, the guard renders the child tree without hitting the API.
    */
   openModules?: string[];
   /**
@@ -44,7 +47,7 @@ interface Props {
  */
 export const ModuleGuard = ({
   moduleName,
-  openModules = ["services"],
+  openModules = ["services", "documents"],
   inlineDeny = true,
   children,
 }: Props) => {

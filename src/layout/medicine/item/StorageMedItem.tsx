@@ -4,7 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { transferMedicineStock } from "@/db/statements/medicine";
+import {
+  transferMedicineStock,
+  updateMedicineThreshold,
+} from "@/db/statements/medicine";
 import { formatPureDate } from "@/utils/date";
 
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -29,6 +32,7 @@ import {
   Loader2,
   CalendarClock,
   CheckCircle2,
+  Save,
 } from "lucide-react";
 
 import type {
@@ -52,6 +56,31 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
   const [onOpen, setOnOpen] = useState(0); // 0=closed, 1=details, 2=transfer
   const queryClient = useQueryClient();
   const today = new Date();
+
+  const [threshold, setThreshold] = useState<string>(
+    String((item.MedicineStock ?? [])[0]?.threshold ?? 5),
+  );
+  const [savingThreshold, setSavingThreshold] = useState(false);
+
+  const saveThreshold = async () => {
+    const value = Math.max(0, parseInt(threshold || "0", 10) || 0);
+    setSavingThreshold(true);
+    try {
+      await updateMedicineThreshold(auth.token as string, {
+        medicineId: item.id,
+        storageId: storageId as string,
+        threshold: value,
+        lineId,
+        userId: auth.userId as string,
+      });
+      toast.success(`Threshold set to ${value} for ${item.name}`);
+      queryClient.invalidateQueries({ queryKey: ["medStorage-list"] });
+    } catch (e) {
+      toast.error("Failed to update threshold", { description: `${e}` });
+    } finally {
+      setSavingThreshold(false);
+    }
+  };
 
   const stocks: MedicineStock[] = useMemo(
     () => (item.MedicineStock ?? []).filter((s) => (s.quantity ?? 0) > 0),
@@ -269,6 +298,44 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Low-stock threshold */}
+          <div className="border rounded-md p-2.5 bg-gray-50/60">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-semibold text-gray-700 uppercase tracking-wide">
+                Low-stock threshold
+              </p>
+              <span className="text-[9px] text-gray-400">
+                applies to all batches
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                className="h-8 text-xs w-28"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button
+                size="sm"
+                className="h-8 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+                onClick={saveThreshold}
+                disabled={savingThreshold}
+              >
+                {savingThreshold ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Save className="h-3 w-3" />
+                )}
+                Save
+              </Button>
+            </div>
+            <p className="text-[9px] text-gray-400 mt-1">
+              You'll be alerted when stock falls to this number or below.
+            </p>
           </div>
 
           <Button
