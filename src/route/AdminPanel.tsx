@@ -16,21 +16,7 @@ import {
 import Account from "./admin-panel/Account";
 import Lines from "./admin-panel/Lines";
 import Logs from "./admin-panel/Logs";
-
-// Placeholder until the backup tooling lands.
-const Backup = () => (
-  <div className="w-full p-6">
-    <div className="max-w-md mx-auto text-center border border-dashed rounded-xl bg-white p-10">
-      <div className="mx-auto w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
-        <DatabaseBackup className="h-6 w-6 text-slate-400" />
-      </div>
-      <p className="text-sm font-semibold text-gray-800">Backups</p>
-      <p className="text-xs text-gray-500 mt-1">
-        Database backup &amp; restore tools are coming soon.
-      </p>
-    </div>
-  </div>
-);
+import Backup from "./admin-panel/Backup";
 
 type TabValue = "account" | "line" | "logs" | "backup";
 

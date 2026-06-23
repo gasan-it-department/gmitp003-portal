@@ -80,6 +80,33 @@ export const checkPositionInvitation = async (inviteId: string) => {
   return response.data;
 };
 
+export const updateUnitPosition = async (
+  token: string,
+  payload: {
+    unitPositionId: string;
+    title?: string;
+    designation?: string | null;
+    itemNumber?: string | null;
+    salaryGradeId?: string | null;
+    plantilla?: boolean;
+    fixToUnit?: boolean;
+    slots?: number;
+    lineId: string;
+    userId?: string;
+  },
+) => {
+  const response = await axios.patch("/position/unit/update", payload, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (response.status !== 200) throw new Error("Failed to update position");
+  return response.data;
+};
+
 export const positionRecords = async (token: string, id: string) => {
   const response = await axios.get("/position/records", {
     headers: {

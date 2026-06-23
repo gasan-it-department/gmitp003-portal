@@ -492,6 +492,37 @@ export const downloadProvisionalPersonnelExcel = async (
   URL.revokeObjectURL(url);
 };
 
+// Admin panel — full-database backup as a downloaded JSON file.
+export const downloadBackup = async (token: string | undefined) => {
+  const response = await axios.get("/admin/backup/export", {
+    headers: provHeaders(token as string),
+    responseType: "blob",
+  });
+  const blob = response.data as Blob;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cd = response.headers["content-disposition"] as string | undefined;
+  const m = cd ? /filename="?([^"]+)"?/.exec(cd) : null;
+  a.download = m ? m[1] : "gmitp-backup.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Admin panel — restore a backup JSON (skips rows whose PK already exists).
+export const importBackup = async (
+  token: string | undefined,
+  data: unknown,
+) => {
+  const response = await axios.post("/admin/backup/import", data, {
+    headers: provHeaders(token as string),
+  });
+  if (response.status !== 200) throw new Error("Import failed");
+  return response.data;
+};
+
 // Admin panel — audit logs. `type` selects the log model (hr, medicine, ...).
 export const getAdminLogs = async (
   token: string | undefined,

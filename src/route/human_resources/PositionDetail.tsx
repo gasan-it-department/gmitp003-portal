@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useAuth } from "@/provider/ProtectedRoute";
-import { positionRecords } from "@/db/statements/position";
+import { positionRecords, updateUnitPosition } from "@/db/statements/position";
 //tabs
 import Application from "@/layout/human_resources/position/Application";
 import SlotHistory from "@/layout/human_resources/position/SlotHistory";
@@ -11,6 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import Modal from "@/components/custom/Modal";
+import SalaryGradeSelect from "@/layout/human_resources/SalaryGradeSelect";
 //icons
 import {
   Briefcase,
@@ -23,6 +31,7 @@ import {
   Banknote,
   History,
   Layers,
+  Pencil,
 } from "lucide-react";
 
 interface PositionDetailData {
@@ -36,7 +45,7 @@ interface PositionDetailData {
     id: string;
     name: string;
     /** Prisma exposes the relation as PascalCase on the Position model. */
-    SalaryGrade?: { grade: number; amount: number } | null;
+    SalaryGrade?: { id: string; grade: number; amount: number } | null;
   } | null;
   unit?: { id: string; name: string } | null;
   line?: { id: string; name: string } | null;
@@ -52,6 +61,7 @@ interface PositionDetailData {
 const PositionDetail = () => {
   const { positionId } = useParams();
   const auth = useAuth();
+  const queryClient = useQueryClient();
 
   const { data, isFetching } = useQuery<PositionDetailData>({
     queryKey: ["position-data", positionId],
@@ -59,6 +69,72 @@ const PositionDetail = () => {
     enabled: !!positionId,
     refetchOnWindowFocus: false,
   });
+
+  // ── Edit position modal ──────────────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    designation: "",
+    itemNumber: "",
+    salaryGradeId: "",
+    plantilla: true,
+    fixToUnit: false,
+    slots: 1,
+  });
+
+  const lineId = data?.line?.id ?? "";
+
+  const openEdit = () => {
+    if (!data) return;
+    setForm({
+      title: data.position?.name ?? "",
+      designation: data.designation ?? "",
+      itemNumber: data.itemNumber ?? "",
+      salaryGradeId: data.position?.SalaryGrade?.id ?? "",
+      plantilla: data.plantilla ?? true,
+      fixToUnit: data.fixToUnit ?? false,
+      slots: data.totalSlots ?? data._count?.slot ?? 1,
+    });
+    setEditOpen(true);
+  };
+
+  const submitEdit = async () => {
+    if (!positionId || !lineId) return;
+    if (!form.title.trim()) {
+      toast.error("Position name is required");
+      return;
+    }
+    const occupied = data?.occupiedSlots ?? 0;
+    if (form.slots < occupied) {
+      toast.error(`Slots can't be fewer than the ${occupied} currently occupied`);
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateUnitPosition(auth.token as string, {
+        unitPositionId: positionId,
+        lineId,
+        userId: auth.userId as string,
+        title: form.title.trim(),
+        designation: form.designation.trim() || null,
+        itemNumber: form.itemNumber.trim() || null,
+        salaryGradeId: form.salaryGradeId || null,
+        plantilla: form.plantilla,
+        fixToUnit: form.fixToUnit,
+        slots: Number(form.slots),
+      });
+      toast.success("Position updated");
+      setEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["position-data", positionId] });
+    } catch (e: any) {
+      toast.error("Update failed", {
+        description: e?.response?.data?.message || `${e}`,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (isFetching && !data) {
     return (
@@ -126,7 +202,7 @@ const PositionDetail = () => {
               </p>
             </div>
 
-            {/* Slot fill counter */}
+            {/* Slot fill counter + edit */}
             <div className="flex items-center gap-2">
               <Badge
                 variant="outline"
@@ -146,6 +222,15 @@ const PositionDetail = () => {
                   {vacantSlots} vacant
                 </Badge>
               )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openEdit}
+                className="h-7 gap-1.5 text-[11px]"
+              >
+                <Pencil className="w-3 h-3" />
+                Edit
+              </Button>
             </div>
           </div>
 
@@ -264,6 +349,108 @@ const PositionDetail = () => {
           </div>
         </Tabs>
       </div>
+
+      {/* ── Edit position modal ──────────────────────────────────────── */}
+      <Modal
+        title="Edit Position"
+        onOpen={editOpen}
+        setOnOpen={() => setEditOpen(false)}
+        onFunction={submitEdit}
+        loading={saving}
+        footer={true}
+        yesTitle={saving ? "Saving..." : "Save changes"}
+        className="sm:max-w-lg"
+      >
+        <div className="space-y-3 overflow-y-auto pr-1">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Position name</Label>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="e.g. Administrative Officer II"
+              className="h-8 text-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Designation</Label>
+              <Input
+                value={form.designation}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, designation: e.target.value }))
+                }
+                placeholder="Optional"
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Item No.</Label>
+              <Input
+                value={form.itemNumber}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, itemNumber: e.target.value }))
+                }
+                placeholder="Optional"
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Salary Grade</Label>
+              <SalaryGradeSelect
+                lineId={lineId}
+                token={auth.token as string}
+                value={form.salaryGradeId}
+                onChange={(v: string) =>
+                  setForm((f) => ({ ...f, salaryGradeId: v }))
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Slots</Label>
+              <Input
+                type="number"
+                min={data?.occupiedSlots ?? 0}
+                value={form.slots}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    slots: Math.max(0, Number(e.target.value) || 0),
+                  }))
+                }
+                className="h-8 text-xs"
+              />
+              <p className="text-[10px] text-gray-400">
+                {data?.occupiedSlots ?? 0} occupied · cannot reduce below that
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-1">
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={form.plantilla}
+                onCheckedChange={(c) =>
+                  setForm((f) => ({ ...f, plantilla: c === true }))
+                }
+              />
+              Plantilla position
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={form.fixToUnit}
+                onCheckedChange={(c) =>
+                  setForm((f) => ({ ...f, fixToUnit: c === true }))
+                }
+              />
+              Fixed to this unit
+            </label>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
