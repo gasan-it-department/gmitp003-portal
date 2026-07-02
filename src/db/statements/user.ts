@@ -22,6 +22,25 @@ export const getUserData = async (
   return response.data;
 };
 
+// Upload/replace the user's profile picture (multipart). Returns the new URL.
+export const updateProfilePicture = async (
+  token: string,
+  userId: string,
+  file: Blob,
+) => {
+  const form = new FormData();
+  form.append("userId", userId);
+  form.append("file", file, "avatar.jpg");
+  const response = await axios.post("/user/profile-picture", form, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
+  if (response.status !== 200) throw new Error("Upload failed");
+  return response.data as { file_url: string };
+};
+
 export const searchLineUser = async (
   token: string,
   id: string,

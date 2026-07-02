@@ -63,7 +63,7 @@ const AdminLogin = () => {
       }
 
       const { admin } = response.data;
-      setCookie(`auth_admin_token-${admin.id}`, admin.token, 1);
+      setCookie(`auth_admin_token-${admin.id}`, admin.token, 8);
       localStorage.setItem("auth_admin", admin.id);
 
       toast.success("Welcome back, admin");

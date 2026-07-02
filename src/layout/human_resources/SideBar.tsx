@@ -16,6 +16,8 @@ import {
   CalendarDays,
   Wallet,
   Clock4,
+  Archive,
+  Wrench,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
 
@@ -41,6 +43,7 @@ export const menuGroups = [
     items: [
       { title: "Employees",     path: "employee",    Icon: IdCardLanyard, children: [], accord: false },
       { title: "Non-Plantilla", path: "provisional", Icon: Clock4,        children: [], accord: false },
+      { title: "Archived",      path: "archived",    Icon: Archive,       children: [], accord: false },
       { title: "Units",         path: "units",       Icon: Blocks,        children: [], accord: false },
       { title: "Salary Grades", path: "salary",      Icon: Landmark,      children: [], accord: false },
     ],
@@ -52,6 +55,12 @@ export const menuGroups = [
       { title: "Payroll",       path: "payroll",  Icon: Wallet,       children: [], accord: false },
       { title: "Document Room", path: "document", Icon: FileText,     children: [], accord: false },
       { title: "Modules",       path: "module",   Icon: Component,    children: [], accord: false },
+    ],
+  },
+  {
+    section: "Tools",
+    items: [
+      { title: "Tools", path: "tools", Icon: Wrench, children: [], accord: false },
     ],
   },
 ];

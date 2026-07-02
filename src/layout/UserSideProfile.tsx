@@ -1,9 +1,11 @@
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useAuth } from "@/provider/ProtectedRoute";
 import { removeCookie } from "@/utils/cookies";
-import { getUserData } from "@/db/statements/user";
+import { getUserData, updateProfilePicture } from "@/db/statements/user";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
   Boxes,
   UserRound,
+  Camera,
 } from "lucide-react";
 
 import type { User } from "@/interface/data";
@@ -28,6 +31,86 @@ import type { User } from "@/interface/data";
 const UserSideProfile = () => {
   const auth = useAuth();
   const nav = useNavigate();
+  const queryClient = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const onPickFile = () => fileRef.current?.click();
+
+  // downscale to a compact square-ish JPEG before storing it in Postgres
+  const downscale = (file: File): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const MAX = 512;
+        const ratio = Math.min(
+          1,
+          MAX / Math.max(img.naturalWidth || 1, img.naturalHeight || 1),
+        );
+        const w = Math.max(1, Math.round((img.naturalWidth || 1) * ratio));
+        const h = Math.max(1, Math.round((img.naturalHeight || 1) * ratio));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no canvas"));
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("encode failed"))),
+          "image/jpeg",
+          0.9,
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("load failed"));
+      };
+      img.src = url;
+    });
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (f.size > 12 * 1024 * 1024) {
+      toast.error("Image is too large (max 12MB).");
+      return;
+    }
+    setUploading(true);
+    try {
+      const blob = await downscale(f);
+      const result = await updateProfilePicture(
+        auth.token as string,
+        auth.userId as string,
+        blob,
+      );
+      // update the cached profile immediately so the avatar refreshes now
+      queryClient.setQueryData(
+        ["userProfile", auth.userId],
+        (old: unknown) =>
+          old && typeof old === "object"
+            ? {
+                ...(old as Record<string, unknown>),
+                userProfilePictures: { file_url: result.file_url },
+              }
+            : old,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: ["userProfile", auth.userId],
+      });
+      toast.success("Profile picture updated.");
+    } catch {
+      toast.error("Couldn't update the profile picture.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const { data, isFetching } = useQuery({
     queryKey: ["userProfile", auth.userId],
@@ -108,6 +191,27 @@ const UserSideProfile = () => {
                 isActive ? "bg-emerald-500" : "bg-gray-400"
               }`}
               title={isActive ? "Active" : (user.status as unknown as string)}
+            />
+            {/* change profile picture */}
+            <button
+              type="button"
+              onClick={onPickFile}
+              disabled={uploading}
+              title="Change profile picture"
+              className="absolute -bottom-1 -left-1 h-6 w-6 rounded-full bg-blue-600 text-white flex items-center justify-center border-2 border-white shadow hover:bg-blue-700 disabled:opacity-60"
+            >
+              {uploading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Camera className="h-3 w-3" />
+              )}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onFileChange}
             />
           </div>
           <div className="text-center min-w-0 w-full">

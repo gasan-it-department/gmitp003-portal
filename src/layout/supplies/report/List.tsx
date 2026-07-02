@@ -23,7 +23,9 @@ import {
   RefreshCw,
   Loader2,
   AlertTriangle,
+  PackagePlus,
 } from "lucide-react";
+import AddStockItem from "../AddStockItem";
 
 //hooks
 import { useEffect, useState } from "react";
@@ -47,6 +49,7 @@ interface Props {
 
 const List = ({ id, auth, containerId, lineId, listId }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
   const [params, setParams] = useSearchParams({ query: "", trend: "Current" });
   const { ref, inView } = useInView({
     threshold: 0,
@@ -155,8 +158,16 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
             )}
           </div>
 
-          {/* Refresh Button */}
+          {/* Actions */}
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => setAddOpen(true)}
+              className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700"
+            >
+              <PackagePlus className="h-3.5 w-3.5" />
+              Add Item
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -352,6 +363,24 @@ const List = ({ id, auth, containerId, lineId, listId }: Props) => {
           </p>
         </div>
       </Modal>
+
+      {/* Add item + initial stock (direct — no order process) */}
+      <Modal
+        title={undefined}
+        onOpen={addOpen}
+        className="max-w-lg w-[95vw] overflow-auto max-h-[90vh]"
+        setOnOpen={() => setAddOpen(false)}
+        footer={1}
+        children={
+          <AddStockItem
+            lineId={lineId}
+            auth={auth}
+            listId={listId}
+            containerId={containerId}
+            onClose={() => setAddOpen(false)}
+          />
+        }
+      />
     </div>
   );
 };

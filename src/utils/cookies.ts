@@ -4,9 +4,10 @@ export const getCookie = (name: string) => {
   if (parts.length === 2) return parts.pop()?.split(";").shift();
 };
 
-export const setCookie = (name: string, value: string, days: number) => {
+// NOTE: the duration is in HOURS (the math below is hours, not days).
+export const setCookie = (name: string, value: string, hours: number) => {
   const expires = new Date();
-  expires.setTime(expires.getTime() + days * 1 * 60 * 60 * 1000);
+  expires.setTime(expires.getTime() + hours * 60 * 60 * 1000);
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;domain=${
     window.location.hostname
   };${window.location.protocol === "https:" ? "secure;" : ""}`;

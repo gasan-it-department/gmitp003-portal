@@ -2955,6 +2955,194 @@ export const viewUserProfile = async (
   return response.data;
 };
 
+// Verification QR for an employee (shown on their profile + used on the ID).
+export const getUserVerifyInfo = async (token: string, userId: string) => {
+  const response = await axios.get("/user/verify-info", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { userId },
+  });
+  if (response.status !== 200) throw new Error("Failed to load verify QR");
+  return response.data as {
+    code: string;
+    verifyUrl: string;
+    qr: string;
+    extras?: {
+      birthday: string;
+      age: string;
+      sex: string;
+      phone: string;
+      civilStatus: string;
+      bloodType: string;
+      address: string;
+    };
+  };
+};
+
+// PUBLIC — confirm an ID's QR code maps to a real, active employee. No auth.
+export const verifyIdCode = async (code: string) => {
+  const response = await axios.get("/id/verify", {
+    headers: { Accept: "application/json" },
+    params: { code },
+  });
+  return response.data as {
+    found: boolean;
+    valid: boolean;
+    fullName?: string;
+    position?: string | null;
+    department?: string | null;
+    line?: string | null;
+    status?: string;
+    photoUrl?: string | null;
+  };
+};
+
+// Bulk ID issuing — all active employees of a line for the batch picker.
+export const idIssueList = async (token: string, lineId: string) => {
+  const response = await axios.get("/id/issue-list", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { lineId },
+  });
+  return response.data as {
+    list: {
+      userId: string;
+      fullName: string;
+      position: string;
+      photoUrl: string | null;
+      departmentId: string;
+      office: string;
+    }[];
+    units: { id: string; name: string }[];
+  };
+};
+
+export interface IdExportPaper {
+  size: string;
+  orientation: "portrait" | "landscape";
+  marginMm: number;
+  gapMm: number;
+  flip: "long" | "short";
+  cutMarks: boolean;
+}
+
+// Generate the imposed front/rear ID PDFs (returned as base64).
+export const idExportBatch = async (
+  token: string,
+  body: {
+    lineId: string;
+    userIds: string[];
+    template: unknown;
+    paper: IdExportPaper;
+    nameOverrides?: Record<string, string>;
+    nameScales?: Record<string, number>;
+  },
+) => {
+  const response = await axios.post("/id/export-batch", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+  });
+  return response.data as {
+    front: string;
+    rear: string | null;
+    meta: {
+      cols: number;
+      rows: number;
+      perPage: number;
+      count: number;
+      pages: number;
+    };
+  };
+};
+
+export const userRecord = async (
+  token: string,
+  userId: string,
+  lineId?: string,
+) => {
+  const response = await axios.get("/user/record", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { userId, lineId },
+  });
+
+  if (response.status !== 200) throw new Error(response.data.message);
+  return response.data;
+};
+
+export const archivedPersonnel = async (
+  token: string,
+  id: string,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/archived-personnel", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { id, lastCursor, limit, query },
+  });
+
+  if (response.status !== 200) throw new Error(response.data.message);
+  return response.data;
+};
+
+export const restorePersonnel = async (
+  token: string,
+  payload: { userId: string; lineId: string; actorId?: string },
+) => {
+  const response = await axios.post("/archived-personnel/restore", payload, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+
+  if (response.status !== 200) throw new Error("Failed to restore");
+  return response.data;
+};
+
+// A container's datasets (with supply counts) — used by the direct "Add item"
+// form to search/create supplies. Datasets are per-container, not per-list.
+export const getContainerDatasets = async (
+  token: string,
+  containerId: string,
+) => {
+  const response = await axios.get("/supply/container-datasets", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { id: containerId },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data as {
+    list: { id: string; title: string; count: number }[];
+  };
+};
+
 export const suspendAccount = async (
   token: string,
   userId: string,

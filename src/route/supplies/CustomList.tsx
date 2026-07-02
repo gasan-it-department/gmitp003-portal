@@ -21,7 +21,12 @@ const CustomList = () => {
   const { listId, containerId, lineId } = useParams();
   const auth = useAuth();
 
-  const currentTab = params.get("tab") || "overview";
+  const rawTab = params.get("tab") || "overview";
+  // Orders tab is hidden for now. Flip to true to bring it back (the OrderList
+  // content stays wired below so nothing breaks the build).
+  const showOrders = false;
+  const currentTab =
+    rawTab === "orders" && !showOrders ? "overview" : rawTab;
   const prev = 3;
 
   const handleChangeParam = (value: string) => {
@@ -104,7 +109,7 @@ const CustomList = () => {
                 </TabsTrigger>
               )}
 
-              {prev >= 2 && (
+              {showOrders && (
                 <TabsTrigger
                   value="orders"
                   className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
@@ -168,7 +173,7 @@ const CustomList = () => {
                 </TabsTrigger>
               )}
 
-              {prev >= 2 && (
+              {showOrders && (
                 <TabsTrigger
                   value="orders"
                   className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
@@ -234,7 +239,7 @@ const CustomList = () => {
             </TabsContent>
           )}
 
-          {prev >= 2 && (
+          {showOrders && (
             <TabsContent
               value="orders"
               className="h-full m-0 focus-visible:outline-none"

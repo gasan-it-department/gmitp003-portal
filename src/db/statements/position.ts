@@ -91,6 +91,7 @@ export const updateUnitPosition = async (
     plantilla?: boolean;
     fixToUnit?: boolean;
     slots?: number;
+    occupied?: number;
     lineId: string;
     userId?: string;
   },

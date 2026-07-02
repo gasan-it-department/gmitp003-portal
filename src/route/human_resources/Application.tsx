@@ -288,14 +288,21 @@ const Application = () => {
         lineId: lineId as string,
         message: assignMessage.trim() || null,
       });
-      toast.success(
-        `${res?.invited ?? selected.length} applicant(s) invited to ${res?.position ?? "the position"}`,
-        {
-          description: res?.skipped
-            ? `${res.skipped} skipped (already registered or invited).`
-            : undefined,
-        },
-      );
+      {
+        const invited = res?.invited ?? 0;
+        const reassigned = res?.reassigned ?? 0;
+        const parts: string[] = [];
+        if (invited) parts.push(`${invited} invited`);
+        if (reassigned) parts.push(`${reassigned} re-assigned`);
+        toast.success(
+          `${parts.join(" · ") || `${selected.length} processed`} → ${res?.position ?? "the position"}`,
+          {
+            description: res?.skipped
+              ? `${res.skipped} skipped (already placed or has a live invite).`
+              : undefined,
+          },
+        );
+      }
       setOnOpen(0);
       setAssignPositionId("");
       setAssignUnitId("");

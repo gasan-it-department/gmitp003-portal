@@ -42,10 +42,11 @@ import {
 } from "@/components/ui/input-group";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { KbdGroup, Kbd } from "@/components/ui/kbd";
 import Modal from "@/components/custom/Modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UploadMedicineExcel from "@/layout/medicine/UploadMedicineExcel";
+import MobileAccess from "@/layout/medicine/MobileAccess";
 import MedicinItem from "@/layout/medicine/item/MedicinItem";
 
 import {
@@ -56,6 +57,8 @@ import {
   Search,
   Loader2,
   AlertCircle,
+  ListChecks,
+  Smartphone,
 } from "lucide-react";
 
 import type { Medicine, AddNewMedicineProps } from "@/interface/data";
@@ -186,19 +189,41 @@ const StorageConfig = () => {
             </div>
             <div className="min-w-0">
               <h1 className="text-xs font-semibold text-gray-900 truncate">
-                Medicine Catalog
+                Pharmacy Configuration
               </h1>
               <p className="text-[10px] text-gray-500 leading-none mt-0.5">
-                Manage the master list of medicines
+                Medicine catalog &amp; mobile access
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono flex-shrink-0">
-            {items.length} medicines
-          </Badge>
         </div>
       </div>
 
+      {/* Tabs: Medicine Catalog / Mobile Access */}
+      <Tabs defaultValue="catalog" className="flex-1 min-h-0 flex flex-col">
+        <div className="bg-white border-b px-2 pt-1 flex-shrink-0">
+          <TabsList className="h-8 bg-transparent gap-0.5 p-0">
+            <TabsTrigger
+              value="catalog"
+              className="h-7 px-2.5 text-[11px] gap-1.5 rounded-none text-gray-600 hover:text-gray-900 transition-colors data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent"
+            >
+              <ListChecks className="h-3 w-3" />
+              Medicine Catalog
+            </TabsTrigger>
+            <TabsTrigger
+              value="access"
+              className="h-7 px-2.5 text-[11px] gap-1.5 rounded-none text-gray-600 hover:text-gray-900 transition-colors data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent"
+            >
+              <Smartphone className="h-3 w-3" />
+              Mobile Access
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent
+          value="catalog"
+          className="flex-1 min-h-0 m-0 p-0 flex flex-col focus-visible:outline-none"
+        >
       {/* Toolbar */}
       <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-shrink-0">
         <InputGroup className="bg-white flex-1 max-w-xs">
@@ -373,6 +398,19 @@ const StorageConfig = () => {
           </Table>
         </div>
       </div>
+        </TabsContent>
+
+        <TabsContent
+          value="access"
+          className="flex-1 min-h-0 m-0 p-0 overflow-auto focus-visible:outline-none"
+        >
+          <MobileAccess
+            token={auth.token as string}
+            lineId={lineId as string}
+            userId={auth.userId as string}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Medicine Modal */}
       <Modal

@@ -115,7 +115,7 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
           <span className="text-xs">
             Prescribed by:{" "}
             <span className="font-medium text-gray-700">
-              {data.processBy.lastName}, {data.processBy.firstName}
+              {data.processBy?.lastName}, {data.processBy?.firstName}
             </span>
           </span>
         </div>
@@ -144,7 +144,7 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
                 Barangay
               </label>
               <p className="text-sm text-gray-700 mt-0.5">
-                {data.barangay.name}
+                {data.barangay?.name ?? "—"}
               </p>
             </div>
             <div>
@@ -152,7 +152,7 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
                 Municipal
               </label>
               <p className="text-sm text-gray-700 mt-0.5">
-                {data.municipal.name}
+                {data.municipal?.name ?? "—"}
               </p>
             </div>
             <div>
@@ -160,7 +160,7 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
                 Province
               </label>
               <p className="text-sm text-gray-700 mt-0.5">
-                {data.province.name}
+                {data.province?.name ?? "—"}
               </p>
             </div>
             <div className="sm:col-span-2">
@@ -181,7 +181,9 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
         <div>
           <p className="text-xs font-medium text-blue-900">Complete Address</p>
           <p className="text-xs text-blue-700 mt-0.5">
-            {data.barangay.name}, {data.municipal.name}, {data.province.name}
+            {[data.barangay?.name, data.municipal?.name, data.province?.name]
+              .filter(Boolean)
+              .join(", ") || "No address on record"}
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import {
   useInfiniteQuery,
   useQuery,
@@ -44,7 +44,6 @@ import {
 import Modal from "@/components/custom/Modal";
 import FormTags from "@/layout/FormTags";
 import { Checkbox } from "@/components/ui/checkbox";
-import SalaryGradeSelect from "@/layout/human_resources/SalaryGradeSelect";
 
 import {
   ArrowLeftRight,
@@ -62,6 +61,7 @@ import {
   Send,
   Sparkles,
   UserCheck,
+  UserCircle,
   UserCog,
   UserMinus,
   Users,
@@ -75,6 +75,9 @@ const EMP_TYPES = [
   "Contractual",
   "Temporary",
 ];
+// Positions no longer carry an employment type, but the backend still requires
+// one — store a neutral placeholder so creation validates.
+const DEFAULT_PROV_EMP_TYPE = "Non-Plantilla";
 const TERM_OPTIONS = [3, 6, 9, 12, 24];
 
 interface Page<T> {
@@ -116,6 +119,7 @@ interface Applicant {
 
 const Provisional = () => {
   const { lineId } = useParams();
+  const nav = useNavigate();
   const auth = useAuth();
   const queryClient = useQueryClient();
   const token = auth.token as string;
@@ -161,18 +165,16 @@ const Provisional = () => {
   // ── Create-position modal state ──────────────────────────────────────────
   const [newOpen, setNewOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [empType, setEmpType] = useState(EMP_TYPES[0]);
+  const [empType, setEmpType] = useState(DEFAULT_PROV_EMP_TYPE);
   const [termMonths, setTermMonths] = useState(3);
   const [slots, setSlots] = useState(1);
   const [description, setDescription] = useState("");
-  const [posSalaryGradeId, setPosSalaryGradeId] = useState("");
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // ── Edit-personnel modal state ───────────────────────────────────────────
   const [editPers, setEditPers] = useState<Personnel | null>(null);
   const [editPersStatus, setEditPersStatus] = useState("");
-  const [editPersSG, setEditPersSG] = useState("");
   const [savingPers, setSavingPers] = useState(false);
 
   // ── Hire modal state ─────────────────────────────────────────────────────
@@ -272,11 +274,10 @@ const Provisional = () => {
 
   const resetCreate = () => {
     setTitle("");
-    setEmpType(EMP_TYPES[0]);
+    setEmpType(DEFAULT_PROV_EMP_TYPE);
     setTermMonths(3);
     setSlots(1);
     setDescription("");
-    setPosSalaryGradeId("");
   };
 
   const openCreate = () => {
@@ -288,11 +289,10 @@ const Provisional = () => {
   const openEditPosition = (p: ProvPosition) => {
     setEditingId(p.id);
     setTitle(p.title);
-    setEmpType(p.empType);
+    setEmpType(p.empType || DEFAULT_PROV_EMP_TYPE);
     setTermMonths(p.termMonths);
     setSlots(p.slots);
     setDescription(p.description ?? "");
-    setPosSalaryGradeId(p.salaryGrade?.id ?? "");
     setNewOpen(true);
   };
 
@@ -311,7 +311,6 @@ const Provisional = () => {
           termMonths,
           slots,
           description: description.trim() || null,
-          salaryGradeId: posSalaryGradeId || null,
           lineId: lineId as string,
           userId: auth.userId as string,
         });
@@ -324,7 +323,6 @@ const Provisional = () => {
           slots,
           description: description.trim() || null,
           lineId: lineId as string,
-          salaryGradeId: posSalaryGradeId || null,
           userId: auth.userId as string,
         });
         toast.success("Non-plantilla position created");
@@ -346,7 +344,6 @@ const Provisional = () => {
   const openEditPersonnel = (u: Personnel) => {
     setEditPers(u);
     setEditPersStatus(u.status);
-    setEditPersSG(u.SalaryGrade?.id ?? "");
   };
 
   const submitEditPersonnel = async () => {
@@ -356,7 +353,6 @@ const Provisional = () => {
       await updateProvisionalPersonnel(token, {
         userId: editPers.id,
         status: editPersStatus,
-        salaryGradeId: editPersSG || null,
         actorId: auth.userId as string,
         lineId: lineId as string,
       });
@@ -986,8 +982,18 @@ const Provisional = () => {
                             size="sm"
                             variant="outline"
                             className="h-7 text-[10px] gap-1 px-2 bg-white"
+                            onClick={() => nav(`../employee/${u.id}`)}
+                            title="View profile & platform record"
+                          >
+                            <UserCircle className="h-3 w-3 text-indigo-600" />
+                            Profile
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] gap-1 px-2 bg-white"
                             onClick={() => openEditPersonnel(u)}
-                            title="Edit employment type / salary grade"
+                            title="Edit employment type"
                           >
                             <Pencil className="h-3 w-3 text-gray-600" />
                             Edit
@@ -1082,23 +1088,6 @@ const Provisional = () => {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-700">
-                Employment type *
-              </label>
-              <Select value={empType} onValueChange={setEmpType}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EMP_TYPES.map((t) => (
-                    <SelectItem key={t} value={t} className="text-xs">
-                      {t}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-700">
                 Term (months) *
               </label>
               <Select
@@ -1117,9 +1106,6 @@ const Provisional = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-700">
                 Slots *
@@ -1133,17 +1119,6 @@ const Provisional = () => {
                   className="h-8 text-xs"
                 />
               </InputGroup>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-700">
-                Salary grade
-              </label>
-              <SalaryGradeSelect
-                lineId={lineId as string}
-                token={token}
-                value={posSalaryGradeId}
-                onChange={(v) => setPosSalaryGradeId(v as string)}
-              />
             </div>
           </div>
 
@@ -1532,7 +1507,7 @@ const Provisional = () => {
               <span className="font-semibold text-gray-900">
                 {editPers.firstName} {editPers.lastName}
               </span>
-              's employment type and salary grade. They'll be notified.
+              's employment type. They'll be notified.
             </p>
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-gray-700">
@@ -1550,17 +1525,6 @@ const Provisional = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-gray-700">
-                Salary grade
-              </label>
-              <SalaryGradeSelect
-                lineId={lineId as string}
-                token={token}
-                value={editPersSG}
-                onChange={(v) => setEditPersSG(v as string)}
-              />
             </div>
           </div>
         )}

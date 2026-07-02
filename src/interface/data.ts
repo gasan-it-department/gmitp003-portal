@@ -1028,6 +1028,10 @@ export interface SubmittedApplicationProps {
   forPosition: Position | null;
   positionId: string | null;
   ApplicationSkillTags: ApplicationSkillTags[];
+  /** Backend-computed: applicant already has prior history in this line
+   *  (previously hired, invited, or a repeat applicant). */
+  hasRecord?: boolean;
+  eligibility?: "registered" | "accepted" | "invited" | "eligible";
 }
 
 interface ApplicationSkillTags {

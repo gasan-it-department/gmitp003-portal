@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/context-menu";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
+import { History } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
 
@@ -99,9 +100,23 @@ const ApplicationItem = ({
           <TableCell className="text-[11px] text-gray-800 truncate max-w-[200px]">
             {item?.forPosition?.name || "—"}
           </TableCell>
-          <TableCell className="text-[11px] text-gray-900 font-medium truncate max-w-[220px]">
-            {searchedChar(query, item.lastname)},{" "}
-            {searchedChar(query, item.firstname)}
+          <TableCell className="text-[11px] text-gray-900 font-medium max-w-[240px]">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="truncate">
+                {searchedChar(query, item.lastname)},{" "}
+                {searchedChar(query, item.firstname)}
+              </span>
+              {item.hasRecord && (
+                <Badge
+                  variant="outline"
+                  title="This applicant already has a record in this line (previously hired, invited, or applied before)."
+                  className="text-[9px] px-1 py-0 gap-0.5 bg-amber-50 text-amber-700 border-amber-200 flex-none"
+                >
+                  <History className="h-2.5 w-2.5" />
+                  Record
+                </Badge>
+              )}
+            </span>
           </TableCell>
           <TableCell className="text-[10px] text-gray-600">
             {formatDate(item.timestamp)}

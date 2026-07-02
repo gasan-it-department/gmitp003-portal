@@ -8,13 +8,20 @@ import Modal from "@/components/custom/Modal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import DispenseItem from "../DispenseItem";
+import RestockItem from "../RestockItem";
 //import ConfirmDelete from "@/layout/ConfirmDelete";
 import SelectStockDispense from "@/layout/SelectStockDispense";
 //utils
 import { searchedChar } from "@/utils/element";
 
 //
-import { CircleX, HandHelping, Package, ChevronRight } from "lucide-react";
+import {
+  CircleX,
+  HandHelping,
+  Package,
+  ChevronRight,
+  PackagePlus,
+} from "lucide-react";
 //interfaces and Props
 import type { SuppliesProps, ProtectedRouteProps } from "@/interface/data";
 
@@ -180,6 +187,23 @@ const ListItem = ({
             </Button>
 
             <Button
+              variant="outline"
+              className="w-full justify-between gap-3 py-2 h-auto text-gray-700 hover:bg-gray-50"
+              onClick={() => setOnOpen(5)}
+            >
+              <div className="flex items-center gap-2">
+                <PackagePlus className="w-3.5 h-3.5" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">Restock Item</p>
+                  <p className="text-[10px] text-gray-500">
+                    Add stock directly — no order
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+
+            <Button
               variant="destructive"
               className="w-full justify-between gap-3 py-2 h-auto"
               onClick={() => setOnOpen(4)}
@@ -249,6 +273,26 @@ const ListItem = ({
           containerId={containerId}
         />
       </Modal>
+
+      {/* Restock Item Modal (direct — no order process) */}
+      <Modal
+        title={undefined}
+        onOpen={onOpen === 5}
+        footer={1}
+        className="max-w-lg w-[95vw] overflow-auto max-h-[90vh]"
+        setOnOpen={() => setOnOpen(0)}
+        children={
+          <RestockItem
+            queryKey="supply-list"
+            item={item}
+            lineId={lineId}
+            auth={auth}
+            setOnOpen={setOnOpen}
+            listId={listId}
+            containerId={containerId}
+          />
+        }
+      />
     </>
   );
 };

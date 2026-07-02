@@ -95,7 +95,7 @@ const Login = () => {
         //   setOnOpen(1);
         //   return;
         // }
-        setCookie(`auth_token-${response.data.data.id}`, token, 1);
+        setCookie(`auth_token-${response.data.data.id}`, token, 8);
         localStorage.setItem("user", response.data.data.id);
         navigate(`/${response.data.data.line}`);
       } else {

@@ -81,6 +81,7 @@ const PositionDetail = () => {
     plantilla: true,
     fixToUnit: false,
     slots: 1,
+    occupied: 0,
   });
 
   const lineId = data?.line?.id ?? "";
@@ -95,6 +96,7 @@ const PositionDetail = () => {
       plantilla: data.plantilla ?? true,
       fixToUnit: data.fixToUnit ?? false,
       slots: data.totalSlots ?? data._count?.slot ?? 1,
+      occupied: data.occupiedSlots ?? 0,
     });
     setEditOpen(true);
   };
@@ -105,9 +107,8 @@ const PositionDetail = () => {
       toast.error("Position name is required");
       return;
     }
-    const occupied = data?.occupiedSlots ?? 0;
-    if (form.slots < occupied) {
-      toast.error(`Slots can't be fewer than the ${occupied} currently occupied`);
+    if (form.occupied > form.slots) {
+      toast.error("Occupied can't exceed the total slots");
       return;
     }
     setSaving(true);
@@ -123,6 +124,7 @@ const PositionDetail = () => {
         plantilla: form.plantilla,
         fixToUnit: form.fixToUnit,
         slots: Number(form.slots),
+        occupied: Number(form.occupied),
       });
       toast.success("Position updated");
       setEditOpen(false);
@@ -397,34 +399,55 @@ const PositionDetail = () => {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label className="text-xs">Salary Grade</Label>
+            <SalaryGradeSelect
+              lineId={lineId}
+              token={auth.token as string}
+              value={form.salaryGradeId}
+              onChange={(v: string) =>
+                setForm((f) => ({ ...f, salaryGradeId: v }))
+              }
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Salary Grade</Label>
-              <SalaryGradeSelect
-                lineId={lineId}
-                token={auth.token as string}
-                value={form.salaryGradeId}
-                onChange={(v: string) =>
-                  setForm((f) => ({ ...f, salaryGradeId: v }))
+              <Label className="text-xs">Total slots</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.slots}
+                onChange={(e) =>
+                  setForm((f) => {
+                    const slots = Math.max(0, Number(e.target.value) || 0);
+                    return { ...f, slots, occupied: Math.min(f.occupied, slots) };
+                  })
                 }
+                className="h-8 text-xs"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Slots</Label>
+              <Label className="text-xs">Occupied</Label>
               <Input
                 type="number"
-                min={data?.occupiedSlots ?? 0}
-                value={form.slots}
+                min={0}
+                max={form.slots}
+                value={form.occupied}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    slots: Math.max(0, Number(e.target.value) || 0),
+                    occupied: Math.min(
+                      f.slots,
+                      Math.max(0, Number(e.target.value) || 0),
+                    ),
                   }))
                 }
                 className="h-8 text-xs"
               />
               <p className="text-[10px] text-gray-400">
-                {data?.occupiedSlots ?? 0} occupied · cannot reduce below that
+                {Math.max(0, form.slots - form.occupied)} vacant · assigned-user
+                slots can only be freed via Vacate
               </p>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/provider/ProtectedRoute";
 
 import { getUserData } from "@/db/statements/user";
-import { downloadPdsExcel } from "@/db/statement";
+import { downloadPdsExcel, userRecord, getUserVerifyInfo } from "@/db/statement";
 import { userActiveStatus } from "@/utils/helper";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,10 @@ import {
   UserX,
   LayoutGrid,
   Download,
+  History,
+  Briefcase,
+  Activity,
+  CalendarClock,
 } from "lucide-react";
 
 import type { User } from "@/interface/data";
@@ -117,6 +121,41 @@ const UserProfile = () => {
   });
 
   const [downloading, setDownloading] = useState(false);
+
+  // Verification QR (used on the ID card; scans to the public verify page).
+  const { data: verify } = useQuery<{
+    code: string;
+    verifyUrl: string;
+    qr: string;
+  }>({
+    queryKey: ["user-verify", employeeId],
+    queryFn: () => getUserVerifyInfo(auth.token as string, employeeId as string),
+    enabled: !!auth.token && !!employeeId,
+    refetchOnWindowFocus: false,
+  });
+
+  // Platform history/record (appointments, employment changes, leaves, activity)
+  const { data: record, isFetching: recordLoading } = useQuery<{
+    counts: {
+      appointment: number;
+      employment: number;
+      leave: number;
+      activity: number;
+    };
+    timeline: {
+      id: string;
+      type: "appointment" | "employment" | "leave" | "activity";
+      title: string;
+      detail: string;
+      timestamp: string;
+    }[];
+  }>({
+    queryKey: ["user-record", employeeId],
+    queryFn: () =>
+      userRecord(auth.token as string, employeeId as string, lineId),
+    enabled: !!auth.token && !!employeeId,
+    refetchOnWindowFocus: false,
+  });
   const handleDownloadPds = async () => {
     if (!employeeId) return;
     setDownloading(true);
@@ -239,9 +278,59 @@ const UserProfile = () => {
           </div>
         </div>
 
+        {/* ── Verification QR ─────────────────────────────────────── */}
+        {verify?.qr && (
+          <div className="border rounded-lg bg-white p-3 flex items-center gap-3">
+            <img
+              src={verify.qr}
+              alt="ID verification QR"
+              className="h-20 w-20 flex-none"
+            />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-xs font-semibold text-gray-800">
+                ID Verification QR
+              </h3>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                Put this on the ID card. Scanning it confirms the holder against
+                the live record.
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px]"
+                  onClick={() => window.open(verify.verifyUrl, "_blank")}
+                >
+                  Open verify page
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px]"
+                  onClick={() => {
+                    navigator.clipboard
+                      ?.writeText(verify.verifyUrl)
+                      .then(() => toast.success("Verify link copied"))
+                      .catch(() => {});
+                  }}
+                >
+                  Copy link
+                </Button>
+                <a
+                  href={verify.qr}
+                  download={`id-qr-${employeeId}.png`}
+                  className="inline-flex items-center h-7 px-3 text-[10px] rounded-md border bg-white hover:bg-gray-50"
+                >
+                  Download QR
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Tabs ────────────────────────────────────────────────── */}
         <Tabs defaultValue="overview" className="space-y-3">
-          <TabsList className="grid w-full grid-cols-5 h-8">
+          <TabsList className="grid w-full grid-cols-6 h-8">
             <TabsTrigger value="overview" className="text-xs">
               Overview
             </TabsTrigger>
@@ -253,6 +342,10 @@ const UserProfile = () => {
             </TabsTrigger>
             <TabsTrigger value="pds" className="text-xs">
               PDS
+            </TabsTrigger>
+            <TabsTrigger value="record" className="text-xs gap-1">
+              <History className="h-3 w-3" />
+              Record
             </TabsTrigger>
             <TabsTrigger value="modules" className="text-xs">
               Modules
@@ -624,6 +717,88 @@ const UserProfile = () => {
                   )}
               </>
             )}
+          </TabsContent>
+
+          {/* ── Record / History ──────────────────────────────── */}
+          <TabsContent value="record" className="space-y-3 mt-0">
+            <SectionCard title="Platform Record" icon={History}>
+              {recordLoading && !record ? (
+                <div className="flex items-center justify-center py-8 text-gray-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : !record || record.timeline.length === 0 ? (
+                <p className="text-xs text-gray-500 py-6 text-center">
+                  No history yet — appointments, employment changes, leaves and
+                  activity will appear here.
+                </p>
+              ) : (
+                <>
+                  {/* Summary counts */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                    {(
+                      [
+                        ["appointment", "Appointments", Briefcase, "text-blue-600"],
+                        ["employment", "Employment", History, "text-indigo-600"],
+                        ["leave", "Leaves", CalendarClock, "text-amber-600"],
+                        ["activity", "Activity", Activity, "text-emerald-600"],
+                      ] as const
+                    ).map(([key, label, Icon, toneCls]) => (
+                      <div
+                        key={key}
+                        className="border rounded-lg p-2 flex items-center gap-2 bg-gray-50/60"
+                      >
+                        <Icon className={`h-3.5 w-3.5 ${toneCls}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 leading-none">
+                            {record.counts[key]}
+                          </p>
+                          <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                            {label}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Timeline */}
+                  <ol className="relative border-l border-gray-200 ml-2 space-y-3">
+                    {record.timeline.map((ev) => {
+                      const tone =
+                        ev.type === "appointment"
+                          ? { dot: "bg-blue-500", Icon: Briefcase }
+                          : ev.type === "employment"
+                            ? { dot: "bg-indigo-500", Icon: History }
+                            : ev.type === "leave"
+                              ? { dot: "bg-amber-500", Icon: CalendarClock }
+                              : { dot: "bg-emerald-500", Icon: Activity };
+                      return (
+                        <li key={ev.id} className="ml-4">
+                          <span
+                            className={`absolute -left-[7px] flex h-3.5 w-3.5 items-center justify-center rounded-full ring-2 ring-white ${tone.dot}`}
+                          />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-medium text-gray-800 flex items-center gap-1.5">
+                                <tone.Icon className="h-3 w-3 text-gray-400 flex-none" />
+                                <span className="truncate">{ev.title}</span>
+                              </p>
+                              {ev.detail && (
+                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                  {ev.detail}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400 whitespace-nowrap flex-none">
+                              {formatDate(ev.timestamp)}
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </>
+              )}
+            </SectionCard>
           </TabsContent>
 
           {/* ── Modules ───────────────────────────────────────── */}

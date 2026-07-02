@@ -18,6 +18,12 @@ import AccessDenied from "@/route/AccessDenied.tsx";
 import HrEmployee from "./route/human_resources/Employee.tsx";
 import HrApplication from "./route/human_resources/Application.tsx";
 import Provisional from "./route/human_resources/Provisional.tsx";
+import Archived from "./route/human_resources/Archived.tsx";
+import Tools from "./route/human_resources/Tools.tsx";
+import IdCardMaker from "./route/human_resources/IdCardMaker.tsx";
+import IdCardIssue from "./route/human_resources/IdCardIssue.tsx";
+import IdCardBatch from "./route/human_resources/IdCardBatch.tsx";
+import VerifyId from "./route/VerifyId.tsx";
 import AddEmployee from "./route/human_resources/AddEmployee.tsx";
 import Invite from "./route/human_resources/Invite.tsx";
 import SalaryGrade from "./route/human_resources/SalaryGrade.tsx";
@@ -169,6 +175,7 @@ createRoot(document.getElementById("root")!).render(
             />
             <Route path="/invitation/:invitationId" element={<InviteLink />} />
             <Route path="/job-post/:municipalId" element={<JobPost />} />
+            <Route path="/verify-id" element={<VerifyId />} />
             <Route path="/public" element={<TempAuthProvider />}>
               <Route
                 path="application/:applicationId"
@@ -347,6 +354,11 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="employee/:employeeId" element={<UserProfile />} />
                 <Route path="employees/add" element={<AddEmployee />} />
                 <Route path="provisional" element={<Provisional />} />
+                <Route path="archived" element={<Archived />} />
+                <Route path="tools" element={<Tools />} />
+                <Route path="tools/id-card" element={<IdCardMaker />} />
+                <Route path="tools/id-card/issue" element={<IdCardIssue />} />
+                <Route path="tools/id-card/batch" element={<IdCardBatch />} />
                 <Route path="application" element={<HrApplication />} />
                 <Route path="module" element={<ModuleHome />} />
                 <Route

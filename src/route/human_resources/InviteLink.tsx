@@ -51,6 +51,7 @@ import PublicRegionSelect from "@/layout/PublicRegionSelect";
 
 const InviteLink = () => {
   const [onOpen, setOnOpen] = useState(0);
+  const [submittedId, setSubmittedId] = useState("");
   const [uploadingFiles, setUploadingFiles] = useState<{
     [key: string]: boolean;
   }>({});
@@ -523,11 +524,16 @@ const InviteLink = () => {
                 nestedValue.toISOString(),
               );
             } else {
-              formData.append(`${key}[${nestedKey}]`, String(nestedValue));
+              // Never send the literal string "undefined"/"null" for blank
+              // fields — it gets stored and printed onto the PDS.
+              formData.append(
+                `${key}[${nestedKey}]`,
+                nestedValue == null ? "" : String(nestedValue),
+              );
             }
           });
         } else {
-          formData.append(key, String(value));
+          formData.append(key, value == null ? "" : String(value));
         }
       });
 
@@ -545,7 +551,9 @@ const InviteLink = () => {
         throw new Error(response.data.message);
       }
 
-      // Success — close the confirm modal and show the success modal.
+      // Success — keep the new application id so the success modal can show a
+      // trackable link, then close the confirm modal and show the success one.
+      setSubmittedId(response.data?.applicationId ?? "");
       setOnOpen(3);
       toast.success("Application submitted successfully!", {
         position: "top-center",
@@ -3688,17 +3696,20 @@ const InviteLink = () => {
               </p>
               <div className="flex items-center justify-between bg-white border border-blue-300 rounded px-3 py-2">
                 <code className="text-sm text-blue-600 truncate">
-                  {/* `${frontendUrl}public/application/${applicationId}` */}
+                  {`${window.location.origin}/public/application/${submittedId}`}
                 </code>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-                  onClick={() => {
-                    // navigator.clipboard.writeText(
-                    //   `${frontendUrl}/public/application/${applicationId}`,
-                    // );
-                    toast.success("Link copied to clipboard!");
+                  onClick={async () => {
+                    const link = `${window.location.origin}/public/application/${submittedId}`;
+                    try {
+                      await navigator.clipboard.writeText(link);
+                      toast.success("Link copied to clipboard!");
+                    } catch {
+                      toast.error("Couldn't copy — please copy it manually.");
+                    }
                   }}
                 >
                   <svg
