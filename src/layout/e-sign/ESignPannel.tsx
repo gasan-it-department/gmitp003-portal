@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   FileText,
   Building2,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,6 +48,13 @@ const TILES: Tile[] = [
       "Registry of barcode-stickered documents logged by receiving personnel.",
     Icon: Inbox,
     path: "receiving",
+  },
+  {
+    name: "Mobile Access",
+    description:
+      "Choose who may scan and register received documents from the mobile app.",
+    Icon: Smartphone,
+    path: "mobile-access",
   },
   {
     name: "Document Archive",

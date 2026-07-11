@@ -27,7 +27,26 @@ interface Props {
   token: string;
   lineId: string;
   userId: string; // the current (managing) user's User.id
+  /** Override the API endpoints — defaults to the Pharmacy module's. Lets
+   *  other modules (e.g. Documents) reuse this exact grant/revoke UI. */
+  endpoints?: { list: string; candidates: string; mutate: string };
+  /** Override the explainer copy — defaults to the Pharmacy wording. */
+  copy?: { heading: string; body: string; emptyBody: string };
 }
+
+const PHARMACY_ENDPOINTS = {
+  list: "/medicine/mobile-access",
+  candidates: "/medicine/mobile-access/candidates",
+  mutate: "/medicine/mobile-access",
+};
+
+const PHARMACY_COPY = {
+  heading: "Who can use the mobile Pharmacy app",
+  body:
+    "Only the users listed below can scan, add stock, and sync medicine data from the mobile app. Everyone else is blocked — this protects your medicine records from unauthorized changes. Add or remove access anytime; you can add yourself too.",
+  emptyBody:
+    "Until you add someone, no one can use the mobile pharmacy scanner or add stock from a phone.",
+};
 
 interface AccessRow {
   id: string;
@@ -45,7 +64,9 @@ interface Candidate {
   department: string | null;
 }
 
-const MobileAccess = ({ token, lineId, userId }: Props) => {
+const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
+  const ep = endpoints ?? PHARMACY_ENDPOINTS;
+  const text2 = copy ?? PHARMACY_COPY;
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 400);
@@ -54,10 +75,10 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
   const headers = { Authorization: `Bearer ${token}` };
 
   const { data: granted = [], isFetching } = useQuery<AccessRow[]>({
-    queryKey: ["mobile-access", lineId],
+    queryKey: ["mobile-access", ep.list, lineId],
     queryFn: async () =>
       (
-        await axios.get("/medicine/mobile-access", {
+        await axios.get(ep.list, {
           params: { lineId },
           headers,
         })
@@ -69,10 +90,10 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
   const { data: candidates = [], isFetching: loadingCandidates } = useQuery<
     Candidate[]
   >({
-    queryKey: ["mobile-access-candidates", lineId, query],
+    queryKey: ["mobile-access-candidates", ep.candidates, lineId, query],
     queryFn: async () =>
       (
-        await axios.get("/medicine/mobile-access/candidates", {
+        await axios.get(ep.candidates, {
           params: { lineId, query },
           headers,
         })
@@ -82,14 +103,16 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
   });
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["mobile-access", lineId] });
-    qc.invalidateQueries({ queryKey: ["mobile-access-candidates", lineId] });
+    qc.invalidateQueries({ queryKey: ["mobile-access", ep.list, lineId] });
+    qc.invalidateQueries({
+      queryKey: ["mobile-access-candidates", ep.candidates, lineId],
+    });
   };
 
   const grant = useMutation({
     mutationFn: (uid: string) =>
       axios.post(
-        "/medicine/mobile-access",
+        ep.mutate,
         { lineId, userId: uid, grantedById: userId },
         { headers },
       ),
@@ -103,7 +126,7 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
 
   const revoke = useMutation({
     mutationFn: (uid: string) =>
-      axios.delete("/medicine/mobile-access", {
+      axios.delete(ep.mutate, {
         data: { lineId, userId: uid, revokedById: userId },
         headers,
       }),
@@ -125,13 +148,10 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
           <ShieldCheck className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <div>
             <p className="text-xs font-semibold text-blue-900">
-              Who can use the mobile Pharmacy app
+              {text2.heading}
             </p>
             <p className="text-[11px] text-blue-700 mt-0.5 leading-relaxed">
-              Only the users listed below can scan, add stock, and sync medicine
-              data from the mobile app. Everyone else is blocked — this protects
-              your medicine records from unauthorized changes. Add or remove
-              access anytime; you can add yourself too.
+              {text2.body}
             </p>
           </div>
         </div>
@@ -247,8 +267,7 @@ const MobileAccess = ({ token, lineId, userId }: Props) => {
               No one has mobile access yet
             </p>
             <p className="text-[10px] text-gray-500 max-w-[280px]">
-              Until you add someone, no one can use the mobile pharmacy scanner
-              or add stock from a phone.
+              {text2.emptyBody}
             </p>
           </div>
         ) : (

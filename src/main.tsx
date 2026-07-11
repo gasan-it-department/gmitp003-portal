@@ -85,6 +85,7 @@ import Document from "./route/human_resources/Document.tsx";
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
 import DocumentReceiving from "./route/e-sign/Receiving.tsx";
+import DocumentsMobileAccess from "./route/e-sign/MobileAccess.tsx";
 import Dissemination from "./route/e-sign/Dissemination.tsx";
 import DisseminationIndex from "./route/e-sign/DisseminationIndex.tsx";
 import NewDisseminationRoom from "./route/e-sign/NewDisseminationRoom.tsx";
@@ -440,6 +441,7 @@ createRoot(document.getElementById("root")!).render(
               >
                 <Route index={true} element={<EsignHomePannel />} />
                 <Route path="receiving" element={<DocumentReceiving />} />
+                <Route path="mobile-access" element={<DocumentsMobileAccess />} />
                 <Route path="archive" element={<Archive />} />
                 <Route path="archive/:archiveId" element={<ArchiveDetail />} />
                 <Route path="manage-signature" element={<ManageSignature />} />
