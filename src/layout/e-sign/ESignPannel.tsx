@@ -42,6 +42,13 @@ interface OverviewLike {
 
 const TILES: Tile[] = [
   {
+    name: "Document Receiving",
+    description:
+      "Registry of barcode-stickered documents logged by receiving personnel.",
+    Icon: Inbox,
+    path: "receiving",
+  },
+  {
     name: "Document Archive",
     description: "Search, browse and preview archived municipal documents.",
     Icon: Archive,

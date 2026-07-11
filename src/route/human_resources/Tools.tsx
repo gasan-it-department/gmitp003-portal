@@ -5,6 +5,7 @@ import {
   IdCard,
   ChevronRight,
   Sparkles,
+  Wand2,
 } from "lucide-react";
 
 interface Tool {
@@ -23,6 +24,14 @@ const TOOLS: Tool[] = [
       "Design an ID template, drop in Full Name & Position placeholders, and print cards for plantilla or non-plantilla staff.",
     Icon: IdCard,
     path: "id-card",
+  },
+  {
+    key: "bg-remover",
+    title: "Background Remover",
+    description:
+      "Upload a photo and remove its background right in your browser (private — nothing is uploaded), then download a transparent PNG.",
+    Icon: Wand2,
+    path: "background-remover",
   },
 ];
 

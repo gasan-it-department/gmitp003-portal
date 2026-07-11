@@ -20,6 +20,7 @@ import HrApplication from "./route/human_resources/Application.tsx";
 import Provisional from "./route/human_resources/Provisional.tsx";
 import Archived from "./route/human_resources/Archived.tsx";
 import Tools from "./route/human_resources/Tools.tsx";
+import BackgroundRemover from "./route/human_resources/BackgroundRemover.tsx";
 import IdCardMaker from "./route/human_resources/IdCardMaker.tsx";
 import IdCardIssue from "./route/human_resources/IdCardIssue.tsx";
 import IdCardBatch from "./route/human_resources/IdCardBatch.tsx";
@@ -83,6 +84,7 @@ import EsignHome from "./route/e-sign/Main.tsx";
 import Document from "./route/human_resources/Document.tsx";
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
+import DocumentReceiving from "./route/e-sign/Receiving.tsx";
 import Dissemination from "./route/e-sign/Dissemination.tsx";
 import DisseminationIndex from "./route/e-sign/DisseminationIndex.tsx";
 import NewDisseminationRoom from "./route/e-sign/NewDisseminationRoom.tsx";
@@ -356,6 +358,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="provisional" element={<Provisional />} />
                 <Route path="archived" element={<Archived />} />
                 <Route path="tools" element={<Tools />} />
+                <Route
+                  path="tools/background-remover"
+                  element={<BackgroundRemover />}
+                />
                 <Route path="tools/id-card" element={<IdCardMaker />} />
                 <Route path="tools/id-card/issue" element={<IdCardIssue />} />
                 <Route path="tools/id-card/batch" element={<IdCardBatch />} />
@@ -433,6 +439,7 @@ createRoot(document.getElementById("root")!).render(
                 }
               >
                 <Route index={true} element={<EsignHomePannel />} />
+                <Route path="receiving" element={<DocumentReceiving />} />
                 <Route path="archive" element={<Archive />} />
                 <Route path="archive/:archiveId" element={<ArchiveDetail />} />
                 <Route path="manage-signature" element={<ManageSignature />} />

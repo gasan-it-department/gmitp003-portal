@@ -6,6 +6,11 @@ import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Transformers.js (HR Background Remover) ships its own onnxruntime-web WASM
+  // as separate ESM files; Vite pre-bundling breaks it, so exclude it.
+  optimizeDeps: {
+    exclude: ["@huggingface/transformers"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

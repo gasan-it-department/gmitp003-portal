@@ -1228,3 +1228,55 @@ export const setSignatureQr = async (
   });
   return res.data as { message: string; id: string; qrEnabled: boolean };
 };
+
+// ── Document Receiving (barcode-stickered physical documents) ────────────
+
+export interface DocumentReceiveRecord {
+  id: string;
+  lineId: string;
+  barcode: string;
+  title: string;
+  senderUnitId: string | null;
+  senderUnitName: string | null;
+  senderName: string | null;
+  receivedById: string | null;
+  receivedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const documentReceiveList = async (
+  token: string,
+  lineId: string,
+  cursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const res = await axios.get("/document/receive/list", {
+    headers: jsonHeaders(token),
+    params: { lineId, cursor: cursor ?? undefined, limit, query },
+  });
+  return res.data as {
+    list: DocumentReceiveRecord[];
+    hasMore: boolean;
+    lastCursor: string | null;
+  };
+};
+
+export const documentReceiveCreate = async (
+  token: string,
+  body: {
+    lineId: string;
+    barcode: string;
+    title: string;
+    senderUnitId?: string | null;
+    senderUnitName?: string | null;
+    senderName?: string | null;
+    userId?: string | null;
+  },
+) => {
+  const res = await axios.post("/document/receive", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as { record: DocumentReceiveRecord; existing: boolean };
+};
