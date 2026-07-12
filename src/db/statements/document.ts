@@ -1241,6 +1241,7 @@ export interface DocumentReceiveRecord {
   senderName: string | null;
   receivedById: string | null;
   receivedByName: string | null;
+  pages?: { id: string; page: number }[];
   createdAt: string;
   updatedAt: string;
 }

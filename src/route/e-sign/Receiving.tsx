@@ -40,7 +40,9 @@ import {
   Building2,
   User,
   Inbox,
+  FileImage,
 } from "lucide-react";
+import axiosClient from "@/db/axios";
 
 interface UnitOption {
   id: string;
@@ -226,6 +228,9 @@ const Receiving = () => {
                 Received by
               </TableHead>
               <TableHead className="text-xs uppercase tracking-wider">
+                Pages
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider">
                 Date received
               </TableHead>
             </TableRow>
@@ -255,6 +260,26 @@ const Receiving = () => {
                 <TableCell className="text-sm text-gray-600">
                   {r.receivedByName ?? "—"}
                 </TableCell>
+                <TableCell>
+                  {r.pages && r.pages.length > 0 ? (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <FileImage className="h-3.5 w-3.5 text-blue-500" />
+                      {r.pages.map((p) => (
+                        <a
+                          key={p.id}
+                          href={`${axiosClient.defaults.baseURL}/document/receive/page/${p.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          p{p.page}
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-xs text-gray-500">
                   {fmt(r.createdAt)}
                 </TableCell>
@@ -262,7 +287,7 @@ const Receiving = () => {
             ))}
             {rows.length === 0 && !isFetching ? (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <div className="py-12 text-center">
                     <Inbox className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-700">
