@@ -74,11 +74,12 @@ const Receiving = () => {
 
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 600);
+  const [dirFilter, setDirFilter] = useState<"all" | "in" | "out">("all");
   const [pages, setPages] = useState<DocumentReceiveRecord[][]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
 
   const { data, isFetching } = useQuery({
-    queryKey: ["document-receive", lineId, query, cursor],
+    queryKey: ["document-receive", lineId, query, dirFilter, cursor],
     queryFn: async () => {
       const page = await documentReceiveList(
         auth.token as string,
@@ -86,6 +87,7 @@ const Receiving = () => {
         cursor,
         "20",
         query,
+        dirFilter === "all" ? undefined : dirFilter,
       );
       setPages((prev) => (cursor ? [...prev, page.list] : [page.list]));
       return page;
@@ -265,19 +267,47 @@ const Receiving = () => {
         </div>
       </div>
 
-      {/* search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            setCursor(null);
-            setPages([]);
-          }}
-          placeholder="Search barcode, title, sender…"
-          className="pl-9"
-        />
+      {/* search + direction filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setCursor(null);
+              setPages([]);
+            }}
+            placeholder="Search barcode, title, sender…"
+            className="pl-9"
+          />
+        </div>
+        <div className="inline-flex rounded-md border bg-white p-0.5">
+          {(
+            [
+              { key: "all", label: "All" },
+              { key: "in", label: "IN" },
+              { key: "out", label: "OUT" },
+            ] as const
+          ).map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              onClick={() => {
+                setDirFilter(o.key);
+                setCursor(null);
+                setPages([]);
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                dirFilter === o.key
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* table */}

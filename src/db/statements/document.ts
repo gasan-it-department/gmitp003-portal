@@ -1253,10 +1253,17 @@ export const documentReceiveList = async (
   cursor: string | null,
   limit: string,
   query: string,
+  direction?: "in" | "out",
 ) => {
   const res = await axios.get("/document/receive/list", {
     headers: jsonHeaders(token),
-    params: { lineId, cursor: cursor ?? undefined, limit, query },
+    params: {
+      lineId,
+      cursor: cursor ?? undefined,
+      limit,
+      query,
+      direction: direction ?? undefined,
+    },
   });
   return res.data as {
     list: DocumentReceiveRecord[];
