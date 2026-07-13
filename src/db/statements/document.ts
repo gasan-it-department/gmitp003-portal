@@ -1241,6 +1241,7 @@ export interface DocumentReceiveRecord {
   senderName: string | null;
   receivedById: string | null;
   receivedByName: string | null;
+  direction: "in" | "out";
   pages?: { id: string; page: number }[];
   createdAt: string;
   updatedAt: string;
@@ -1273,6 +1274,7 @@ export const documentReceiveCreate = async (
     senderUnitId?: string | null;
     senderUnitName?: string | null;
     senderName?: string | null;
+    direction?: "in" | "out";
     userId?: string | null;
   },
 ) => {

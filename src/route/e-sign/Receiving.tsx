@@ -44,6 +44,8 @@ import {
   Barcode,
   Printer,
   Download,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from "lucide-react";
 import axiosClient from "@/db/axios";
 import {
@@ -102,6 +104,7 @@ const Receiving = () => {
   const [senderMode, setSenderMode] = useState<"unit" | "manual">("unit");
   const [senderUnitId, setSenderUnitId] = useState("");
   const [senderName, setSenderName] = useState("");
+  const [direction, setDirection] = useState<"in" | "out">("in");
 
   // ── barcode-label generator ─────────────────────────────────────────────
   const [bcOpen, setBcOpen] = useState(false);
@@ -166,6 +169,7 @@ const Receiving = () => {
     setSenderMode("unit");
     setSenderUnitId("");
     setSenderName("");
+    setDirection("in");
   };
 
   const onRegister = async () => {
@@ -193,6 +197,7 @@ const Receiving = () => {
         senderUnitId: senderMode === "unit" ? senderUnitId : null,
         senderUnitName: senderMode === "unit" ? (unit?.name ?? null) : null,
         senderName: senderMode === "manual" ? senderName.trim() : null,
+        direction,
         userId: auth.userId ?? null,
       });
       if (res.existing) {
@@ -281,6 +286,9 @@ const Receiving = () => {
           <TableHeader className="bg-gray-50">
             <TableRow>
               <TableHead className="text-xs uppercase tracking-wider">
+                Dir.
+              </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider">
                 Barcode
               </TableHead>
               <TableHead className="text-xs uppercase tracking-wider">
@@ -303,6 +311,17 @@ const Receiving = () => {
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.id}>
+                <TableCell>
+                  {r.direction === "out" ? (
+                    <Badge className="gap-1 bg-amber-100 text-amber-700 border-amber-200 font-medium">
+                      <ArrowUpRight className="h-3 w-3" /> OUT
+                    </Badge>
+                  ) : (
+                    <Badge className="gap-1 bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
+                      <ArrowDownLeft className="h-3 w-3" /> IN
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="font-mono text-xs">{r.barcode}</TableCell>
                 <TableCell className="text-sm font-medium text-gray-900">
                   {r.title}
@@ -352,7 +371,7 @@ const Receiving = () => {
             ))}
             {rows.length === 0 && !isFetching ? (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <div className="py-12 text-center">
                     <Inbox className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm font-medium text-gray-700">
@@ -400,6 +419,27 @@ const Receiving = () => {
         className="max-w-md"
       >
         <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-gray-700">Direction</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <Button
+                type="button"
+                variant={direction === "in" ? "default" : "outline"}
+                onClick={() => setDirection("in")}
+                className="gap-1.5"
+              >
+                <ArrowDownLeft className="h-4 w-4" /> IN (received)
+              </Button>
+              <Button
+                type="button"
+                variant={direction === "out" ? "default" : "outline"}
+                onClick={() => setDirection("out")}
+                className="gap-1.5"
+              >
+                <ArrowUpRight className="h-4 w-4" /> OUT (released)
+              </Button>
+            </div>
+          </div>
           <div>
             <label className="text-xs font-medium text-gray-700">
               Barcode (from the sticker)
