@@ -43,9 +43,14 @@ import {
   FileImage,
   Barcode,
   Printer,
+  Download,
 } from "lucide-react";
 import axiosClient from "@/db/axios";
-import { printBarcodeSheet, LABELS_PER_SHEET } from "@/utils/barcodeSheet";
+import {
+  printBarcodeSheet,
+  downloadBarcodePdf,
+  LABELS_PER_SHEET,
+} from "@/utils/barcodeSheet";
 
 interface UnitOption {
   id: string;
@@ -114,31 +119,44 @@ const Receiving = () => {
   });
   const units: UnitOption[] = unitsData?.list ?? [];
 
-  const onGenerateBarcodes = () => {
+  const bcOpts = () => {
     const unit = units.find((u) => u.id === bcUnitId);
     const unitName = unit?.name?.trim();
     if (!unitName) {
       toast.error("Pick the unit / office the labels are for.");
-      return;
+      return null;
     }
     if (!bcMunicipality.trim() || !bcProvince.trim()) {
       toast.error("Municipality and province are required.");
-      return;
+      return null;
     }
-    const sheets = Math.max(1, Math.min(20, parseInt(bcSheets, 10) || 1));
-    const made = printBarcodeSheet({
+    return {
       municipality: bcMunicipality.trim(),
       province: bcProvince.trim(),
       unit: unitName,
-      sheets,
-    });
+      sheets: Math.max(1, Math.min(20, parseInt(bcSheets, 10) || 1)),
+    };
+  };
+
+  const onDownloadPdf = () => {
+    const o = bcOpts();
+    if (!o) return;
+    const made = downloadBarcodePdf(o);
+    toast.success(`Downloaded A4 PDF — ${made} label(s).`);
+    setBcOpen(false);
+  };
+
+  const onPrintBarcodes = () => {
+    const o = bcOpts();
+    if (!o) return;
+    const made = printBarcodeSheet(o);
     if (made === 0) {
       toast.error("Pop-up blocked", {
-        description: "Allow pop-ups for this site, then generate again.",
+        description: "Allow pop-ups for this site, then try again.",
       });
       return;
     }
-    toast.success(`Generating ${made} label(s) across ${sheets} sheet(s).`);
+    toast.success(`Generating ${made} label(s) to print.`);
     setBcOpen(false);
   };
 
@@ -479,9 +497,12 @@ const Receiving = () => {
             <p className="text-xs text-blue-800">
               Fills each A4 sheet with{" "}
               <span className="font-semibold">{LABELS_PER_SHEET} labels</span>{" "}
-              (40 × 30&nbsp;mm each), with dashed cut lines. Each label shows the
-              office header and a unique EAN-13 barcode. Print at 100% scale
-              (“Actual size”, no fit-to-page) so the labels stay 40 × 30&nbsp;mm.
+              (40 × 30&nbsp;mm each), dashed cut lines, and a unique EAN-13
+              barcode per label.{" "}
+              <span className="font-semibold">Download A4 PDF</span> is
+              recommended — the page is A4 inside the file, so the printer can’t
+              shrink it to Folio/Long. When printing the PDF, keep scale at 100%
+              (“Actual size”).
             </p>
           </div>
 
@@ -544,8 +565,11 @@ const Receiving = () => {
             <Button variant="outline" onClick={() => setBcOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={onGenerateBarcodes} className="gap-2">
-              <Printer className="h-4 w-4" /> Generate &amp; print
+            <Button variant="outline" onClick={onPrintBarcodes} className="gap-2">
+              <Printer className="h-4 w-4" /> Print
+            </Button>
+            <Button onClick={onDownloadPdf} className="gap-2">
+              <Download className="h-4 w-4" /> Download A4 PDF
             </Button>
           </div>
         </div>

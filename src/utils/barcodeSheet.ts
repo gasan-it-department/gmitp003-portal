@@ -1,4 +1,5 @@
 import JsBarcode from "jsbarcode";
+import { jsPDF } from "jspdf";
 
 /**
  * A4 sheet of EAN-13 barcode labels for Document Receiving.
@@ -147,5 +148,116 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   win.document.open();
   win.document.write(html);
   win.document.close();
+  return total;
+}
+
+// ── EAN-13 encoding (draw bars directly into the PDF as vector rects) ──────
+const EAN_L = ["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"]; // prettier-ignore
+const EAN_G = ["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010001","0001001","0010111"]; // prettier-ignore
+const EAN_R = ["1110010","1100110","1101100","1000010","1011100","1001110","1010000","1000100","1001000","1110100"]; // prettier-ignore
+const EAN_PARITY = ["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"]; // prettier-ignore
+
+function ean13Check(d12: string): number {
+  let s = 0;
+  for (let i = 0; i < 12; i++) s += +d12[i] * (i % 2 === 0 ? 1 : 3);
+  return (10 - (s % 10)) % 10;
+}
+
+/** 12 data digits → full 13-digit value + its 95-module binary pattern. */
+function ean13(d12: string): { value: string; bits: string } {
+  const value = d12 + ean13Check(d12);
+  const parity = EAN_PARITY[+value[0]];
+  let bits = "101";
+  for (let i = 1; i <= 6; i++)
+    bits += parity[i - 1] === "L" ? EAN_L[+value[i]] : EAN_G[+value[i]];
+  bits += "01010";
+  for (let i = 7; i <= 12; i++) bits += EAN_R[+value[i]];
+  bits += "101";
+  return { value, bits };
+}
+
+/**
+ * Build and DOWNLOAD a real A4 PDF of barcode labels — paper size is A4
+ * inside the file, so it can't be overridden by the printer's default page
+ * size. Barcodes are drawn as vector rectangles (sharpest possible) and the
+ * text is native PDF text. Returns the number of labels generated.
+ */
+export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
+  const sheets = Math.max(1, Math.min(20, Math.floor(opts.sheets ?? 1)));
+  const total = sheets * LABELS_PER_SHEET;
+
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const MARGIN_X = 5;
+  const MARGIN_Y = 13.5;
+  const CW = 40; // cell width mm
+  const CH = 30; // cell height mm
+  const BC_W = 30; // barcode width mm (95 modules)
+  const MOD = BC_W / 95;
+  const BC_H = 10; // bar height mm
+
+  const muniText = `${opts.municipality} ${opts.province}`.toUpperCase();
+  const batch = String(100000 + Math.floor(Math.random() * 900000));
+
+  for (let i = 0; i < total; i++) {
+    const posInSheet = i % LABELS_PER_SHEET;
+    if (i > 0 && posInSheet === 0) doc.addPage();
+    const col = posInSheet % COLS;
+    const row = Math.floor(posInSheet / COLS);
+    const x0 = MARGIN_X + col * CW;
+    const y0 = MARGIN_Y + row * CH;
+    const cx = x0 + CW / 2;
+
+    // dashed cut border
+    doc.setDrawColor(120, 120, 120);
+    doc.setLineWidth(0.15);
+    doc.setLineDashPattern([0.8, 0.8], 0);
+    doc.rect(x0, y0, CW, CH, "S");
+    doc.setLineDashPattern([], 0);
+
+    // header text
+    doc.setTextColor(20, 20, 20);
+    doc.setFont("times", "normal");
+    doc.setFontSize(6);
+    doc.setCharSpace(0.3);
+    doc.text(muniText, cx, y0 + 4, { align: "center" });
+    doc.setCharSpace(0);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    const unitLines = doc
+      .splitTextToSize((opts.unit || "").toUpperCase(), CW - 4)
+      .slice(0, 2);
+    unitLines.forEach((ln: string, n: number) =>
+      doc.text(ln, cx, y0 + 7.6 + n * 3.3, { align: "center" }),
+    );
+
+    // barcode bars (merge runs of "1" into single rects)
+    const { value, bits } = ean13(batch + String(i + 1).padStart(6, "0"));
+    const barTop = y0 + 7.6 + unitLines.length * 3.3 + 1;
+    const barX = x0 + (CW - BC_W) / 2;
+    doc.setFillColor(0, 0, 0);
+    let m = 0;
+    while (m < 95) {
+      if (bits[m] === "1") {
+        let j = m;
+        while (j < 95 && bits[j] === "1") j++;
+        doc.rect(barX + m * MOD, barTop, (j - m) * MOD, BC_H, "F");
+        m = j;
+      } else m++;
+    }
+    // human-readable number
+    doc.setFont("courier", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(0, 0, 0);
+    doc.text(value, cx, barTop + BC_H + 2.8, { align: "center" });
+  }
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  const safeUnit = (opts.unit || "labels")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  doc.save(`barcodes-${safeUnit}-${stamp}.pdf`);
   return total;
 }
