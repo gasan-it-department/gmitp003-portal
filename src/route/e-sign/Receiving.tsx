@@ -41,8 +41,11 @@ import {
   User,
   Inbox,
   FileImage,
+  Barcode,
+  Printer,
 } from "lucide-react";
 import axiosClient from "@/db/axios";
+import { printBarcodeSheet, LABELS_PER_SHEET } from "@/utils/barcodeSheet";
 
 interface UnitOption {
   id: string;
@@ -95,14 +98,49 @@ const Receiving = () => {
   const [senderUnitId, setSenderUnitId] = useState("");
   const [senderName, setSenderName] = useState("");
 
+  // ── barcode-label generator ─────────────────────────────────────────────
+  const [bcOpen, setBcOpen] = useState(false);
+  const [bcUnitId, setBcUnitId] = useState("");
+  const [bcMunicipality, setBcMunicipality] = useState("Gasan");
+  const [bcProvince, setBcProvince] = useState("Marinduque");
+  const [bcSheets, setBcSheets] = useState("1");
+
   const { data: unitsData } = useQuery({
     queryKey: ["line-units-all", lineId],
     queryFn: () =>
       getLinetUnits(auth.token as string, lineId as string, null, "200", ""),
-    enabled: !!auth.token && !!lineId && open,
+    enabled: !!auth.token && !!lineId && (open || bcOpen),
     refetchOnWindowFocus: false,
   });
   const units: UnitOption[] = unitsData?.list ?? [];
+
+  const onGenerateBarcodes = () => {
+    const unit = units.find((u) => u.id === bcUnitId);
+    const unitName = unit?.name?.trim();
+    if (!unitName) {
+      toast.error("Pick the unit / office the labels are for.");
+      return;
+    }
+    if (!bcMunicipality.trim() || !bcProvince.trim()) {
+      toast.error("Municipality and province are required.");
+      return;
+    }
+    const sheets = Math.max(1, Math.min(20, parseInt(bcSheets, 10) || 1));
+    const made = printBarcodeSheet({
+      municipality: bcMunicipality.trim(),
+      province: bcProvince.trim(),
+      unit: unitName,
+      sheets,
+    });
+    if (made === 0) {
+      toast.error("Pop-up blocked", {
+        description: "Allow pop-ups for this site, then generate again.",
+      });
+      return;
+    }
+    toast.success(`Generating ${made} label(s) across ${sheets} sheet(s).`);
+    setBcOpen(false);
+  };
 
   const resetForm = () => {
     setBarcode("");
@@ -190,9 +228,18 @@ const Receiving = () => {
             </p>
           </div>
         </div>
-        <Button onClick={() => setOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Register document
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBcOpen(true)}
+            className="gap-2"
+          >
+            <Barcode className="h-4 w-4" /> Generate barcodes
+          </Button>
+          <Button onClick={() => setOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Register document
+          </Button>
+        </div>
       </div>
 
       {/* search */}
@@ -414,6 +461,91 @@ const Receiving = () => {
             <Button onClick={onRegister} disabled={saving} className="gap-2">
               {saving ? <Spinner className="h-4 w-4" /> : null}
               Register
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* barcode-label generator dialog */}
+      <Modal
+        title="Generate barcode labels"
+        onOpen={bcOpen}
+        setOnOpen={() => setBcOpen(false)}
+        footer={1}
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="rounded-md bg-blue-50 border border-blue-200 p-3">
+            <p className="text-xs text-blue-800">
+              Fills each A4 sheet with{" "}
+              <span className="font-semibold">{LABELS_PER_SHEET} labels</span>{" "}
+              (40 × 30&nbsp;mm each), with dashed cut lines. Each label shows the
+              office header and a unique EAN-13 barcode. Print at 100% scale
+              (“Actual size”, no fit-to-page) so the labels stay 40 × 30&nbsp;mm.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-700">
+                Municipality
+              </label>
+              <Input
+                value={bcMunicipality}
+                onChange={(e) => setBcMunicipality(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700">
+                Province
+              </label>
+              <Input
+                value={bcProvince}
+                onChange={(e) => setBcProvince(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-700">
+              Unit / Office / Department
+            </label>
+            <Select value={bcUnitId} onValueChange={setBcUnitId}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select the office these labels are for…" />
+              </SelectTrigger>
+              <SelectContent>
+                {units.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name ?? u.idCode ?? u.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-1/2">
+            <label className="text-xs font-medium text-gray-700">
+              Sheets (A4)
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              value={bcSheets}
+              onChange={(e) => setBcSheets(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={() => setBcOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={onGenerateBarcodes} className="gap-2">
+              <Printer className="h-4 w-4" /> Generate &amp; print
             </Button>
           </div>
         </div>
