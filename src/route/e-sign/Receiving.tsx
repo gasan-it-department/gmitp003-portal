@@ -497,8 +497,8 @@ const Receiving = () => {
             <p className="text-xs text-blue-800">
               Fills each A4 sheet with{" "}
               <span className="font-semibold">{LABELS_PER_SHEET} labels</span>{" "}
-              (40 × 30&nbsp;mm each), dashed cut lines, and a unique EAN-13
-              barcode per label.{" "}
+              edge-to-edge (≈40 × 32&nbsp;mm each, minimal margins), dashed cut
+              lines, and a unique EAN-13 barcode per label.{" "}
               <span className="font-semibold">Download A4 PDF</span> is
               recommended — the page is A4 inside the file, so the printer can’t
               shrink it to Folio/Long. When printing the PDF, keep scale at 100%

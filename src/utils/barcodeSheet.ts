@@ -106,17 +106,17 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   html, body { width: 210mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sheet {
     width: 210mm; height: 297mm;
-    padding: 13.5mm 5mm;
+    padding: 5mm;
     display: grid;
-    grid-template-columns: repeat(${COLS}, 40mm);
-    grid-template-rows: repeat(${ROWS}, 30mm);
+    grid-template-columns: repeat(${COLS}, 1fr);
+    grid-template-rows: repeat(${ROWS}, 1fr);
     page-break-after: always;
   }
   .sheet:last-child { page-break-after: auto; }
   .st {
-    width: 40mm; height: 30mm;
+    width: 100%; height: 100%;
     border: 0.3mm dashed #777;
-    padding: 1.2mm 1.5mm;
+    padding: 1mm 1.5mm;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     text-align: center; overflow: hidden;
@@ -130,10 +130,10 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 8pt; font-weight: 800; letter-spacing: 0.2pt;
     text-transform: uppercase; color: #000;
-    line-height: 1.05; margin: 0.6mm 0 0.8mm;
+    line-height: 1.05; margin: 0.6mm 0 0.9mm;
   }
-  .bc { width: 34mm; }
-  .bc svg { width: 100%; height: 13mm; display: block; }
+  .bc { width: 35mm; }
+  .bc svg { width: 100%; height: 15mm; display: block; }
   @media screen {
     body { background: #64748b; padding: 8mm 0; }
     .sheet { margin: 0 auto 8mm; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
@@ -187,13 +187,13 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
   const total = sheets * LABELS_PER_SHEET;
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  // Minimal margins on every side — labels grow to fill the whole A4.
   const MARGIN_X = 5;
-  const MARGIN_Y = 13.5;
-  const CW = 40; // cell width mm
-  const CH = 30; // cell height mm
-  const BC_W = 30; // barcode width mm (95 modules)
+  const MARGIN_Y = 5;
+  const CW = (210 - 2 * MARGIN_X) / COLS; // 40mm wide
+  const CH = (297 - 2 * MARGIN_Y) / ROWS; // ~31.9mm tall
+  const BC_W = 35; // enlarged barcode width mm (95 modules)
   const MOD = BC_W / 95;
-  const BC_H = 10; // bar height mm
 
   const muniText = `${opts.municipality} ${opts.province}`.toUpperCase();
   const batch = String(100000 + Math.floor(Math.random() * 900000));
@@ -232,9 +232,12 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
       doc.text(ln, cx, y0 + 7.6 + n * 3.3, { align: "center" }),
     );
 
-    // barcode bars (merge runs of "1" into single rects)
+    // barcode bars (merge runs of "1" into single rects). Bar height fills the
+    // space left under the header — taller when the unit is one line.
     const { value, bits } = ean13(batch + String(i + 1).padStart(6, "0"));
-    const barTop = y0 + 7.6 + unitLines.length * 3.3 + 1;
+    const headerBottom = 7.6 + unitLines.length * 3.3 + 1.4; // from y0
+    const barTop = y0 + headerBottom;
+    const BC_H = Math.min(16, CH - headerBottom - 4); // 4mm: number + bottom pad
     const barX = x0 + (CW - BC_W) / 2;
     doc.setFillColor(0, 0, 0);
     let m = 0;
@@ -248,9 +251,9 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
     }
     // human-readable number
     doc.setFont("courier", "normal");
-    doc.setFontSize(7);
+    doc.setFontSize(7.5);
     doc.setTextColor(0, 0, 0);
-    doc.text(value, cx, barTop + BC_H + 2.8, { align: "center" });
+    doc.text(value, cx, barTop + BC_H + 2.9, { align: "center" });
   }
 
   const stamp = new Date().toISOString().slice(0, 10);
