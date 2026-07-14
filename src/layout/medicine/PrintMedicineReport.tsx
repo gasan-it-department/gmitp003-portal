@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "@/db/axios";
+import { useAuth } from "@/provider/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import { useMutation } from "@tanstack/react-query";
@@ -17,11 +18,18 @@ interface Props {
 
 const PrintMedicineReport = ({ storageId }: Props) => {
   const [isOpen, setIsOpen] = useState(0);
+  const auth = useAuth();
 
   const downloadMedicineReport = async () => {
     try {
-      // Make the API request with axios
+      // Make the API request with axios. The endpoint is Bearer-authenticated
+      // (the shared axios instance doesn't inject the token), so pass it here —
+      // otherwise the download 401s.
       const response = await axios.get("/medicine/export/report", {
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "X-Requested-With": "XMLHttpRequest",
+        },
         params: {
           storgeId: storageId, // Note: keeping the same parameter name as your backend
         },
