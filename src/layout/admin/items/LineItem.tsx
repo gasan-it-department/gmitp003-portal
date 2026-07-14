@@ -2,7 +2,12 @@ import { memo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 //
-import { updateLineStatus, deleteLine } from "@/db/statements/line";
+import {
+  updateLineStatus,
+  deleteLine,
+  openLineHrSession,
+} from "@/db/statements/line";
+import { enterLineHr } from "@/utils/impersonation";
 
 //
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -39,6 +44,7 @@ import {
   Trash2,
   Power,
   Copy,
+  UserCog,
 } from "lucide-react";
 
 interface Props {
@@ -80,6 +86,14 @@ const LineItem = ({ item, query, token, userId }: Props) => {
         refetchType: "active",
       });
     },
+  });
+
+  // Super-admin: open THIS line's HR (mints a real line session, then enters
+  // the existing HR module scoped to the line).
+  const manageHrMutation = useMutation({
+    mutationFn: () => openLineHrSession(token, item.id),
+    onError: () => toast.error("Couldn't open this line's HR"),
+    onSuccess: (session) => enterLineHr(session),
   });
 
   const deleteLineMutation = useMutation({
@@ -223,6 +237,21 @@ const LineItem = ({ item, query, token, userId }: Props) => {
                 sideOffset={5}
               >
                 <div className="space-y-1">
+                  {/* Manage HR — full HR control of this line as super-admin */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start h-9 px-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    disabled={item.status !== 1 || manageHrMutation.isPending}
+                    onClick={() => {
+                      setIsOpen(false);
+                      manageHrMutation.mutate();
+                    }}
+                  >
+                    <UserCog className="w-3.5 h-3.5 mr-2" />
+                    {manageHrMutation.isPending ? "Opening HR…" : "Manage HR"}
+                  </Button>
+
                   {/* View Details */}
                   {/* <Button
                     variant="ghost"

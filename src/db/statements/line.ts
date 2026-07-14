@@ -1,5 +1,30 @@
 import axios from "../axios";
 
+/**
+ * Super-admin: mint a real line session for the target line so the admin can
+ * manage that line's HR (the whole existing HR module, scoped to the line).
+ */
+export const openLineHrSession = async (token: string, lineId: string) => {
+  const response = await axios.post(
+    `/admin/line/${lineId}/hr-session`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  return response.data as {
+    token: string;
+    accountId: string;
+    lineId: string;
+    lineName: string;
+  };
+};
+
 export const getAllLines = async (
   token: string,
   lastCursor: string | null,
