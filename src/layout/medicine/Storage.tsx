@@ -39,14 +39,13 @@ const STORAGE_ACCESS_ENDPOINTS = {
 const STORAGE_ACCESS_COPY = {
   heading: "Who can dispense & restock from this storage",
   body:
-    "Assign the users allowed to dispense and restock medicines held in THIS storage. " +
-    "A user assigned to at least one storage can only act in the storages they're assigned to — " +
-    "on the web and on the pharmacy desktop app. Users with no assignments anywhere remain " +
-    "unrestricted, so nothing changes until you assign someone.",
-  emptyTitle: "No one is assigned to this storage yet",
+    "Only the users listed below can dispense and restock medicines held in THIS storage — " +
+    "everyone else is blocked, on the web and on the pharmacy desktop app. " +
+    "Storages are locked by default: assign the staff who work this storage (you can add yourself too).",
+  emptyTitle: "This storage is locked — no one can dispense yet",
   emptyBody:
-    "Until you assign someone, any pharmacy user can dispense and restock here. " +
-    "Assign a user to start restricting who can touch this storage's stock.",
+    "Storages are locked by default. Until you assign someone here, NO ONE can dispense " +
+    "or restock this storage's stock. Add the pharmacy staff who should have access.",
 };
 
 const Storage = () => {
