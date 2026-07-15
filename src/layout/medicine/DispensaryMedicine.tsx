@@ -159,9 +159,12 @@ const DispensaryMedicine = ({ token, id, userId, status }: Props) => {
       });
       toast.success("Success");
       nav(-1);
-    } catch (error) {
+    } catch (error: any) {
+      // surface the server's own message (e.g. the storage-access denial)
+      const serverMsg =
+        error?.response?.data?.message ?? error?.message ?? `${error}`;
       toast.error("Failed to submit", {
-        description: `${error}`,
+        description: serverMsg,
       });
     }
   };

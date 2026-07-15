@@ -31,7 +31,16 @@ interface Props {
    *  other modules (e.g. Documents) reuse this exact grant/revoke UI. */
   endpoints?: { list: string; candidates: string; mutate: string };
   /** Override the explainer copy — defaults to the Pharmacy wording. */
-  copy?: { heading: string; body: string; emptyBody: string };
+  copy?: {
+    heading: string;
+    body: string;
+    emptyBody: string;
+    emptyTitle?: string;
+  };
+  /** Extra request params sent with every call (query params on the GETs,
+   *  body fields on grant/revoke) — e.g. { storageId } for the per-storage
+   *  Dispense Access tab. Also part of the cache keys. */
+  extraParams?: Record<string, string>;
 }
 
 const PHARMACY_ENDPOINTS = {
@@ -64,9 +73,18 @@ interface Candidate {
   department: string | null;
 }
 
-const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
+const MobileAccess = ({
+  token,
+  lineId,
+  userId,
+  endpoints,
+  copy,
+  extraParams,
+}: Props) => {
   const ep = endpoints ?? PHARMACY_ENDPOINTS;
   const text2 = copy ?? PHARMACY_COPY;
+  const extra = extraParams ?? {};
+  const extraKey = JSON.stringify(extra);
   const qc = useQueryClient();
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 400);
@@ -75,11 +93,11 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
   const headers = { Authorization: `Bearer ${token}` };
 
   const { data: granted = [], isFetching } = useQuery<AccessRow[]>({
-    queryKey: ["mobile-access", ep.list, lineId],
+    queryKey: ["mobile-access", ep.list, lineId, extraKey],
     queryFn: async () =>
       (
         await axios.get(ep.list, {
-          params: { lineId },
+          params: { lineId, ...extra },
           headers,
         })
       ).data.list ?? [],
@@ -90,11 +108,17 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
   const { data: candidates = [], isFetching: loadingCandidates } = useQuery<
     Candidate[]
   >({
-    queryKey: ["mobile-access-candidates", ep.candidates, lineId, query],
+    queryKey: [
+      "mobile-access-candidates",
+      ep.candidates,
+      lineId,
+      extraKey,
+      query,
+    ],
     queryFn: async () =>
       (
         await axios.get(ep.candidates, {
-          params: { lineId, query },
+          params: { lineId, query, ...extra },
           headers,
         })
       ).data.list ?? [],
@@ -103,9 +127,11 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
   });
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["mobile-access", ep.list, lineId] });
     qc.invalidateQueries({
-      queryKey: ["mobile-access-candidates", ep.candidates, lineId],
+      queryKey: ["mobile-access", ep.list, lineId, extraKey],
+    });
+    qc.invalidateQueries({
+      queryKey: ["mobile-access-candidates", ep.candidates, lineId, extraKey],
     });
   };
 
@@ -113,12 +139,12 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
     mutationFn: (uid: string) =>
       axios.post(
         ep.mutate,
-        { lineId, userId: uid, grantedById: userId },
+        { lineId, userId: uid, grantedById: userId, ...extra },
         { headers },
       ),
     onSuccess: () => {
       invalidate();
-      toast.success("Mobile access granted");
+      toast.success("Access granted");
     },
     onError: (e: any) =>
       toast.error(e?.response?.data?.message ?? "Failed to grant access"),
@@ -127,12 +153,12 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
   const revoke = useMutation({
     mutationFn: (uid: string) =>
       axios.delete(ep.mutate, {
-        data: { lineId, userId: uid, revokedById: userId },
+        data: { lineId, userId: uid, revokedById: userId, ...extra },
         headers,
       }),
     onSuccess: () => {
       invalidate();
-      toast.success("Mobile access removed");
+      toast.success("Access removed");
     },
     onError: (e: any) =>
       toast.error(e?.response?.data?.message ?? "Failed to remove access"),
@@ -264,7 +290,7 @@ const MobileAccess = ({ token, lineId, userId, endpoints, copy }: Props) => {
               <AlertCircle className="h-5 w-5 text-gray-300" />
             </div>
             <p className="text-xs font-medium text-gray-700">
-              No one has mobile access yet
+              {text2.emptyTitle ?? "No one has mobile access yet"}
             </p>
             <p className="text-[10px] text-gray-500 max-w-[280px]">
               {text2.emptyBody}

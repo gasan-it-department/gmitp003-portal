@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 
 import StorageMedList from "./StorageMedList";
 import MedicineInfo from "./MedicineInfo";
+import MobileAccess from "./MobileAccess";
 
 import {
   ListCheck,
@@ -22,9 +23,31 @@ import {
   Loader2,
   ArrowLeft,
   Hash,
+  ShieldCheck,
 } from "lucide-react";
 
 import type { MedicineStorage } from "@/interface/data";
+
+// Per-storage Dispense Access — reuses the Mobile Access grant/revoke UI
+// against the storage-scoped endpoints (storageId rides in extraParams).
+const STORAGE_ACCESS_ENDPOINTS = {
+  list: "/medicine/storage-access",
+  candidates: "/medicine/storage-access/candidates",
+  mutate: "/medicine/storage-access",
+};
+
+const STORAGE_ACCESS_COPY = {
+  heading: "Who can dispense & restock from this storage",
+  body:
+    "Assign the users allowed to dispense and restock medicines held in THIS storage. " +
+    "A user assigned to at least one storage can only act in the storages they're assigned to — " +
+    "on the web and on the pharmacy desktop app. Users with no assignments anywhere remain " +
+    "unrestricted, so nothing changes until you assign someone.",
+  emptyTitle: "No one is assigned to this storage yet",
+  emptyBody:
+    "Until you assign someone, any pharmacy user can dispense and restock here. " +
+    "Assign a user to start restricting who can touch this storage's stock.",
+};
 
 const Storage = () => {
   const { storageId, lineId } = useParams();
@@ -169,6 +192,13 @@ const Storage = () => {
                   <Info className="h-3 w-3" />
                   Information
                 </TabsTrigger>
+                <TabsTrigger
+                  value="access"
+                  className="h-6 px-2 text-[10px] gap-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ShieldCheck className="h-3 w-3" />
+                  Dispense Access
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -192,6 +222,20 @@ const Storage = () => {
                 lineId={lineId as string}
                 userId={auth.userId as string}
                 token={auth.token as string}
+              />
+            </TabsContent>
+
+            <TabsContent
+              value="access"
+              className="flex-1 min-h-0 m-0 p-0 focus-visible:outline-none overflow-auto"
+            >
+              <MobileAccess
+                token={auth.token as string}
+                lineId={lineId as string}
+                userId={auth.userId as string}
+                endpoints={STORAGE_ACCESS_ENDPOINTS}
+                copy={STORAGE_ACCESS_COPY}
+                extraParams={{ storageId: storageId as string }}
               />
             </TabsContent>
           </Tabs>
