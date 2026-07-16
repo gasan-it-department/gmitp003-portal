@@ -2575,6 +2575,70 @@ export const getApplicationData = async (token: string, id: string) => {
   return response.data;
 };
 
+// PUBLIC applicant action — replace the profile photo, or add/replace a
+// document, on the submitted application. target: "profile" | "document".
+export const reuploadApplicationFile = async (args: {
+  applicationId: string;
+  file: File;
+  target: "profile" | "document";
+  attachmentId?: string;
+}) => {
+  const fd = new FormData();
+  fd.append("applicationId", args.applicationId);
+  fd.append("target", args.target);
+  if (args.attachmentId) fd.append("attachmentId", args.attachmentId);
+  fd.append("file", args.file);
+  const response = await axios.post("/application/public/reupload", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data as { message: string; file_url?: string; id?: string };
+};
+
+// PUBLIC applicant action — edit the core contact/identity fields.
+export const editApplicationContact = async (args: {
+  applicationId: string;
+  firstname: string;
+  middleName?: string;
+  lastname: string;
+  suffix?: string;
+  email: string;
+  mobileNo: string;
+  teleNo?: string;
+}) => {
+  const response = await axios.patch(
+    "/application/public/edit-contact",
+    args,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  return response.data as { message: string };
+};
+
+// PUBLIC applicant action — withdraw (cancel) the submitted application.
+// The applicationId UUID is the credential (same model as viewing).
+export const withdrawApplication = async (
+  applicationId: string,
+  reason?: string,
+) => {
+  const response = await axios.post(
+    "/application/public/withdraw",
+    { applicationId, reason },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  return response.data as { message: string; status?: number };
+};
+
 export const publicApplicationData = async (
   token: string,
   applicatioId: string,

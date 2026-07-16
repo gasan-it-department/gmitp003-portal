@@ -3,7 +3,12 @@ import type { MedicineStock, PositionSlotProps } from "@/interface/data";
 export const userActiveStatus = ["Offline", "Active", "Suspended"];
 export const supplyOrderStatus = ["Drafted", "Pending", "Concluded"];
 export const lineStatus = ["Inactinve", "Active", "Suspended"];
-export const applicantionStatus = ["Pending", "For Interview", "Concluded"];
+export const applicantionStatus = [
+  "Pending",
+  "For Interview",
+  "Concluded",
+  "Withdrawn",
+];
 export const prescriptionStatus = ["Pending", "Viewed", "Concluded"];
 export const applicationStatus = ["Pending", "Viewed", "Concluded"];
 export const unitOfMeasures = [

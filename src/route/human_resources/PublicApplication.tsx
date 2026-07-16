@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { toast } from "sonner";
 
@@ -8,8 +8,13 @@ import {
   publicApplicationData,
   downloadPdsExcel,
   resolveAddressNames,
+  withdrawApplication,
+  reuploadApplicationFile,
+  editApplicationContact,
 } from "@/db/statement";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   formatPureDate,
   formatDate,
@@ -40,6 +45,11 @@ import {
   Calendar,
   Loader2,
   Download,
+  XCircle,
+  AlertTriangle,
+  Ban,
+  Camera,
+  Pencil,
 } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
@@ -155,6 +165,116 @@ const PublicApplication = () => {
     }
   };
 
+  // ── Withdraw / cancel ───────────────────────────────────────────────────
+  const queryClient = useQueryClient();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState("");
+  const withdraw = useMutation({
+    mutationFn: () => withdrawApplication(applicationId as string, withdrawReason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["public-application-data", applicationId],
+      });
+      setWithdrawOpen(false);
+      setWithdrawReason("");
+      toast.success("Your application has been withdrawn.");
+    },
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.message ?? "Couldn't withdraw. Please try again.",
+      ),
+  });
+
+  // status: 0 Pending · 1 For Interview · 2 Concluded · 3 Withdrawn
+  const isWithdrawn = data?.status === 3;
+  const isConcluded = data?.status === 2;
+  const canWithdraw = !!data && !isWithdrawn && !isConcluded;
+  // same rule: nothing is editable once concluded or withdrawn
+  const canEdit = canWithdraw;
+
+  // ── Replace profile photo ───────────────────────────────────────────────
+  const changePhoto = useMutation({
+    mutationFn: (file: File) =>
+      reuploadApplicationFile({
+        applicationId: applicationId as string,
+        file,
+        target: "profile",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["public-application-data", applicationId],
+      });
+      toast.success("Photo updated.");
+    },
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.message ?? "Couldn't update the photo. Try again.",
+      ),
+  });
+
+  const onPickPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image is too large (max 5 MB).");
+      return;
+    }
+    changePhoto.mutate(file);
+  };
+
+  // ── Edit core details (name / email / phone) ────────────────────────────
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    firstname: "",
+    middleName: "",
+    lastname: "",
+    suffix: "",
+    email: "",
+    mobileNo: "",
+    teleNo: "",
+  });
+  const openEdit = () => {
+    if (!data) return;
+    setEditForm({
+      firstname: data.firstname ?? "",
+      middleName: data.middleName === "N/A" ? "" : data.middleName ?? "",
+      lastname: data.lastname ?? "",
+      suffix: data.suffix === "N/A" ? "" : data.suffix ?? "",
+      email: data.email ?? "",
+      mobileNo: data.mobileNo ?? "",
+      teleNo: data.teleNo ?? "",
+    });
+    setEditOpen(true);
+  };
+  const setField = (k: keyof typeof editForm, v: string) =>
+    setEditForm((f) => ({ ...f, [k]: v }));
+  const editMut = useMutation({
+    mutationFn: () =>
+      editApplicationContact({
+        applicationId: applicationId as string,
+        ...editForm,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["public-application-data", applicationId],
+      });
+      setEditOpen(false);
+      toast.success("Your details were updated.");
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? "Couldn't save. Try again."),
+  });
+  const editValid =
+    editForm.firstname.trim() &&
+    editForm.lastname.trim() &&
+    editForm.email.trim() &&
+    editForm.mobileNo.trim();
+
   if (isFetching && !data) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -217,20 +337,220 @@ const PublicApplication = () => {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
+
+      {/* ── Withdraw confirmation ── */}
+      {withdrawOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 border-b bg-red-50 flex items-start gap-2.5">
+              <div className="p-1.5 bg-red-100 rounded-md flex-shrink-0">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Withdraw this application?
+                </h3>
+                <p className="text-[10px] text-red-700 mt-0.5">
+                  The office will be notified that you cancelled. You can message
+                  them afterward if you change your mind.
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">
+                Reason (optional)
+              </p>
+              <Textarea
+                value={withdrawReason}
+                onChange={(e) => setWithdrawReason(e.target.value)}
+                placeholder="e.g. I accepted another position."
+                className="text-xs min-h-[64px] resize-none"
+                disabled={withdraw.isPending}
+              />
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setWithdrawOpen(false)}
+                disabled={withdraw.isPending}
+              >
+                Keep application
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => withdraw.mutate()}
+                disabled={withdraw.isPending}
+              >
+                {withdraw.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Withdrawing...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-3.5 w-3.5" />
+                    Withdraw
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit core details ── */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Edit your details
+                </h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  Fix your name or how the office can reach you. The rest of your
+                  PDS stays as submitted.
+                </p>
+              </div>
+            </div>
+            <div className="px-4 py-3 space-y-2.5 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">First name *</span>
+                  <Input
+                    value={editForm.firstname}
+                    onChange={(e) => setField("firstname", e.target.value)}
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">Last name *</span>
+                  <Input
+                    value={editForm.lastname}
+                    onChange={(e) => setField("lastname", e.target.value)}
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">Middle name</span>
+                  <Input
+                    value={editForm.middleName}
+                    onChange={(e) => setField("middleName", e.target.value)}
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">Suffix</span>
+                  <Input
+                    value={editForm.suffix}
+                    onChange={(e) => setField("suffix", e.target.value)}
+                    placeholder="Jr., III"
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-[10px] font-semibold text-gray-700">Email *</span>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  className="h-8 text-xs mt-0.5"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">Mobile *</span>
+                  <Input
+                    value={editForm.mobileNo}
+                    onChange={(e) => setField("mobileNo", e.target.value)}
+                    placeholder="09XX XXX XXXX"
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">Telephone</span>
+                  <Input
+                    value={editForm.teleNo}
+                    onChange={(e) => setField("teleNo", e.target.value)}
+                    className="h-8 text-xs mt-0.5"
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setEditOpen(false)}
+                disabled={editMut.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => editMut.mutate()}
+                disabled={editMut.isPending || !editValid}
+              >
+                {editMut.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto p-3 space-y-3">
 
         {/* Header card */}
         <div className="border rounded-lg bg-white overflow-hidden">
           <div className="p-3 flex items-center gap-3">
-            <Avatar className="h-12 w-12 flex-shrink-0">
-              <AvatarImage
-                src={data.profilePic?.file_url}
-                alt={data.profilePic?.file_name}
-              />
-              <AvatarFallback className="text-xs">
-                {(data.firstname?.[0] ?? "") + (data.lastname?.[0] ?? "")}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-12 w-12">
+                <AvatarImage
+                  src={data.profilePic?.file_url}
+                  alt={data.profilePic?.file_name}
+                />
+                <AvatarFallback className="text-xs">
+                  {(data.firstname?.[0] ?? "") + (data.lastname?.[0] ?? "")}
+                </AvatarFallback>
+              </Avatar>
+              {canEdit && (
+                <>
+                  <label
+                    htmlFor="change-photo"
+                    title="Change photo"
+                    className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center cursor-pointer shadow"
+                  >
+                    {changePhoto.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Camera className="h-3 w-3" />
+                    )}
+                  </label>
+                  <input
+                    id="change-photo"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onPickPhoto}
+                    disabled={changePhoto.isPending}
+                  />
+                </>
+              )}
+            </div>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-gray-900 truncate">
                 {fullName || "Unnamed applicant"}
@@ -253,22 +573,70 @@ const PublicApplication = () => {
                 </span>
               </div>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto h-8 text-xs gap-1.5 shrink-0"
-              onClick={handleDownloadPds}
-              disabled={downloading}
-            >
-              {downloading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="h-3.5 w-3.5" />
+            <div className="ml-auto flex items-center gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs gap-1.5"
+                onClick={handleDownloadPds}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
+                Download PDS (Excel)
+              </Button>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={openEdit}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit details
+                </Button>
               )}
-              Download PDS (Excel)
-            </Button>
+              {canWithdraw && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => setWithdrawOpen(true)}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                  Withdraw
+                </Button>
+              )}
+              {isWithdrawn && (
+                <Badge
+                  variant="outline"
+                  className="h-8 px-2.5 gap-1.5 text-[11px] bg-red-50 text-red-700 border-red-200 flex items-center"
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                  Withdrawn
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
+
+        {isWithdrawn && (
+          <div className="border border-red-200 bg-red-50 rounded-lg p-3 flex items-start gap-2.5">
+            <Ban className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-semibold text-red-800">
+                You withdrew this application
+              </p>
+              <p className="text-[11px] text-red-700 mt-0.5">
+                The office has been notified. If this was a mistake, message them
+                below and they can reopen it.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Body grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
