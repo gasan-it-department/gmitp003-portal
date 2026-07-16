@@ -72,7 +72,7 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
       itemNumber: "",
       slotCount: "1",
       level: "",
-      slot: [{ status: false, salaryGrade: "1" }],
+      slot: [{ status: false, salaryGrade: "" }],
       exclusive: false,
     },
   });
@@ -97,7 +97,7 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
     if (current.length < desired) {
       const next = [...current];
       while (next.length < desired) {
-        next.push({ status: false, salaryGrade: "1" });
+        next.push({ status: false, salaryGrade: "" });
       }
       setValue("slot", next);
     } else {
@@ -162,7 +162,15 @@ const AddPosition = ({ unitId, lineId, token, userId }: Props) => {
 
         <Form {...form}>
           <form
-            onSubmit={handleSubmit((d) => createMut.mutateAsync(d))}
+            onSubmit={handleSubmit((d) => {
+              // A slot's salary grade defaults empty — block submit until each
+              // is chosen, so we never send a placeholder into the FK.
+              if (d.slot.some((s) => !s.salaryGrade)) {
+                toast.error("Choose a salary grade for every slot.");
+                return;
+              }
+              return createMut.mutateAsync(d);
+            })}
             className="space-y-3"
           >
             {/* Options */}
