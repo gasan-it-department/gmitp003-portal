@@ -92,7 +92,11 @@ const LineItem = ({ item, query, token, userId }: Props) => {
   // the existing HR module scoped to the line).
   const manageHrMutation = useMutation({
     mutationFn: () => openLineHrSession(token, item.id),
-    onError: () => toast.error("Couldn't open this line's HR"),
+    // surface the server's reason (e.g. the line has no staff account yet)
+    onError: (e: any) =>
+      toast.error("Couldn't open this line's HR", {
+        description: e?.response?.data?.message ?? undefined,
+      }),
     onSuccess: (session) => enterLineHr(session),
   });
 

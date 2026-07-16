@@ -19,6 +19,9 @@ export const openLineHrSession = async (token: string, lineId: string) => {
   );
   return response.data as {
     token: string;
+    /** The User behind the minted account — the session is keyed on this, and
+     *  it's what the HR screens stamp on their audit rows (a User FK). */
+    userId: string;
     accountId: string;
     lineId: string;
     lineName: string;
