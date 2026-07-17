@@ -97,6 +97,10 @@ const Section = ({
 // Gov IDs come back as "N/A" when unset — show blank in the editor instead.
 const idOrBlank = (v: unknown) => (v == null || v === "N/A" ? "" : String(v));
 
+// Education/PDS fields default to the literal "N/A" when unset — treat that
+// (and null) as blank for both display and editing.
+const eduVal = (v: unknown) => (v == null || v === "N/A" ? "" : String(v));
+
 const Field = ({ label, value }: { label: React.ReactNode; value: React.ReactNode }) => (
   <div>
     <p className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</p>
@@ -490,11 +494,63 @@ const PublicApplication = () => {
       buildPayload: (rows) => ({ children: rows }),
     });
   };
-  // NOTE: Educational Background is intentionally NOT editable here yet. Its
-  // stored shape ({ course, highestAttained, yearGraduate, records }) does not
-  // match the keys this page renders ({ degree, highestLevel, yearGraduated,
-  // honors, unitsEarned }); an editor can't be non-confusing until that
-  // storage↔display mismatch is reconciled. Tracked as follow-up.
+  // Educational Background — 5 fixed slots, each an object stored on its own
+  // column. Uses the CANONICAL keys that submitApplication writes and the PDS
+  // Excel export reads ({ name, course, from, to, highestAttained,
+  // yearGraduate, records }).
+  const EDU_SLOTS = [
+    { storeKey: "elementary", label: "Elementary" },
+    { storeKey: "secondary", label: "Secondary" },
+    { storeKey: "vocational", label: "Vocational" },
+    { storeKey: "college", label: "College" },
+    { storeKey: "graduateCollege", label: "Graduate Studies" },
+  ] as const;
+  const EDU_KEYS = [
+    "name",
+    "course",
+    "from",
+    "to",
+    "highestAttained",
+    "yearGraduate",
+    "records",
+  ] as const;
+  const editEducation = () => {
+    const fields: ArrFieldDef[] = [
+      { key: "name", label: "School / University", full: true },
+      { key: "course", label: "Basic education / Degree / Course", full: true },
+      { key: "from", label: "Period from (year)" },
+      { key: "to", label: "Period to (year)" },
+      { key: "highestAttained", label: "Highest level / units earned", full: true },
+      { key: "yearGraduate", label: "Year graduated" },
+      { key: "records", label: "Scholarship / Academic honors", full: true },
+    ];
+    const rows = EDU_SLOTS.map((s) => {
+      const slot = ((data as any)?.[s.storeKey] as Record<string, unknown>) ?? {};
+      const row: Record<string, any> = { __level: s.label };
+      EDU_KEYS.forEach((k) => (row[k] = eduVal(slot[k])));
+      return row;
+    });
+    setArrEdit({
+      title: "Educational Background",
+      fields,
+      rows,
+      fixed: true,
+      rowLabel: (r) => r.__level,
+      newRow: () => ({}),
+      buildPayload: (rows) => {
+        const payload: Record<string, unknown> = {};
+        rows.forEach((row, i) => {
+          // Mirror the submission format exactly: every slot is an object and
+          // blank fields are stored as "N/A" (same as submitApplication), so
+          // the PDS export and every other reader behave identically.
+          payload[EDU_SLOTS[i].storeKey] = Object.fromEntries(
+            EDU_KEYS.map((k) => [k, (row[k] ?? "").toString().trim() || "N/A"]),
+          );
+        });
+        return payload;
+      },
+    });
+  };
 
   if (isFetching && !data) {
     return (
@@ -1193,6 +1249,7 @@ const PublicApplication = () => {
             <Section
               icon={<GraduationCap className="h-3 w-3 text-blue-500" />}
               title="Educational Background"
+              onEdit={canEdit ? editEducation : undefined}
             >
               <div className="space-y-2.5">
                 {(
@@ -1204,38 +1261,42 @@ const PublicApplication = () => {
                     { level: "Graduate Studies", entry: data.graduateCollege, accent: "border-red-500" },
                   ] as const
                 )
-                  .filter((e) => e.entry)
-                  .map(({ level, entry, accent }) => (
-                    <TimelineItem
-                      key={level}
-                      accent={accent}
-                      title={
-                        <>
-                          {level}
-                          {entry!.name && (
-                            <span className="text-[10px] font-normal text-gray-500 ml-1">
-                              · {entry!.name}
-                            </span>
-                          )}
-                        </>
-                      }
-                    >
-                      <p>
-                        {entry!.from} — {entry!.to || "Present"}
-                      </p>
-                      {(entry as any).degree && <p>Degree: {(entry as any).degree}</p>}
-                      {entry!.highestLevel && (
-                        <p>Highest Level: {entry!.highestLevel}</p>
-                      )}
-                      {entry!.yearGraduated && (
-                        <p>Year Graduated: {entry!.yearGraduated}</p>
-                      )}
-                      {entry!.honors && <p>Honors: {entry!.honors}</p>}
-                      {(entry as any).unitsEarned && (
-                        <p>Units Earned: {(entry as any).unitsEarned}</p>
-                      )}
-                    </TimelineItem>
-                  ))}
+                  .filter((e) => e.entry && eduVal((e.entry as any).name))
+                  .map(({ level, entry, accent }) => {
+                    const en = entry as Record<string, any>;
+                    return (
+                      <TimelineItem
+                        key={level}
+                        accent={accent}
+                        title={
+                          <>
+                            {level}
+                            {eduVal(en.name) && (
+                              <span className="text-[10px] font-normal text-gray-500 ml-1">
+                                · {eduVal(en.name)}
+                              </span>
+                            )}
+                          </>
+                        }
+                      >
+                        <p>
+                          {eduVal(en.from) || "—"} — {eduVal(en.to) || "Present"}
+                        </p>
+                        {eduVal(en.course) && (
+                          <p>Course / Degree: {eduVal(en.course)}</p>
+                        )}
+                        {eduVal(en.highestAttained) && (
+                          <p>Highest Level / Units: {eduVal(en.highestAttained)}</p>
+                        )}
+                        {eduVal(en.yearGraduate) && (
+                          <p>Year Graduated: {eduVal(en.yearGraduate)}</p>
+                        )}
+                        {eduVal(en.records) && (
+                          <p>Scholarship / Honors: {eduVal(en.records)}</p>
+                        )}
+                      </TimelineItem>
+                    );
+                  })}
               </div>
             </Section>
 

@@ -41,6 +41,10 @@ import {
 
 import type { SubmittedApplicationProps } from "@/interface/data";
 
+// Education/PDS fields default to the literal "N/A" when unset — treat that
+// (and null) as blank so empty slots/fields don't render.
+const eduVal = (v: unknown) => (v == null || v === "N/A" ? "" : String(v));
+
 interface Props {
   applicationId?: string;
 }
@@ -418,38 +422,42 @@ const ApplicationData = ({ applicationId }: Props) => {
                     { level: "Graduate Studies", entry: data.graduateCollege, accent: "border-red-500" },
                   ] as const
                 )
-                  .filter((e) => e.entry)
-                  .map(({ level, entry, accent }) => (
-                    <TimelineItem
-                      key={level}
-                      accent={accent}
-                      title={
-                        <>
-                          {level}
-                          {entry!.name && (
-                            <span className="text-[10px] font-normal text-gray-500 ml-1">
-                              · {entry!.name}
-                            </span>
-                          )}
-                        </>
-                      }
-                    >
-                      <p>
-                        {entry!.from} — {entry!.to || "Present"}
-                      </p>
-                      {(entry as any).degree && <p>Degree: {(entry as any).degree}</p>}
-                      {entry!.highestLevel && (
-                        <p>Highest Level: {entry!.highestLevel}</p>
-                      )}
-                      {entry!.yearGraduated && (
-                        <p>Year Graduated: {entry!.yearGraduated}</p>
-                      )}
-                      {entry!.honors && <p>Honors: {entry!.honors}</p>}
-                      {(entry as any).unitsEarned && (
-                        <p>Units Earned: {(entry as any).unitsEarned}</p>
-                      )}
-                    </TimelineItem>
-                  ))}
+                  .filter((e) => e.entry && eduVal((e.entry as any).name))
+                  .map(({ level, entry, accent }) => {
+                    const en = entry as Record<string, any>;
+                    return (
+                      <TimelineItem
+                        key={level}
+                        accent={accent}
+                        title={
+                          <>
+                            {level}
+                            {eduVal(en.name) && (
+                              <span className="text-[10px] font-normal text-gray-500 ml-1">
+                                · {eduVal(en.name)}
+                              </span>
+                            )}
+                          </>
+                        }
+                      >
+                        <p>
+                          {eduVal(en.from) || "—"} — {eduVal(en.to) || "Present"}
+                        </p>
+                        {eduVal(en.course) && (
+                          <p>Course / Degree: {eduVal(en.course)}</p>
+                        )}
+                        {eduVal(en.highestAttained) && (
+                          <p>Highest Level / Units: {eduVal(en.highestAttained)}</p>
+                        )}
+                        {eduVal(en.yearGraduate) && (
+                          <p>Year Graduated: {eduVal(en.yearGraduate)}</p>
+                        )}
+                        {eduVal(en.records) && (
+                          <p>Scholarship / Honors: {eduVal(en.records)}</p>
+                        )}
+                      </TimelineItem>
+                    );
+                  })}
               </div>
             </Section>
 
