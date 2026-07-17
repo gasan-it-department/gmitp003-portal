@@ -2594,6 +2594,27 @@ export const reuploadApplicationFile = async (args: {
   return response.data as { message: string; file_url?: string; id?: string };
 };
 
+// PUBLIC applicant action — safe PARTIAL update of any section. Only the keys
+// passed are written; unedited fields are never touched. `fields` uses the
+// stored field names (e.g. cvilStatus, tinNo, elementary, experience).
+export const updatePublicApplication = async (
+  applicationId: string,
+  fields: Record<string, unknown>,
+) => {
+  const response = await axios.patch(
+    "/application/public/update",
+    { applicationId, ...fields },
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  return response.data as { message: string; updated: number };
+};
+
 // PUBLIC applicant action — edit the core contact/identity fields.
 export const editApplicationContact = async (args: {
   applicationId: string;

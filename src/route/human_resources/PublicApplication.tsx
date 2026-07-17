@@ -50,6 +50,8 @@ import {
   Ban,
   Camera,
   Pencil,
+  Trash2,
+  Plus,
 } from "lucide-react";
 
 import type { SubmittedApplicationProps } from "@/interface/data";
@@ -59,11 +61,13 @@ const Section = ({
   icon,
   title,
   count,
+  onEdit,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   count?: number;
+  onEdit?: () => void;
   children: React.ReactNode;
 }) => (
   <div className="border rounded-lg bg-white overflow-hidden">
@@ -71,14 +75,27 @@ const Section = ({
       {icon}
       <h3 className="text-xs font-semibold text-gray-800">{title}</h3>
       {typeof count === "number" && (
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-auto">
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
           {count}
         </Badge>
+      )}
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="ml-auto text-[10px] text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          <Pencil className="h-2.5 w-2.5" />
+          Edit
+        </button>
       )}
     </div>
     <div className="p-3">{children}</div>
   </div>
 );
+
+// Gov IDs come back as "N/A" when unset — show blank in the editor instead.
+const idOrBlank = (v: unknown) => (v == null || v === "N/A" ? "" : String(v));
 
 const Field = ({ label, value }: { label: React.ReactNode; value: React.ReactNode }) => (
   <div>
@@ -274,6 +291,210 @@ const PublicApplication = () => {
     editForm.lastname.trim() &&
     editForm.email.trim() &&
     editForm.mobileNo.trim();
+
+  // ── Generic per-section edit (writes only that section's fields) ─────────
+  // `key` is the STORED field name the update endpoint expects.
+  type EditFieldDef = {
+    key: string;
+    label: string;
+    type?: "text" | "number" | "select";
+    options?: string[];
+  };
+  const [section, setSection] = useState<{
+    title: string;
+    fields: EditFieldDef[];
+  } | null>(null);
+  const [sectionVals, setSectionVals] = useState<Record<string, string>>({});
+  const openSection = (
+    title: string,
+    fields: (EditFieldDef & { value: unknown })[],
+  ) => {
+    setSection({ title, fields: fields.map(({ value, ...f }) => f) });
+    setSectionVals(
+      Object.fromEntries(
+        fields.map((f) => [f.key, f.value == null ? "" : String(f.value)]),
+      ),
+    );
+  };
+  const sectionMut = useMutation({
+    mutationFn: () =>
+      updatePublicApplication(applicationId as string, sectionVals),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["public-application-data", applicationId],
+      });
+      setSection(null);
+      toast.success("Saved.");
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? "Couldn't save. Try again."),
+  });
+
+  const editPersonal = () =>
+    openSection("Personal information", [
+      { key: "gender", label: "Gender", type: "select", options: ["Male", "Female"], value: data?.gender },
+      { key: "cvilStatus", label: "Civil status", type: "select", options: ["Single", "Married", "Widowed", "Separated", "Other"], value: data?.civilStatus },
+      { key: "bloodType", label: "Blood type", type: "select", options: ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"], value: data?.bloodType },
+    ]);
+  const editPhysical = () =>
+    openSection("Physical attributes", [
+      { key: "height", label: "Height (cm)", type: "number", value: data?.height },
+      { key: "weight", label: "Weight (kg)", type: "number", value: data?.weight },
+    ]);
+  const editGovIds = () =>
+    openSection("Government IDs", [
+      { key: "tinNo", label: "TIN", value: idOrBlank(data?.tinNo) },
+      { key: "pagIbigNo", label: "Pag-IBIG", value: idOrBlank(data?.pagIbigNo) },
+      { key: "philHealthNo", label: "PhilHealth", value: idOrBlank(data?.philHealthNo) },
+      { key: "umidNo", label: "UMID", value: idOrBlank(data?.umidNo) },
+      { key: "philSys", label: "PhilSys", value: idOrBlank(data?.philSys) },
+    ]);
+  const editFamily = () =>
+    openSection("Family", [
+      { key: "fatherFirstname", label: "Father — first name", value: data?.fatherFirstname },
+      { key: "fatherSurname", label: "Father — surname", value: data?.fatherSurname },
+      { key: "motherFirstname", label: "Mother — first name", value: data?.motherFirstname },
+      { key: "motherSurname", label: "Mother — surname", value: data?.motherSurname },
+      { key: "spouseFirstname", label: "Spouse — first name", value: data?.spouseFirstname },
+      { key: "spouseSurname", label: "Spouse — surname", value: data?.spouseSurname },
+    ]);
+
+  // ── Generic list/array editor (JSON columns) ────────────────────────────
+  // Rows are edited in place: each row keeps its ORIGINAL object (spread), so
+  // any stored keys the UI doesn't expose are preserved on save. The whole
+  // array is written back through updatePublicApplication.
+  type ArrFieldDef = {
+    key: string;
+    label: string;
+    type?: "text" | "number" | "bool";
+    full?: boolean; // span both columns
+  };
+  const [arrEdit, setArrEdit] = useState<{
+    title: string;
+    fields: ArrFieldDef[];
+    rows: Record<string, any>[];
+    fixed?: boolean; // fixed set of rows (no add/remove)
+    rowLabel?: (row: Record<string, any>, i: number) => string;
+    newRow: () => Record<string, any>;
+    buildPayload: (rows: Record<string, any>[]) => Record<string, unknown>;
+  } | null>(null);
+  const openArray = (
+    storeKey: string,
+    title: string,
+    fields: ArrFieldDef[],
+    rows: unknown,
+  ) =>
+    setArrEdit({
+      title,
+      fields,
+      rows: Array.isArray(rows) ? rows.map((r) => ({ ...(r as object) })) : [],
+      newRow: () =>
+        Object.fromEntries(
+          fields.map((f) => [f.key, f.type === "bool" ? false : ""]),
+        ),
+      buildPayload: (rows) => ({ [storeKey]: rows }),
+    });
+  const setArrRow = (i: number, key: string, val: any) =>
+    setArrEdit((s) =>
+      s
+        ? { ...s, rows: s.rows.map((r, idx) => (idx === i ? { ...r, [key]: val } : r)) }
+        : s,
+    );
+  const addArrRow = () =>
+    setArrEdit((s) => (s ? { ...s, rows: [...s.rows, s.newRow()] } : s));
+  const removeArrRow = (i: number) =>
+    setArrEdit((s) => (s ? { ...s, rows: s.rows.filter((_, idx) => idx !== i) } : s));
+  const arrMut = useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      updatePublicApplication(applicationId as string, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["public-application-data", applicationId],
+      });
+      setArrEdit(null);
+      toast.success("Saved.");
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message ?? "Couldn't save. Try again."),
+  });
+
+  const editExperience = () =>
+    openArray("experience", "Work Experience", [
+      { key: "position", label: "Position / Title", full: true },
+      { key: "department", label: "Department / Agency", full: true },
+      { key: "employer", label: "Employer / Company", full: true },
+      { key: "from", label: "From (e.g. 2020-01-15)" },
+      { key: "to", label: "To (blank = present)" },
+      { key: "statusOfAppointment", label: "Status of appointment", full: true },
+      { key: "govService", label: "This is government service", type: "bool", full: true },
+    ], data?.experience);
+  const editCivilService = () =>
+    openArray("civilService", "Civil Service Eligibility", [
+      { key: "title", label: "Eligibility / Exam", full: true },
+      { key: "rating", label: "Rating" },
+      { key: "type", label: "Type" },
+      { key: "date", label: "Date (e.g. 2019-08-11)" },
+      { key: "placeOfExam", label: "Place of exam", full: true },
+      { key: "number", label: "License number" },
+      { key: "validity", label: "Validity" },
+    ], data?.civilService);
+  const editVoluntary = () =>
+    openArray("voluntaryWork", "Voluntary Work", [
+      { key: "organization", label: "Organization", full: true },
+      { key: "position", label: "Position / Nature of work", full: true },
+      { key: "from", label: "From" },
+      { key: "to", label: "To (blank = present)" },
+      { key: "hours", label: "Number of hours", type: "number" },
+    ], data?.voluntaryWork);
+  const editLearning = () =>
+    openArray("learningDev", "Learning & Development", [
+      { key: "title", label: "Title of training", full: true },
+      { key: "conductedBy", label: "Conducted / Sponsored by", full: true },
+      { key: "type", label: "Type of L&D" },
+      { key: "hours", label: "Number of hours", type: "number" },
+      { key: "from", label: "From" },
+      { key: "to", label: "To (blank = present)" },
+    ], data?.learningDev);
+  const editOtherInfo = () =>
+    openArray("otherInfo", "Other Information", [
+      { key: "specialSkills", label: "Special skill / Hobby", full: true },
+      { key: "recognition", label: "Non-academic recognition", full: true },
+      { key: "membership", label: "Membership in association", full: true },
+    ], data?.otherInfo);
+  const editReferences = () =>
+    openArray("references", "References", [
+      { key: "name", label: "Name", full: true },
+      { key: "position", label: "Position", full: true },
+      { key: "company", label: "Company / Address", full: true },
+      { key: "address", label: "Address", full: true },
+      { key: "telephone", label: "Telephone" },
+    ], data?.references);
+  const editChildren = () => {
+    // `children` is stored as a JSON string of [{ fullname, dob? }]; the
+    // endpoint re-stringifies an array for us.
+    let rows: any[] = [];
+    try {
+      const raw = data?.children as unknown as string;
+      if (raw) rows = JSON.parse(raw);
+    } catch {
+      rows = [];
+    }
+    setArrEdit({
+      title: "Children",
+      fields: [
+        { key: "fullname", label: "Full name", full: true },
+        { key: "dob", label: "Date of birth" },
+      ],
+      rows: Array.isArray(rows) ? rows.map((r) => ({ ...r })) : [],
+      newRow: () => ({ fullname: "", dob: "" }),
+      buildPayload: (rows) => ({ children: rows }),
+    });
+  };
+  // NOTE: Educational Background is intentionally NOT editable here yet. Its
+  // stored shape ({ course, highestAttained, yearGraduate, records }) does not
+  // match the keys this page renders ({ degree, highestLevel, yearGraduated,
+  // honors, unitsEarned }); an editor can't be non-confusing until that
+  // storage↔display mismatch is reconciled. Tracked as follow-up.
 
   if (isFetching && !data) {
     return (
@@ -512,6 +733,212 @@ const PublicApplication = () => {
         </div>
       )}
 
+      {/* ── Generic per-section editor ── */}
+      {section && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2">
+              <Pencil className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold text-gray-900">
+                Edit {section.title.toLowerCase()}
+              </h3>
+            </div>
+            <div className="px-4 py-3 grid grid-cols-2 gap-2.5 max-h-[70vh] overflow-y-auto">
+              {section.fields.map((f) => (
+                <label key={f.key} className="block">
+                  <span className="text-[10px] font-semibold text-gray-700">
+                    {f.label}
+                  </span>
+                  {f.type === "select" ? (
+                    <select
+                      value={sectionVals[f.key] ?? ""}
+                      onChange={(e) =>
+                        setSectionVals((v) => ({ ...v, [f.key]: e.target.value }))
+                      }
+                      className="mt-0.5 w-full h-8 text-xs border rounded-md px-2 bg-white"
+                    >
+                      <option value="">—</option>
+                      {(f.options ?? []).map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      type={f.type === "number" ? "number" : "text"}
+                      value={sectionVals[f.key] ?? ""}
+                      onChange={(e) =>
+                        setSectionVals((v) => ({ ...v, [f.key]: e.target.value }))
+                      }
+                      className="h-8 text-xs mt-0.5"
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setSection(null)}
+                disabled={sectionMut.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => sectionMut.mutate()}
+                disabled={sectionMut.isPending}
+              >
+                {sectionMut.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Generic list / array section editor ── */}
+      {arrEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200 flex flex-col max-h-[88vh]">
+            <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-2 flex-shrink-0">
+              <Pencil className="h-4 w-4 text-blue-600" />
+              <h3 className="text-sm font-semibold text-gray-900">
+                Edit {arrEdit.title.toLowerCase()}
+              </h3>
+              {!arrEdit.fixed && (
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 ml-auto"
+                >
+                  {arrEdit.rows.length}
+                </Badge>
+              )}
+            </div>
+            <div className="px-4 py-3 space-y-2.5 overflow-y-auto">
+              {arrEdit.rows.length === 0 && (
+                <p className="text-[11px] text-gray-400 italic text-center py-6">
+                  Nothing added yet. Use “Add entry” below.
+                </p>
+              )}
+              {arrEdit.rows.map((row, i) => (
+                <div
+                  key={i}
+                  className="border rounded-lg p-2.5 bg-gray-50/60 relative"
+                >
+                  {arrEdit.rowLabel ? (
+                    <p className="text-[11px] font-semibold text-gray-700 mb-1.5">
+                      {arrEdit.rowLabel(row, i)}
+                    </p>
+                  ) : (
+                    !arrEdit.fixed && (
+                      <button
+                        type="button"
+                        onClick={() => removeArrRow(i)}
+                        className="absolute top-1.5 right-1.5 text-red-500 hover:text-red-600"
+                        title="Remove this entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )
+                  )}
+                  <div className="grid grid-cols-2 gap-2 pr-4">
+                    {arrEdit.fields.map((f) =>
+                      f.type === "bool" ? (
+                        <label
+                          key={f.key}
+                          className="col-span-2 flex items-center gap-1.5 text-[11px] font-medium text-gray-700 mt-0.5"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!row[f.key]}
+                            onChange={(e) => setArrRow(i, f.key, e.target.checked)}
+                            className="h-3.5 w-3.5 accent-blue-600"
+                          />
+                          {f.label}
+                        </label>
+                      ) : (
+                        <label
+                          key={f.key}
+                          className={f.full ? "col-span-2 block" : "block"}
+                        >
+                          <span className="text-[10px] font-semibold text-gray-600">
+                            {f.label}
+                          </span>
+                          <Input
+                            type={f.type === "number" ? "number" : "text"}
+                            value={row[f.key] ?? ""}
+                            onChange={(e) =>
+                              setArrRow(
+                                i,
+                                f.key,
+                                f.type === "number"
+                                  ? e.target.value === ""
+                                    ? ""
+                                    : Number(e.target.value)
+                                  : e.target.value,
+                              )
+                            }
+                            className="h-7 text-xs mt-0.5"
+                          />
+                        </label>
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
+              {!arrEdit.fixed && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs gap-1.5 border-dashed"
+                  onClick={addArrRow}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add entry
+                </Button>
+              )}
+            </div>
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setArrEdit(null)}
+                disabled={arrMut.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => arrMut.mutate(arrEdit.buildPayload(arrEdit.rows))}
+                disabled={arrMut.isPending}
+              >
+                {arrMut.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto p-3 space-y-3">
 
         {/* Header card */}
@@ -647,6 +1074,7 @@ const PublicApplication = () => {
             <Section
               icon={<User className="h-3 w-3 text-blue-500" />}
               title="Personal Information"
+              onEdit={canEdit ? editPersonal : undefined}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <Field label="Full Name" value={fullName} />
@@ -673,14 +1101,20 @@ const PublicApplication = () => {
               </div>
             </Section>
 
-            {data.experience && data.experience.length > 0 && (
+            {(canEdit || (data.experience && data.experience.length > 0)) && (
               <Section
                 icon={<Briefcase className="h-3 w-3 text-blue-500" />}
                 title="Work Experience"
-                count={data.experience.length}
+                count={data.experience?.length}
+                onEdit={canEdit ? editExperience : undefined}
               >
                 <div className="space-y-2">
-                  {data.experience.map((exp, i) => (
+                  {(!data.experience || data.experience.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No work experience added yet.
+                    </p>
+                  )}
+                  {data.experience?.map((exp, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-blue-500"
@@ -718,14 +1152,20 @@ const PublicApplication = () => {
               </Section>
             )}
 
-            {data.civilService && data.civilService.length > 0 && (
+            {(canEdit || (data.civilService && data.civilService.length > 0)) && (
               <Section
                 icon={<Award className="h-3 w-3 text-blue-500" />}
                 title="Civil Service Eligibility"
-                count={data.civilService.length}
+                count={data.civilService?.length}
+                onEdit={canEdit ? editCivilService : undefined}
               >
                 <div className="space-y-2">
-                  {data.civilService.map((e, i) => (
+                  {(!data.civilService || data.civilService.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No eligibility added yet.
+                    </p>
+                  )}
+                  {data.civilService?.map((e, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-emerald-500"
@@ -799,14 +1239,20 @@ const PublicApplication = () => {
               </div>
             </Section>
 
-            {data.voluntaryWork && data.voluntaryWork.length > 0 && (
+            {(canEdit || (data.voluntaryWork && data.voluntaryWork.length > 0)) && (
               <Section
                 icon={<Heart className="h-3 w-3 text-blue-500" />}
                 title="Voluntary Work"
-                count={data.voluntaryWork.length}
+                count={data.voluntaryWork?.length}
+                onEdit={canEdit ? editVoluntary : undefined}
               >
                 <div className="space-y-2">
-                  {data.voluntaryWork.map((w, i) => (
+                  {(!data.voluntaryWork || data.voluntaryWork.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No voluntary work added yet.
+                    </p>
+                  )}
+                  {data.voluntaryWork?.map((w, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-pink-500"
@@ -826,14 +1272,20 @@ const PublicApplication = () => {
               </Section>
             )}
 
-            {data.learningDev && data.learningDev.length > 0 && (
+            {(canEdit || (data.learningDev && data.learningDev.length > 0)) && (
               <Section
                 icon={<Lightbulb className="h-3 w-3 text-blue-500" />}
                 title="Learning & Development"
-                count={data.learningDev.length}
+                count={data.learningDev?.length}
+                onEdit={canEdit ? editLearning : undefined}
               >
                 <div className="space-y-2">
-                  {data.learningDev.map((t, i) => (
+                  {(!data.learningDev || data.learningDev.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No trainings added yet.
+                    </p>
+                  )}
+                  {data.learningDev?.map((t, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-yellow-500"
@@ -863,14 +1315,20 @@ const PublicApplication = () => {
               </Section>
             )}
 
-            {data.otherInfo && data.otherInfo.length > 0 && (
+            {(canEdit || (data.otherInfo && data.otherInfo.length > 0)) && (
               <Section
                 icon={<BookMarked className="h-3 w-3 text-blue-500" />}
                 title="Other Information"
-                count={data.otherInfo.length}
+                count={data.otherInfo?.length}
+                onEdit={canEdit ? editOtherInfo : undefined}
               >
                 <div className="space-y-2">
-                  {data.otherInfo.map((info, i) => (
+                  {(!data.otherInfo || data.otherInfo.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No special skills, recognitions, or memberships added yet.
+                    </p>
+                  )}
+                  {data.otherInfo?.map((info, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-gray-400"
@@ -884,14 +1342,20 @@ const PublicApplication = () => {
               </Section>
             )}
 
-            {data.references && data.references.length > 0 && (
+            {(canEdit || (data.references && data.references.length > 0)) && (
               <Section
                 icon={<Users className="h-3 w-3 text-blue-500" />}
                 title="References"
-                count={data.references.length}
+                count={data.references?.length}
+                onEdit={canEdit ? editReferences : undefined}
               >
                 <div className="space-y-2">
-                  {data.references.map((r, i) => (
+                  {(!data.references || data.references.length === 0) && (
+                    <p className="text-[10px] text-gray-400 italic">
+                      No references added yet.
+                    </p>
+                  )}
+                  {data.references?.map((r, i) => (
                     <TimelineItem
                       key={i}
                       accent="border-indigo-500"
@@ -952,6 +1416,7 @@ const PublicApplication = () => {
             <Section
               icon={<User className="h-3 w-3 text-blue-500" />}
               title="Physical Attributes"
+              onEdit={canEdit ? editPhysical : undefined}
             >
               <div className="grid grid-cols-2 gap-2.5">
                 <Field
@@ -968,6 +1433,7 @@ const PublicApplication = () => {
             <Section
               icon={<Shield className="h-3 w-3 text-blue-500" />}
               title="Government IDs"
+              onEdit={canEdit ? editGovIds : undefined}
             >
               <div className="space-y-1.5">
                 {[
@@ -1008,6 +1474,7 @@ const PublicApplication = () => {
             <Section
               icon={<Users className="h-3 w-3 text-blue-500" />}
               title="Family"
+              onEdit={canEdit ? editFamily : undefined}
             >
               <div className="space-y-2.5">
                 {data.spouseFirstname && (
@@ -1030,11 +1497,29 @@ const PublicApplication = () => {
                     .filter(Boolean)
                     .join(" ")}
                 />
-                {data.children && (
+                {(canEdit || data.children) && (
                   <Field
-                    label="Children"
+                    label={
+                      <span className="flex items-center justify-between gap-2">
+                        Children
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={editChildren}
+                            className="text-[10px] text-blue-600 hover:text-blue-700 flex items-center gap-0.5 normal-case"
+                          >
+                            <Pencil className="h-2.5 w-2.5" />
+                            Edit
+                          </button>
+                        )}
+                      </span>
+                    }
                     value={
-                      <ChildrenList raw={data.children as unknown as string} />
+                      data.children ? (
+                        <ChildrenList raw={data.children as unknown as string} />
+                      ) : (
+                        <span className="text-gray-400 italic">None added</span>
+                      )
                     }
                   />
                 )}
