@@ -12,6 +12,7 @@ import {
   Mail,
   Building,
   Shield,
+  ShieldCheck,
   UserPlus,
   AtSign,
   Loader2,
@@ -29,6 +30,8 @@ interface Props {
   token: string;
   lineId: string;
   currUserId: string;
+  /** True when this user already has the module — show a badge, not "Add". */
+  alreadyHasAccess?: boolean;
 }
 
 const EmployeeItem = ({
@@ -38,6 +41,7 @@ const EmployeeItem = ({
   token,
   lineId,
   currUserId,
+  alreadyHasAccess,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -73,9 +77,13 @@ const EmployeeItem = ({
       toast.success("Module access granted");
       setOnOpen(0);
 
-      // Refresh the module-users list so the new user shows up immediately
+      // Refresh the module-users list so the new user shows up immediately,
+      // and the add-page member set so this row flips to "Has access".
       await queryClient.invalidateQueries({
         queryKey: ["module-users", moduleId, lineId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["module-member-ids", moduleId, lineId],
       });
     } catch (err: any) {
       const msg =
@@ -129,15 +137,25 @@ const EmployeeItem = ({
           </div>
         </div>
 
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setOnOpen(1)}
-          className="h-7 px-2.5 text-[10px] gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 flex-shrink-0"
-        >
-          <UserPlus className="h-3 w-3" />
-          Add
-        </Button>
+        {alreadyHasAccess ? (
+          <Badge
+            variant="outline"
+            className="h-7 px-2.5 text-[10px] gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 flex-shrink-0 flex items-center"
+          >
+            <ShieldCheck className="h-3 w-3" />
+            Has access
+          </Badge>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setOnOpen(1)}
+            className="h-7 px-2.5 text-[10px] gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 flex-shrink-0"
+          >
+            <UserPlus className="h-3 w-3" />
+            Add
+          </Button>
+        )}
       </div>
 
       {/* Grant Access Modal */}

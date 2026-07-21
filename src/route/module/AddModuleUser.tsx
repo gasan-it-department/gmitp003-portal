@@ -3,9 +3,9 @@ import { useDebounce } from "use-debounce";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
 import { useInView } from "react-intersection-observer";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
-import { employeeList } from "@/db/statement";
+import { employeeList, getModuleUsers } from "@/db/statement";
 import { panels } from "@/layout/ControlPanel";
 
 import {
@@ -66,6 +66,20 @@ const AddModuleUser = () => {
       if (inView && hasNextPage && !isFetchingNextPage) fetchNextPage();
     },
   });
+
+  // Which line members already have this module — so the list can mark them
+  // and stop HR from re-granting (which errors with "ALREADY ASSIGNED" and
+  // looks wrong because the add-list gave no hint they were already granted).
+  const { data: memberData } = useQuery<ListProps>({
+    queryKey: ["module-member-ids", moduleId, lineId],
+    queryFn: () =>
+      getModuleUsers(auth.token as string, moduleId, null, "1000", ""),
+    refetchOnWindowFocus: false,
+  });
+  const memberIds = useMemo(
+    () => new Set((memberData?.list ?? []).map((u) => u.id)),
+    [memberData],
+  );
 
   const users = data?.pages.flatMap((p) => p.list) ?? [];
   const isLoading = isFetching && !data;
@@ -144,6 +158,7 @@ const AddModuleUser = () => {
                     query={query}
                     token={auth.token as string}
                     lineId={lineId as string}
+                    alreadyHasAccess={memberIds.has(user.id)}
                   />
                 ))}
 
