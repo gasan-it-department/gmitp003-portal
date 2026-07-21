@@ -64,6 +64,7 @@ const ModuleUsers = () => {
         pageParam as string | null,
         "20",
         query,
+        lineId,
       ),
     initialPageParam: null,
     getNextPageParam: (lastPage) =>

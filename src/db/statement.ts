@@ -2909,6 +2909,7 @@ export const getModuleUsers = async (
   lastCursor: string | null,
   limit: string,
   query: string,
+  lineId?: string,
 ) => {
   const resposne = await axios.get("/module/users", {
     headers: {
@@ -2922,6 +2923,7 @@ export const getModuleUsers = async (
       lastCursor,
       limit,
       query,
+      lineId,
     },
   });
 

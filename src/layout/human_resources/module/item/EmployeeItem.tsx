@@ -74,7 +74,11 @@ const EmployeeItem = ({
         toast.error("Failed", { description: response.data.message });
         return;
       }
-      toast.success("Module access granted");
+      if (response.data?.alreadyHad) {
+        toast.info("This user already has access to this module.");
+      } else {
+        toast.success("Module access granted");
+      }
       setOnOpen(0);
 
       // Refresh the module-users list so the new user shows up immediately,

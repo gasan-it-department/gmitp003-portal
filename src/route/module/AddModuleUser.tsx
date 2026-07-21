@@ -73,7 +73,7 @@ const AddModuleUser = () => {
   const { data: memberData } = useQuery<ListProps>({
     queryKey: ["module-member-ids", moduleId, lineId],
     queryFn: () =>
-      getModuleUsers(auth.token as string, moduleId, null, "1000", ""),
+      getModuleUsers(auth.token as string, moduleId, null, "1000", "", lineId),
     refetchOnWindowFocus: false,
   });
   const memberIds = useMemo(
