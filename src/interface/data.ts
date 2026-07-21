@@ -1315,6 +1315,8 @@ export interface FillPositionInvitationProps {
   positionSlotId: string;
   step: number;
   submittedApplicationId?: string;
+  /** "full" → CS Form 212 PDS · "quick" → essentials-only short form. */
+  mode?: "full" | "quick";
   expiresAt?: string | null;
   // Provisional (temporary/contract) hiring
   empType?: string | null;

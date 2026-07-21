@@ -350,3 +350,58 @@ export const vacantPosition = async (
   }
   return response.data;
 };
+
+/**
+ * Public quick registration — the candidate fills only the essentials + photo
+ * (no PDS). Sent as multipart/form-data so the profile picture can ride along.
+ * Returns { error: 1 } when the chosen username is already taken.
+ */
+export const quickPositionRegister = async (payload: {
+  linkId: string;
+  lineId: string;
+  slotId: string;
+  username: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  suffix?: string;
+  birthDate: Date;
+  gender: string;
+  email: string;
+  mobileNumber: string;
+  regionId?: string;
+  provinceId?: string;
+  municipalId?: string;
+  barangayId?: string;
+  photo?: File | null;
+}) => {
+  const fd = new FormData();
+  fd.append("linkId", payload.linkId);
+  fd.append("lineId", payload.lineId);
+  fd.append("slotId", payload.slotId);
+  fd.append("username", payload.username);
+  fd.append("password", payload.password);
+  fd.append("firstName", payload.firstName);
+  fd.append("lastName", payload.lastName);
+  if (payload.middleName) fd.append("middleName", payload.middleName);
+  if (payload.suffix) fd.append("suffix", payload.suffix);
+  fd.append("birthDate", payload.birthDate.toISOString());
+  fd.append("gender", payload.gender);
+  fd.append("email", payload.email);
+  fd.append("mobileNumber", payload.mobileNumber);
+  if (payload.regionId) fd.append("regionId", payload.regionId);
+  if (payload.provinceId) fd.append("provinceId", payload.provinceId);
+  if (payload.municipalId) fd.append("municipalId", payload.municipalId);
+  if (payload.barangayId) fd.append("barangayId", payload.barangayId);
+  if (payload.photo) fd.append("photo", payload.photo);
+
+  const response = await axios.post("/position/quick-register", fd, {
+    headers: {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (response.status !== 200) throw new Error("Quick registration failed");
+  return response.data as { message?: string; error?: number };
+};

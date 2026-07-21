@@ -887,6 +887,31 @@ export const FillPositionSchema = z.object({
   viewPassword: z.boolean(),
 });
 
+// Quick position registration — the candidate fills ONLY the essentials
+// (no CS Form 212 PDS). Written straight to the User record on the server.
+export const QuickPositionRegisterSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  middleName: z.string().optional(),
+  suffix: z.string().optional(),
+  birthDate: z.date({ message: "Birthday is required" }),
+  gender: z.enum(["male", "female"], { message: "Sex is required" }),
+  email: z
+    .string()
+    .refine(
+      (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e),
+      "Invalid email format",
+    ),
+  mobileNumber: z.string().min(7, "Mobile number is required"),
+  regionId: z.string().optional(),
+  provinceId: z.string().optional(),
+  municipalId: z.string().optional(),
+  barangayId: z.string().optional(),
+  username: z.string().min(4, "Username must be at least 4 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  viewPassword: z.boolean().optional(),
+});
+
 export const EmployeeFilterSchema = z.object({
   sgFrom: z.string().optional(),
   sgTo: z.string().optional(),

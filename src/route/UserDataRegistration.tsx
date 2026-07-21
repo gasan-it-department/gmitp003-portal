@@ -29,6 +29,7 @@ import PublicRegionSelect from "@/layout/PublicRegionSelect";
 import PublicProvinceSelect from "@/layout/PublicProvinceSelect";
 import PublicMunicipalSelect from "@/layout/PublicMunicipalSelect";
 import PublicBarangaySelect from "@/layout/PublicBarangaySelect";
+import QuickPositionRegister from "./human_resources/QuickPositionRegister";
 import { toast } from "sonner";
 //icons
 import { CircleAlert, Plus, Send, Tags, Trash } from "lucide-react";
@@ -538,6 +539,16 @@ const UserDataRegistration = () => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // Quick-invite candidates skip the full PDS — render the short form instead.
+  if (data.mode === "quick") {
+    return (
+      <QuickPositionRegister
+        data={data}
+        linkId={positionInviteLinkId as string}
+      />
     );
   }
 

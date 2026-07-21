@@ -46,6 +46,8 @@ import {
   Hourglass,
   Trash2,
   Loader2,
+  FileText,
+  Zap,
 } from "lucide-react";
 
 import type {
@@ -96,6 +98,9 @@ const PositionInvitationForm = ({
   slots,
 }: Props) => {
   const queryClient = useQueryClient();
+  // Invite flavor: "full" → candidate completes the full PDS · "quick" →
+  // candidate fills only the essentials + photo.
+  const [mode, setMode] = React.useState<"full" | "quick">("full");
 
   const form = useForm({
     resolver: zodResolver(PositionInvitationSchema),
@@ -133,6 +138,7 @@ const PositionInvitationForm = ({
           message: data.message,
           email: data.mail,
           slotId: data.slot,
+          mode,
         },
         {
           headers: {
@@ -224,6 +230,46 @@ const PositionInvitationForm = ({
       </div>
 
       <Separator />
+
+      {/* ── Invite type ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => setMode("full")}
+          className={`text-left rounded-lg border p-3 transition ${
+            mode === "full"
+              ? "border-blue-500 bg-blue-50 ring-1 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <FileText className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-semibold text-gray-900">Full PDS</span>
+          </div>
+          <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+            Candidate completes the full Personal Data Sheet (CS Form 212).
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("quick")}
+          className={`text-left rounded-lg border p-3 transition ${
+            mode === "quick"
+              ? "border-blue-500 bg-blue-50 ring-1 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-semibold text-gray-900">
+              Quick invite
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+            Only the essentials — name, birthday, contact, address &amp; photo.
+          </p>
+        </button>
+      </div>
 
       {/* ── Form ─────────────────────────────────────────────────────── */}
       <Form {...form}>
