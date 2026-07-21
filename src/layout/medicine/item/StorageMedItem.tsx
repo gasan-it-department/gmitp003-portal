@@ -75,8 +75,13 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
       });
       toast.success(`Threshold set to ${value} for ${item.name}`);
       queryClient.invalidateQueries({ queryKey: ["medStorage-list"] });
-    } catch (e) {
-      toast.error("Failed to update threshold", { description: `${e}` });
+    } catch (e: any) {
+      // Surface the server's real reason (e.g. access / validation) instead of
+      // a generic "AxiosError…" so the user knows what to do.
+      toast.error(
+        e?.response?.data?.message ??
+          (e instanceof Error ? e.message : "Failed to update threshold"),
+      );
     } finally {
       setSavingThreshold(false);
     }
