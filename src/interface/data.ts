@@ -836,6 +836,9 @@ export type MedicinePriceTrack = {
 export type Prescription = {
   id: string;
   refNumber: string;
+  /** Originated outside this RHU (private doctor / another RHU). */
+  external?: boolean;
+  externalSource?: string | null;
   presMed: PrecribeMedicine[];
   condtion?: string | null;
   firstname?: string | null;

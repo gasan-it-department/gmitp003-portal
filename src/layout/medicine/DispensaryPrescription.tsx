@@ -85,9 +85,26 @@ const DispensaryPrescription = ({ id, token, setStatus }: Props) => {
             Prescription Details
           </h2>
         </div>
-        <Badge variant="outline" className="text-xs">
-          {data.refNumber}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          {(data as { external?: boolean }).external && (
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-amber-50 text-amber-700 border-amber-300"
+              title={
+                (data as { externalSource?: string | null }).externalSource ??
+                "External prescription (private doctor / another RHU)"
+              }
+            >
+              EXTERNAL
+              {(data as { externalSource?: string | null }).externalSource
+                ? ` — ${(data as { externalSource?: string | null }).externalSource}`
+                : ""}
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-xs">
+            {data.refNumber}
+          </Badge>
+        </div>
       </div>
 
       {/* Info Grid - Compact */}

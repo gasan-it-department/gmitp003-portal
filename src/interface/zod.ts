@@ -610,6 +610,8 @@ export const DispensarySchema = z.object({
   birthday: z.string().optional(),
   phoneNumber: z.string().optional(),
   philHealthNo: z.string().optional(),
+  external: z.boolean().optional(),
+  externalSource: z.string().optional(),
   email: z
     .string()
     .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {

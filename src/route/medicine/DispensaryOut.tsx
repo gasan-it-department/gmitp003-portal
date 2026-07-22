@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -101,6 +102,8 @@ const DispensaryOut = () => {
       birthday: "",
       phoneNumber: "",
       philHealthNo: "",
+      external: false,
+      externalSource: "",
       email: "",
       region: "",
       province: "",
@@ -202,6 +205,8 @@ const DispensaryOut = () => {
       birthday: data.birthday || undefined,
       phoneNumber: patientMode === "manual" ? data.phoneNumber || undefined : undefined,
       philHealthNo: patientMode === "manual" ? data.philHealthNo || undefined : undefined,
+      external: data.external ?? false,
+      externalSource: data.external ? data.externalSource || undefined : undefined,
       email: patientMode === "manual" ? data.email || undefined : undefined,
       barangayId,
       municipalId,
@@ -978,6 +983,52 @@ const DispensaryOut = () => {
               {/* ── Description (both modes) ── */}
               <div>
                 <Separator className="my-1" />
+                {/* External prescription — from a private doctor or another
+                    municipality's RHU (outside this RHU's system). */}
+                <FormField
+                  control={control}
+                  name="external"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start gap-2 space-y-0 rounded-md border border-amber-200 bg-amber-50/50 p-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value ?? false}
+                          onCheckedChange={field.onChange}
+                          className="mt-0.5"
+                        />
+                      </FormControl>
+                      <div className="leading-tight">
+                        <FormLabel className="text-[10px] font-semibold text-gray-800">
+                          External prescription (outside this RHU)
+                        </FormLabel>
+                        <p className="text-[9px] text-gray-500">
+                          From a private doctor or another municipality's RHU —
+                          it will be marked EXTERNAL on all records and logs.
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                {watch("external") && (
+                  <FormField
+                    control={control}
+                    name="externalSource"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[10px] font-semibold text-gray-700">
+                          Source (optional)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. Private doctor — Dr. Cruz · RHU Boac"
+                            className="h-8 text-xs"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                )}
                 <FormField
                   control={control}
                   name="desc"

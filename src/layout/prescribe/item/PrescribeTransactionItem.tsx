@@ -23,7 +23,15 @@ const PrescribeTransactionItem = ({ item, no, query }: Props) => {
       onClick={() => nav(`transaction/${item.id}`)}
     >
       <TableCell>{no}</TableCell>
-      <TableCell>{item.refNumber}</TableCell>
+      <TableCell>
+        {item.refNumber}
+        {(item as { external?: boolean }).external && (
+            <span className="ml-1 inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold text-amber-700"
+              title={(item as { external?: boolean }).externalSource ? `External prescription — ${(item as { external?: boolean }).externalSource}` : "External prescription (private doctor / another RHU)"}>
+              EXTERNAL
+            </span>
+          )}
+      </TableCell>
       <TableCell>{searchedChar(query, item.lastname)}</TableCell>
       <TableCell>{searchedChar(query, item.firstname)}</TableCell>
       <TableCell>{formatDate(item.timestamp)}</TableCell>

@@ -26,7 +26,15 @@ const PrescriptionItem = ({ item, no, query }: Props) => {
         onClick={() => nav(`/${item.lineId}/medicine/prescription/${item.id}`)}
       >
         <TableCell>{no + 1}</TableCell>
-        <TableCell>{searchedChar(query, item.refNumber)}</TableCell>
+        <TableCell>
+          {searchedChar(query, item.refNumber)}
+          {item.external && (
+            <span className="ml-1 inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold text-amber-700"
+              title={item.externalSource ? `External prescription — ${item.externalSource}` : "External prescription (private doctor / another RHU)"}>
+              EXTERNAL
+            </span>
+          )}
+        </TableCell>
         <TableCell>{searchedChar(query, item.lastname)}</TableCell>
         <TableCell>{searchedChar(query, item.firstname)}</TableCell>
         <TableCell>{formatDate(item.timestamp)}</TableCell>

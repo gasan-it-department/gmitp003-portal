@@ -266,6 +266,11 @@ const PatientRecordDetail = () => {
               <div className="flex items-center gap-1.5">
                 <code className="text-[10px] font-mono font-semibold text-blue-700">
                   {prescription.refNumber}
+                  {(prescription as { external?: boolean }).external && (
+                    <span className="ml-1 inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold text-amber-700">
+                      EXTERNAL
+                    </span>
+                  )}
                 </code>
                 <Badge
                   variant={isDispensed ? "default" : "secondary"}
