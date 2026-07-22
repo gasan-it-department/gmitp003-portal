@@ -34,6 +34,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 
 import SelectUnit from "@/layout/medicine/SelectUnit";
 import Notification from "@/layout/medicine/Notification";
+import MedicineSearch from "@/layout/medicine/MedicineSearch";
 import StorageItem from "@/layout/medicine/item/StorageItem";
 import MedicineDashboard from "@/layout/medicine/MedicineDashboard";
 
@@ -339,15 +340,23 @@ const StorageList = () => {
           )}
         </div>
 
-        {/* Search Modal */}
+        {/* Search Modal — any medicine-module user can look up a medicine's
+            stock & storages; editing stays gated by Dispense & Stock Access. */}
         <Modal
           title="Search Medicine"
-          children={undefined}
           onOpen={onOpen === 2}
           className="max-w-2xl mx-3 sm:mx-auto"
           setOnOpen={() => setOnOpen(0)}
           cancelTitle="Close"
-        />
+        >
+          {onOpen === 2 && (
+            <MedicineSearch
+              token={auth.token as string}
+              lineId={lineId as string}
+              onClose={() => setOnOpen(0)}
+            />
+          )}
+        </Modal>
 
         {/* Add Storage Modal */}
         <Modal

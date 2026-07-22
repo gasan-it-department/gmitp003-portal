@@ -126,3 +126,43 @@ export const medicineOverview = async (token: string, lineId: string) => {
 
   return response.data;
 };
+
+/** Pharmacy Home search: a medicine's stock per storage, each storage
+ *  flagged `accessible` (does the CALLER hold Dispense & Stock Access). */
+export interface MedicineSearchStorage {
+  id: string;
+  name: string | null;
+  refNumber: string | null;
+  onHand: number;
+  batches: number;
+  nearestExpiration: string | null;
+  accessible: boolean;
+}
+export interface MedicineSearchHit {
+  id: string;
+  name: string;
+  serialNumber: string;
+  barcode: string | null;
+  totalOnHand: number;
+  storages: MedicineSearchStorage[];
+}
+export const searchMedicineStock = async (
+  token: string,
+  lineId: string,
+  query: string,
+): Promise<{ list: MedicineSearchHit[] }> => {
+  const response = await axios.get("/medicine/search-stock", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
+    params: { id: lineId, query },
+  });
+
+  if (response.status !== 200) throw new Error(response.data);
+
+  return response.data;
+};
