@@ -266,7 +266,9 @@ const Login = () => {
           </Form>
         </CardContent>
 
-        <CardFooter className="pt-2 pb-8 md:pb-6 px-6 md:px-6">
+        {/* flex-col: CardFooter is a flex ROW by default, which shoved the
+            mobile security note into a skinny column BESIDE the button. */}
+        <CardFooter className="flex-col pt-2 pb-8 md:pb-6 px-6 md:px-6">
           <Button
             disabled={isSubmitting}
             onClick={handleSubmit(handle)}
