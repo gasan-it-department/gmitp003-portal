@@ -37,15 +37,17 @@ const STORAGE_ACCESS_ENDPOINTS = {
 };
 
 const STORAGE_ACCESS_COPY = {
-  heading: "Who can dispense & restock from this storage",
+  heading: "Who can dispense & stock/restock from this storage",
   body:
-    "Only the users listed below can dispense and restock medicines held in THIS storage — " +
-    "everyone else is blocked, on the web and on the pharmacy desktop app. " +
+    "Only the users listed below can dispense, stock, and restock medicines held in THIS storage — " +
+    "everyone else is blocked on the web, on the pharmacy desktop app, and on the mobile scanner " +
+    "(a barcode scan can only restock storages the signed-in user is listed on). " +
     "Storages are locked by default: assign the staff who work this storage (you can add yourself too).",
-  emptyTitle: "This storage is locked — no one can dispense yet",
+  emptyTitle: "This storage is locked — no one can dispense or restock yet",
   emptyBody:
-    "Storages are locked by default. Until you assign someone here, NO ONE can dispense " +
-    "or restock this storage's stock. Add the pharmacy staff who should have access.",
+    "Storages are locked by default. Until you assign someone here, NO ONE can dispense, " +
+    "stock, or restock this storage's stock — on web, desktop, or mobile. " +
+    "Add the pharmacy staff who should have access.",
 };
 
 const Storage = () => {
@@ -196,7 +198,7 @@ const Storage = () => {
                   className="h-6 px-2 text-[10px] gap-1 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent rounded-none text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ShieldCheck className="h-3 w-3" />
-                  Dispense Access
+                  Dispense &amp; Stock Access
                 </TabsTrigger>
               </TabsList>
             </div>
