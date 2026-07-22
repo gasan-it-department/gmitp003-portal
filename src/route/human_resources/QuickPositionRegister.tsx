@@ -124,8 +124,14 @@ const QuickPositionRegister = ({ data, linkId }: Props) => {
       });
       setTimeout(() => nav("/auth", { replace: true }), 1400);
     },
-    onError: (e) =>
-      toast.error("Registration failed", { description: `${e}` }),
+    onError: (e: any) =>
+      // Surface the server's actual message (e.g. "position fully filled")
+      // instead of a bare AxiosError string.
+      toast.error("Registration failed", {
+        description:
+          e?.response?.data?.message ??
+          (e instanceof Error ? e.message : `${e}`),
+      }),
   });
 
   const onPickPhoto = (file?: File | null) => {

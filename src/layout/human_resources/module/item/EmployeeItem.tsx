@@ -74,10 +74,15 @@ const EmployeeItem = ({
         toast.error("Failed", { description: response.data.message });
         return;
       }
+      // The API echoes WHO the grant landed on (message names the account) —
+      // surface it verbatim so a wrong-target grant is immediately visible.
       if (response.data?.alreadyHad) {
-        toast.info("This user already has access to this module.");
+        toast.info(
+          response.data?.message ??
+            "This user already has access to this module.",
+        );
       } else {
-        toast.success("Module access granted");
+        toast.success(response.data?.message ?? "Module access granted");
       }
       setOnOpen(0);
 
