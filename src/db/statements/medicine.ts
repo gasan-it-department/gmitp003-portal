@@ -166,3 +166,35 @@ export const searchMedicineStock = async (
 
   return response.data;
 };
+
+/** Direct dispense (no prescription): one op through the bulk endpoint.
+ *  Server enforces Dispense & Stock Access + FEFO + audit logging. */
+export const directDispense = async (
+  token: string,
+  op: {
+    lineId: string;
+    storageId: string;
+    medicineId?: string;
+    barcode?: string;
+    quantity: number;
+    note?: string;
+    patientName?: string;
+  },
+): Promise<{
+  results: Array<{ clientOpId: string; status: string; message?: string }>;
+}> => {
+  const response = await axios.post(
+    "/medicine/direct-dispense/bulk",
+    { ops: [{ clientOpId: crypto.randomUUID(), ...op }] },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    },
+  );
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};

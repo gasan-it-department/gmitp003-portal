@@ -35,11 +35,13 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import SelectUnit from "@/layout/medicine/SelectUnit";
 import Notification from "@/layout/medicine/Notification";
 import MedicineSearch from "@/layout/medicine/MedicineSearch";
+import DirectDispense from "@/layout/medicine/DirectDispense";
 import StorageItem from "@/layout/medicine/item/StorageItem";
 import MedicineDashboard from "@/layout/medicine/MedicineDashboard";
 
 import {
   Logs,
+  HandHeart,
   ChevronRight,
   ChevronLeft,
   Search,
@@ -151,6 +153,11 @@ const StorageList = () => {
     setOnOpen((o) => (o === 2 ? 0 : 2));
   });
 
+  hotkeys("ctrl+j", (e) => {
+    e.preventDefault();
+    setOnOpen((o) => (o === 3 ? 0 : 3));
+  });
+
   const allStorages = data?.pages.flatMap((item) => item.list) || [];
 
   return (
@@ -196,6 +203,27 @@ const StorageList = () => {
                   </TooltipTrigger>
                   <TooltipContent className="text-[10px]">
                     Search Medicine (Ctrl+K)
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={500}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setOnOpen(3)}
+                      className="h-7 text-[10px] gap-1.5"
+                    >
+                      <HandHeart className="h-3 w-3" />
+                      <span className="hidden sm:inline">Direct Dispense</span>
+                      <KbdGroup className="hidden md:flex">
+                        <Kbd className="text-[9px]">Ctrl</Kbd>
+                        <Kbd className="text-[9px]">J</Kbd>
+                      </KbdGroup>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-[10px]">
+                    Dispense without a prescription (Ctrl+J)
                   </TooltipContent>
                 </Tooltip>
 
@@ -354,6 +382,23 @@ const StorageList = () => {
               token={auth.token as string}
               lineId={lineId as string}
               onClose={() => setOnOpen(0)}
+            />
+          )}
+        </Modal>
+
+        {/* Direct Dispense Modal — walk-in release without a prescription;
+            scanner-friendly, storage access strictly enforced server-side. */}
+        <Modal
+          title="Direct Dispense (no prescription)"
+          onOpen={onOpen === 3}
+          className="max-w-2xl mx-3 sm:mx-auto"
+          setOnOpen={() => setOnOpen(0)}
+          cancelTitle="Close"
+        >
+          {onOpen === 3 && (
+            <DirectDispense
+              token={auth.token as string}
+              lineId={lineId as string}
             />
           )}
         </Modal>
