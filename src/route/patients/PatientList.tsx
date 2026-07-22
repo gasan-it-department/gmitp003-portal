@@ -118,6 +118,7 @@ const PatientList = () => {
       birthday: "",
       email: "",
       phoneNumber: "",
+      philHealthNo: "",
       region: "",
       province: "",
       municipal: "",
@@ -146,6 +147,7 @@ const PatientList = () => {
         birthday: data.birthday,
         email: data.email,
         phoneNumber: data.phoneNumber,
+        philHealthNo: data.philHealthNo,
         regionId: data.region || undefined,
         provinceId: data.province || undefined,
         municipalId: data.municipal || undefined,
@@ -558,11 +560,31 @@ const PatientList = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-semibold text-gray-700">
-                        Phone
+                        Phone (optional)
                       </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="09XX XXX XXXX"
+                          className="h-8 text-xs"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="philHealthNo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px] font-semibold text-gray-700">
+                        PhilHealth No. (optional)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="XX-XXXXXXXXX-X"
                           className="h-8 text-xs"
                           disabled={isSubmitting}
                           {...field}

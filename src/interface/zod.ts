@@ -609,6 +609,7 @@ export const DispensarySchema = z.object({
   lastname: z.string().min(2, "Minimum of 2 characters"),
   birthday: z.string().optional(),
   phoneNumber: z.string().optional(),
+  philHealthNo: z.string().optional(),
   email: z
     .string()
     .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
@@ -982,6 +983,7 @@ export const NewPatientSchema = z.object({
     })
     .optional(),
   phoneNumber: z.string().optional(),
+  philHealthNo: z.string().optional(),
   region: z.string().optional(),
   province: z.string().optional(),
   municipal: z.string().optional(),
@@ -1000,6 +1002,7 @@ export const UpdatePatientSchema = z.object({
     })
     .optional(),
   phoneNumber: z.string().optional(),
+  philHealthNo: z.string().optional(),
   illi: z.boolean().optional(),
   region: z.string().optional(),
   province: z.string().optional(),

@@ -111,6 +111,7 @@ const PatientDetail = () => {
         birthday: formData.birthday,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
+        philHealthNo: formData.philHealthNo,
         illi: formData.illi,
         regionId: formData.region || undefined,
         provinceId: formData.province || undefined,
@@ -151,6 +152,7 @@ const PatientDetail = () => {
         : "",
       email: data.email ?? "",
       phoneNumber: data.phoneNumber ?? "",
+      philHealthNo: data.philHealthNo ?? "",
       illi: data.illi,
       region: data.regionId ?? "",
       province: data.provinceId ?? "",
@@ -286,6 +288,14 @@ const PatientDetail = () => {
                 <p className="text-[10px] text-gray-500">Phone</p>
                 <p className="text-xs font-medium text-gray-800">
                   {data.phoneNumber || (
+                    <span className="text-gray-400">Not recorded</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-gray-500">PhilHealth No.</p>
+                <p className="text-xs font-medium text-gray-800">
+                  {data.philHealthNo || (
                     <span className="text-gray-400">Not recorded</span>
                   )}
                 </p>
@@ -496,10 +506,30 @@ const PatientDetail = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-semibold text-gray-700">
-                        Phone
+                        Phone (optional)
                       </FormLabel>
                       <FormControl>
                         <Input
+                          className="h-8 text-xs"
+                          disabled={isSubmitting}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="philHealthNo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[10px] font-semibold text-gray-700">
+                        PhilHealth No. (optional)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="XX-XXXXXXXXX-X"
                           className="h-8 text-xs"
                           disabled={isSubmitting}
                           {...field}

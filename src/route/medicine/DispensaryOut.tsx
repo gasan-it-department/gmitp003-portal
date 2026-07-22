@@ -100,6 +100,7 @@ const DispensaryOut = () => {
       lastname: "",
       birthday: "",
       phoneNumber: "",
+      philHealthNo: "",
       email: "",
       region: "",
       province: "",
@@ -156,6 +157,7 @@ const DispensaryOut = () => {
     setValue("lastname", "");
     setValue("birthday", "");
     setValue("phoneNumber", "");
+    setValue("philHealthNo", "");
     setValue("email", "");
     setValue("patientId", "");
   };
@@ -199,6 +201,7 @@ const DispensaryOut = () => {
       lastname: data.lastname,
       birthday: data.birthday || undefined,
       phoneNumber: patientMode === "manual" ? data.phoneNumber || undefined : undefined,
+      philHealthNo: patientMode === "manual" ? data.philHealthNo || undefined : undefined,
       email: patientMode === "manual" ? data.email || undefined : undefined,
       barangayId,
       municipalId,
@@ -844,10 +847,27 @@ const DispensaryOut = () => {
                         name="phoneNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-[10px] font-semibold text-gray-700">Phone</FormLabel>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">Phone (optional)</FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="09XX XXX XXXX"
+                                className="h-8 text-xs"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-[10px]" />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="philHealthNo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">PhilHealth No. (optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="XX-XXXXXXXXX-X"
                                 className="h-8 text-xs"
                                 {...field}
                               />

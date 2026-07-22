@@ -102,6 +102,7 @@ const DiagnoseHome = () => {
       middlename: "",
       birthday: "",
       phoneNumber: "",
+      philHealthNo: "",
       email: "",
       region: "",
       province: "",
@@ -201,6 +202,7 @@ const DiagnoseHome = () => {
       middlename: data.middlename,
       birthday: data.birthday,
       phoneNumber: data.phoneNumber,
+      philHealthNo: data.philHealthNo,
       email: data.email,
       regionId: data.region || undefined,
       provinceId: data.province || undefined,
@@ -699,11 +701,31 @@ const DiagnoseHome = () => {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-[10px] font-semibold text-gray-700">
-                              Phone
+                              Phone (optional)
                             </FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="09XX XXX XXXX"
+                                className="h-8 text-xs"
+                                disabled={isNewSubmitting}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={nc}
+                        name="philHealthNo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-[10px] font-semibold text-gray-700">
+                              PhilHealth No. (optional)
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="XX-XXXXXXXXX-X"
                                 className="h-8 text-xs"
                                 disabled={isNewSubmitting}
                                 {...field}

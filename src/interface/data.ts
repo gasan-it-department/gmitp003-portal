@@ -1680,6 +1680,7 @@ export interface Patient {
   middlename?: string | null;
   email?: string | null;
   phoneNumber?: string | null;
+  philHealthNo?: string | null;
   birthday?: string | null;
   illi: boolean;
   barangay?: Barangay | null;
@@ -1721,6 +1722,7 @@ export type NewPatientProps = {
   birthday?: string;
   email?: string;
   phoneNumber?: string;
+  philHealthNo?: string;
   regionId?: string;
   provinceId?: string;
   municipalId?: string;
@@ -1735,6 +1737,7 @@ export type UpdatePatientProps = {
   birthday?: string;
   email?: string;
   phoneNumber?: string;
+  philHealthNo?: string;
   illi?: boolean;
   regionId?: string;
   provinceId?: string;
