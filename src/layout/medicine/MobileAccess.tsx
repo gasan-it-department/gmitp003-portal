@@ -65,6 +65,10 @@ interface AccessRow {
   department: string | null;
   grantedAt: string;
   grantedBy: string | null;
+  /** Storages (in this line) the user holds Dispense & Stock Access on —
+   *  only present on the Pharmacy Mobile Access list. A scanner user with
+   *  an empty list can scan but every upload will bounce. */
+  storages?: string[];
 }
 interface Candidate {
   id: string;
@@ -304,7 +308,7 @@ const MobileAccess = ({
                 className="flex items-center justify-between gap-2 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-[11px] font-medium text-gray-800 truncate">
                       {g.name}
                     </p>
@@ -313,6 +317,25 @@ const MobileAccess = ({
                         You
                       </Badge>
                     )}
+                    {Array.isArray(g.storages) &&
+                      (g.storages.length > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 bg-blue-50 text-blue-700 border-blue-200"
+                          title="Storages this user can dispense & stock/restock"
+                        >
+                          {g.storages.join(", ")}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 gap-0.5 bg-amber-50 text-amber-700 border-amber-300"
+                          title="Can scan, but every upload will be refused — assign them on a storage's Dispense & Stock Access tab"
+                        >
+                          <AlertCircle className="h-2.5 w-2.5" />
+                          No storage assigned
+                        </Badge>
+                      ))}
                   </div>
                   <p className="text-[10px] text-gray-400 truncate">
                     @{g.username}
