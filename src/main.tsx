@@ -128,6 +128,7 @@ import AdminHome from "./layout/admin/Home.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
 import AdminRouter from "./provider/AdminRouter.tsx";
 import Test from "./route/Test.tsx";
+import RootRedirect from "./route/RootRedirect.tsx";
 import PurchaseRequest from "./layout/supplies/PurchaseRequest.tsx";
 import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
@@ -198,7 +199,10 @@ createRoot(document.getElementById("root")!).render(
                 </Unauthorized>
               }
             >
-              <Route path="/" element={<Test />} />
+              {/* Signed-in users land on their line's panel — Test moved
+                  to /test (kept, just not the landing page). */}
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/test" element={<Test />} />
               <Route path="/access-denied" element={<AccessDenied />} />
               <Route path="/:lineId" element={<App />}>
                 <Route index={true} element={<SupplyIndex />} />

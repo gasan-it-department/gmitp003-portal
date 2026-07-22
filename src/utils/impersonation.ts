@@ -28,6 +28,9 @@ export const enterLineHr = (session: {
 }) => {
   setCookie(`auth_token-${session.userId}`, session.token, 8);
   localStorage.setItem("user", session.userId);
+  // Keep the root-page redirect pointed at the line being managed — a stale
+  // "line" from a previous normal login would bounce "/" to the wrong line.
+  localStorage.setItem("line", session.lineId);
   localStorage.setItem(
     FLAG,
     JSON.stringify({
@@ -53,6 +56,7 @@ export const exitLineHr = () => {
   const imp = getHrImpersonation();
   if (imp?.userId) removeCookie(`auth_token-${imp.userId}`);
   localStorage.removeItem("user");
+  localStorage.removeItem("line");
   localStorage.removeItem(FLAG);
   window.location.href = "/admin-panel";
 };

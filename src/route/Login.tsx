@@ -97,6 +97,9 @@ const Login = () => {
         // }
         setCookie(`auth_token-${response.data.data.id}`, token, 8);
         localStorage.setItem("user", response.data.data.id);
+        // Remember the line so the root page ("/") can send a still-signed-in
+        // user straight to their control panel on the next visit.
+        localStorage.setItem("line", response.data.data.line);
         navigate(`/${response.data.data.line}`);
       } else {
         throw new Error("Login failed");
