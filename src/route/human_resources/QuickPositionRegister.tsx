@@ -92,6 +92,11 @@ const QuickPositionRegister = ({ data, linkId }: Props) => {
   const provinceId = watch("provinceId");
   const municipalId = watch("municipalId");
 
+  // The address dropdowns include selectable placeholder rows ("loading",
+  // "noData", …) — never send those as ids.
+  const addrId = (v?: string) =>
+    v && !["loading", "noData", "error", "errors"].includes(v) ? v : undefined;
+
   const mut = useMutation({
     mutationFn: (v: QuickProps) =>
       quickPositionRegister({
@@ -108,10 +113,10 @@ const QuickPositionRegister = ({ data, linkId }: Props) => {
         gender: v.gender,
         email: v.email,
         mobileNumber: v.mobileNumber,
-        regionId: v.regionId,
-        provinceId: v.provinceId,
-        municipalId: v.municipalId,
-        barangayId: v.barangayId,
+        regionId: addrId(v.regionId),
+        provinceId: addrId(v.provinceId),
+        municipalId: addrId(v.municipalId),
+        barangayId: addrId(v.barangayId),
         photo,
       }),
     onSuccess: (res) => {
