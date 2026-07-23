@@ -413,10 +413,12 @@ const Expiration = () => {
                         {s.actualStock} {s.quality}
                       </Badge>
                     </TableCell>
-                    {/* Batch identity fields — two rows of the same medicine
-                        that stay separate differ on one of THESE. */}
+                    {/* Per-unit packing — "—" when the line combines
+                        batches packed differently (units are summed). */}
                     <TableCell className="text-center text-[10px] text-gray-700 font-mono">
-                      × {(s as any).perQuantity ?? 1}
+                      {(s as any).perQuantity != null
+                        ? `× ${(s as any).perQuantity}`
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-[10px] text-gray-700">
                       {fmt((s as any).manufacturingDate)}
