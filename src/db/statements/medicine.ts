@@ -70,13 +70,15 @@ export const updateMedicineThreshold = async (
   token: string,
   body: {
     medicineId: string;
-    storageId: string;
+    storageId?: string;
     threshold: number;
     lineId: string;
     userId: string;
   },
 ) => {
-  const response = await axios.patch("/medicine/threshold", body, {
+  // ONE threshold per MEDICINE — the alert watches the medicine's TOTAL
+  // stock across every batch and storage, not per-batch counts.
+  const response = await axios.patch("/medicine/low-stock-threshold", body, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",

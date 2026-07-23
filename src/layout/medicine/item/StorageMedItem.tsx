@@ -57,10 +57,11 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
   const queryClient = useQueryClient();
   const today = new Date();
 
-  const [threshold, setThreshold] = useState<string>(
-    String((item.MedicineStock ?? [])[0]?.threshold ?? 5),
-  );
+  // ONE threshold per MEDICINE — alerts watch the medicine's TOTAL stock.
+  const medThreshold = (item as any).lowStockThreshold ?? 0;
+  const [threshold, setThreshold] = useState<string>(String(medThreshold));
   const [savingThreshold, setSavingThreshold] = useState(false);
+  const isLow = medThreshold > 0 && item.totalStock <= medThreshold;
 
   const saveThreshold = async () => {
     const value = Math.max(0, parseInt(threshold || "0", 10) || 0);
@@ -94,7 +95,7 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
 
   const statusColor = () => {
     if (item.totalStock <= 0) return "bg-red-50 text-red-700 border-red-200";
-    if (item.totalStock < 10) return "bg-amber-50 text-amber-700 border-amber-200";
+    if (isLow) return "bg-amber-50 text-amber-700 border-amber-200";
     return "bg-emerald-50 text-emerald-700 border-emerald-200";
   };
 
@@ -191,7 +192,12 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
     <>
       <TableRow
         className="hover:bg-gray-50 cursor-pointer"
-        onClick={() => setOnOpen(1)}
+        onClick={() => {
+          // Re-sync the editor with the CURRENT medicine-level value —
+          // the list refetches after saves and props move under the state.
+          setThreshold(String(medThreshold));
+          setOnOpen(1);
+        }}
       >
         {onMultiSelect && (
           <TableCell className="w-10" onClick={(e) => e.stopPropagation()} />
@@ -220,6 +226,21 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
             {item.totalStock}
           </Badge>
         </TableCell>
+        {/* Medicine-wide low-stock threshold — one number for ALL batches */}
+        <TableCell className="text-center">
+          <Badge
+            variant="outline"
+            className={`text-[10px] px-1.5 py-0 font-mono ${
+              medThreshold > 0
+                ? isLow
+                  ? "bg-amber-50 text-amber-700 border-amber-300"
+                  : "bg-gray-50 text-gray-700"
+                : "bg-gray-50 text-gray-400"
+            }`}
+          >
+            {medThreshold > 0 ? medThreshold : "—"}
+          </Badge>
+        </TableCell>
         <TableCell>
           <Badge
             variant="outline"
@@ -234,11 +255,7 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
         </TableCell>
         <TableCell className="text-center">
           <Badge className="text-[10px] px-1.5 py-0">
-            {item.totalStock <= 0
-              ? "Out"
-              : item.totalStock < 10
-                ? "Low"
-                : "In Stock"}
+            {item.totalStock <= 0 ? "Out" : isLow ? "Low" : "In Stock"}
           </Badge>
         </TableCell>
       </TableRow>
@@ -312,7 +329,7 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
                 Low-stock threshold
               </p>
               <span className="text-[9px] text-gray-400">
-                applies to all batches
+                one number for the WHOLE medicine — every batch, every storage
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -339,7 +356,8 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
               </Button>
             </div>
             <p className="text-[9px] text-gray-400 mt-1">
-              You'll be alerted when stock falls to this number or below.
+              Alerts fire when the medicine's TOTAL stock falls to this
+              number or below — not per batch.
             </p>
           </div>
 
