@@ -3,7 +3,11 @@ import { useDebounce } from "use-debounce";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useParams } from "react-router";
 import { useInView } from "react-intersection-observer";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  keepPreviousData,
+} from "@tanstack/react-query";
 
 import { employeeList, getModuleUsers } from "@/db/statement";
 import { panels } from "@/layout/ControlPanel";
@@ -58,6 +62,10 @@ const AddModuleUser = () => {
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.lastCursor : undefined,
     refetchOnWindowFocus: false,
+    // Keep showing the PREVIOUS list while a new search loads. Without this
+    // the rows collapse/reflow mid-refetch and a click aimed at one user
+    // can land on another — the exact wrong-user-grant report.
+    placeholderData: keepPreviousData,
   });
 
   const { ref } = useInView({
@@ -75,6 +83,7 @@ const AddModuleUser = () => {
     queryFn: () =>
       getModuleUsers(auth.token as string, moduleId, null, "1000", "", lineId),
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
   const memberIds = useMemo(
     () => new Set((memberData?.list ?? []).map((u) => u.id)),
@@ -142,12 +151,18 @@ const AddModuleUser = () => {
               </div>
             ) : users.length > 0 ? (
               <div className="space-y-2">
-                {!isFetching && (
-                  <p className="text-[10px] text-gray-500 px-0.5">
-                    Found {users.length} user{users.length !== 1 ? "s" : ""}
-                    {query && ` matching "${query}"`}
-                  </p>
-                )}
+                {/* Always rendered — appearing/disappearing shifted every
+                    row up and down during refetches (misclick hazard). */}
+                <p className="text-[10px] text-gray-500 px-0.5 flex items-center gap-1.5 h-4">
+                  Found {users.length} user{users.length !== 1 ? "s" : ""}
+                  {query && ` matching "${query}"`}
+                  {isFetching && (
+                    <span className="flex items-center gap-1 text-blue-500">
+                      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                      updating…
+                    </span>
+                  )}
+                </p>
 
                 {users.map((user) => (
                   <EmployeeItem

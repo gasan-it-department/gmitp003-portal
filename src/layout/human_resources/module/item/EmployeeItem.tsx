@@ -45,8 +45,15 @@ const EmployeeItem = ({
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // SNAPSHOT of the person whose Add button was clicked. The list can
+  // refetch/reorder underneath an open modal (debounced search), so the
+  // modal and the grant request read from this frozen copy — never from
+  // the live row prop, which may silently become a different user.
+  const [target, setTarget] = useState<UserProps | null>(null);
   const queryClient = useQueryClient();
   const { moduleId } = useParams();
+
+  const person = target ?? item;
 
   const grant = async () => {
     setSubmitting(true);
@@ -54,11 +61,11 @@ const EmployeeItem = ({
       const response = await axios.post(
         "/module/add/acces",
         {
-          userId: item.id,
+          userId: person.id,
           // Double-key: the server refuses the grant if this username and
           // the id don't belong to the SAME account — a stale or mismatched
           // list can never grant the wrong person.
-          username: item.username,
+          username: person.username,
           lineId,
           module,
           currUserId,
@@ -84,9 +91,9 @@ const EmployeeItem = ({
       const grantee = response.data?.grantee as
         | { id: string; username?: string | null }
         | undefined;
-      if (grantee?.id && grantee.id !== item.id) {
+      if (grantee?.id && grantee.id !== person.id) {
         toast.error("Grant mismatch — please report this", {
-          description: `The server processed @${grantee.username ?? grantee.id} but you selected @${item.username}. Refresh the page.`,
+          description: `The server processed @${grantee.username ?? grantee.id} but you selected @${person.username}. Refresh the page.`,
           duration: 12000,
         });
         return;
@@ -104,7 +111,7 @@ const EmployeeItem = ({
       // Flip THIS row from the server's own answer (truth-from-response) —
       // even if a refetch lags or is scoped oddly, the badge reflects what
       // the server just confirmed it did.
-      const markedId = grantee?.id ?? item.id;
+      const markedId = grantee?.id ?? person.id;
       queryClient.setQueryData(
         ["module-member-ids", moduleId, lineId],
         (old: { list?: Array<{ id: string }> } | undefined) => {
@@ -131,8 +138,6 @@ const EmployeeItem = ({
       setSubmitting(false);
     }
   };
-
-  const fullName = `${item.firstName ?? ""} ${item.lastName ?? ""}`.trim();
 
   return (
     <>
@@ -186,7 +191,12 @@ const EmployeeItem = ({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setOnOpen(1)}
+            onClick={() => {
+              // Freeze WHO was clicked before opening the modal — the list
+              // may refetch and put a different user under this row.
+              setTarget(item);
+              setOnOpen(1);
+            }}
             className="h-7 px-2.5 text-[10px] gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 flex-shrink-0"
           >
             <UserPlus className="h-3 w-3" />
@@ -209,33 +219,39 @@ const EmployeeItem = ({
         setOnOpen={() => {
           if (submitting) return;
           setOnOpen(0);
+          setTarget(null);
         }}
         className="max-w-sm"
         footer={true}
         onFunction={grant}
         loading={submitting}
-        yesTitle="Grant Access"
+        yesTitle={`Grant to @${person.username}`}
       >
         <div className="space-y-3 p-1">
-          {/* User card */}
+          {/* User card — rendered from the SNAPSHOT taken at click time */}
           <div className="border rounded-lg bg-gray-50 p-3 flex items-center gap-2.5">
             <Avatar className="h-10 w-10">
-              {item.userProfilePictures && (
-                <AvatarImage src={item.userProfilePictures.file_url} />
+              {person.userProfilePictures && (
+                <AvatarImage src={person.userProfilePictures.file_url} />
               )}
               <AvatarFallback className="text-xs font-medium bg-blue-100 text-blue-700">
-                {getInitials(item.firstName)}
-                {getInitials(item.lastName)}
+                {getInitials(person.firstName)}
+                {getInitials(person.lastName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-900 truncate">
-                {fullName}
+                {`${person.firstName ?? ""} ${person.lastName ?? ""}`.trim()}
               </p>
-              {item.email && (
+              {/* The account that will receive access — impossible to miss */}
+              <p className="text-sm font-bold text-blue-700 flex items-center gap-0.5">
+                <AtSign className="h-3.5 w-3.5" />
+                {person.username}
+              </p>
+              {person.email && (
                 <p className="text-[10px] text-gray-500 truncate flex items-center gap-1">
                   <Mail className="h-2.5 w-2.5" />
-                  {item.email}
+                  {person.email}
                 </p>
               )}
               <Badge
@@ -249,7 +265,11 @@ const EmployeeItem = ({
 
           <p className="text-[11px] text-gray-500">
             This grants <span className="font-medium capitalize">{module}</span>{" "}
-            module access to {fullName || "this user"}.
+            module access to the account{" "}
+            <span className="font-semibold text-gray-700">
+              @{person.username}
+            </span>{" "}
+            only. Check the username before confirming.
           </p>
 
           {submitting && (
