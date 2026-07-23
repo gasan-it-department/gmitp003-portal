@@ -129,6 +129,7 @@ import { Toaster } from "./components/ui/sonner.tsx";
 import AdminRouter from "./provider/AdminRouter.tsx";
 import Test from "./route/Test.tsx";
 import RootRedirect from "./route/RootRedirect.tsx";
+import PrivacyPolicy from "./route/PrivacyPolicy.tsx";
 import PurchaseRequest from "./layout/supplies/PurchaseRequest.tsx";
 import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
@@ -165,6 +166,9 @@ createRoot(document.getElementById("root")!).render(
               element={<PositionInvitation />}
             />
             <Route path="/auth" element={<Login />} />
+            {/* Public privacy policy — required by the app stores; reviewers
+                must reach it without signing in. */}
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/admin-login" element={<AdminLogin />} />
             <Route path="/admin-panel" element={<AdminRouter />}>
               <Route index={true} element={<AdminPanel />} />
