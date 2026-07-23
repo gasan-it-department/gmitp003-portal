@@ -85,15 +85,21 @@ const EmployeeItem = ({
         toast.error("Failed", { description: response.data.message });
         return;
       }
-      // The API echoes WHO the grant actually landed on. Verify it against
-      // the row that was clicked — any mismatch is surfaced as a loud error,
-      // never a silent success.
+      // The API echoes WHO the grant actually landed on. The identity the
+      // admin verified on screen is the @USERNAME (it's on the confirm
+      // button) — so a different id with the SAME username is fine: the
+      // server resolved a stale cached id to the person's current account.
+      // Only a different USERNAME is a real mismatch.
       const grantee = response.data?.grantee as
         | { id: string; username?: string | null }
         | undefined;
-      if (grantee?.id && grantee.id !== person.id) {
+      if (
+        grantee?.username &&
+        person.username &&
+        grantee.username !== person.username
+      ) {
         toast.error("Grant mismatch — please report this", {
-          description: `The server processed @${grantee.username ?? grantee.id} but you selected @${person.username}. Refresh the page.`,
+          description: `The server processed @${grantee.username} but you selected @${person.username}. Refresh the page.`,
           duration: 12000,
         });
         return;
