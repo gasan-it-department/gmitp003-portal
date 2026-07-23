@@ -55,6 +55,10 @@ const EmployeeItem = ({
         "/module/add/acces",
         {
           userId: item.id,
+          // Double-key: the server refuses the grant if this username and
+          // the id don't belong to the SAME account — a stale or mismatched
+          // list can never grant the wrong person.
+          username: item.username,
           lineId,
           module,
           currUserId,
@@ -74,8 +78,19 @@ const EmployeeItem = ({
         toast.error("Failed", { description: response.data.message });
         return;
       }
-      // The API echoes WHO the grant landed on (message names the account) —
-      // surface it verbatim so a wrong-target grant is immediately visible.
+      // The API echoes WHO the grant actually landed on. Verify it against
+      // the row that was clicked — any mismatch is surfaced as a loud error,
+      // never a silent success.
+      const grantee = response.data?.grantee as
+        | { id: string; username?: string | null }
+        | undefined;
+      if (grantee?.id && grantee.id !== item.id) {
+        toast.error("Grant mismatch — please report this", {
+          description: `The server processed @${grantee.username ?? grantee.id} but you selected @${item.username}. Refresh the page.`,
+          duration: 12000,
+        });
+        return;
+      }
       if (response.data?.alreadyHad) {
         toast.info(
           response.data?.message ??
@@ -85,6 +100,19 @@ const EmployeeItem = ({
         toast.success(response.data?.message ?? "Module access granted");
       }
       setOnOpen(0);
+
+      // Flip THIS row from the server's own answer (truth-from-response) —
+      // even if a refetch lags or is scoped oddly, the badge reflects what
+      // the server just confirmed it did.
+      const markedId = grantee?.id ?? item.id;
+      queryClient.setQueryData(
+        ["module-member-ids", moduleId, lineId],
+        (old: { list?: Array<{ id: string }> } | undefined) => {
+          const list = old?.list ?? [];
+          if (list.some((u) => u.id === markedId)) return old;
+          return { ...(old ?? {}), list: [...list, { id: markedId }] };
+        },
+      );
 
       // Refresh the module-users list so the new user shows up immediately,
       // and the add-page member set so this row flips to "Has access".
