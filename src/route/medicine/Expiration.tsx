@@ -322,6 +322,12 @@ const Expiration = () => {
                 <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-16">
                   Stock
                 </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-16">
+                  Per Unit
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[100px]">
+                  Manufactured
+                </TableHead>
                 <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[100px]">
                   Expires
                 </TableHead>
@@ -333,7 +339,7 @@ const Expiration = () => {
             <TableBody>
               {isError ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex flex-col items-center gap-1.5">
                       <AlertCircle className="h-4 w-4 text-red-500" />
                       <p className="text-[10px] font-medium text-red-600">
@@ -347,7 +353,7 @@ const Expiration = () => {
                 </TableRow>
               ) : isFetching && items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex items-center justify-center gap-1.5 text-gray-400">
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       <span className="text-[10px]">Loading...</span>
@@ -356,7 +362,7 @@ const Expiration = () => {
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     <div className="flex flex-col items-center gap-1.5">
                       <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
                         <CalendarClock className="h-5 w-5 text-emerald-400" />
@@ -407,6 +413,14 @@ const Expiration = () => {
                         {s.actualStock} {s.quality}
                       </Badge>
                     </TableCell>
+                    {/* Batch identity fields — two rows of the same medicine
+                        that stay separate differ on one of THESE. */}
+                    <TableCell className="text-center text-[10px] text-gray-700 font-mono">
+                      × {(s as any).perQuantity ?? 1}
+                    </TableCell>
+                    <TableCell className="text-[10px] text-gray-700">
+                      {fmt((s as any).manufacturingDate)}
+                    </TableCell>
                     <TableCell className="text-[10px] text-gray-700">
                       {fmt(s.expiration)}
                     </TableCell>
@@ -417,7 +431,7 @@ const Expiration = () => {
 
               {hasNextPage && (
                 <TableRow ref={ref}>
-                  <TableCell colSpan={7} className="text-center py-2">
+                  <TableCell colSpan={9} className="text-center py-2">
                     {isFetchingNextPage ? (
                       <div className="flex items-center justify-center gap-1.5 text-gray-400">
                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -434,7 +448,7 @@ const Expiration = () => {
 
               {!hasNextPage && items.length > 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-2 border-t">
+                  <TableCell colSpan={9} className="text-center py-2 border-t">
                     <span className="text-[10px] text-gray-400">
                       Showing all {items.length} record
                       {items.length !== 1 ? "s" : ""}
