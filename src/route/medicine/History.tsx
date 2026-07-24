@@ -3,8 +3,10 @@ import { useSearchParams } from "react-router";
 
 //
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import { HandHeart } from "lucide-react";
 import Prescriptions from "./Prescriptions";
 import MedicineLogs from "./MedicineLogs";
+import DispenseHistory from "./DispenseHistory";
 
 const History = () => {
   const [params, setParams] = useSearchParams({ tab: "prescriptions" });
@@ -85,6 +87,15 @@ const History = () => {
                     Medicine Logs
                   </span>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="dispenses"
+                  className="flex-1 md:flex-none min-w-[140px] md:min-w-auto px-4 py-3 md:py-2 text-sm font-medium rounded-none md:rounded-md data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:shadow-none data-[state=active]:text-blue-600 hover:text-blue-600"
+                >
+                  <span className="flex items-center gap-2">
+                    <HandHeart className="hidden sm:inline h-4 w-4" />
+                    Dispense History
+                  </span>
+                </TabsTrigger>
               </div>
             </TabsList>
           </div>
@@ -106,6 +117,14 @@ const History = () => {
           >
             <div className="w-full h-full p-4 md:p-6">
               <MedicineLogs />
+            </div>
+          </TabsContent>
+          <TabsContent
+            value="dispenses"
+            className="w-full h-full p-0 m-0 data-[state=active]:animate-none"
+          >
+            <div className="w-full h-full p-4 md:p-6">
+              <DispenseHistory />
             </div>
           </TabsContent>
         </div>

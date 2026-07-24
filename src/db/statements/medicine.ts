@@ -233,3 +233,105 @@ export const editMedicineBatch = async (
   if (response.status !== 200) throw new Error(response.data?.message);
   return response.data;
 };
+
+// ── Dispense history + bulk direct dispense ──────────────────────────────
+export interface DispenseHistoryRow {
+  id: string;
+  kind: number; // 0 = direct, 1 = prescription
+  patientName: string | null;
+  dispenserName: string | null;
+  dispenserUsername: string | null;
+  external: boolean;
+  externalSource: string | null;
+  refNumber: string | null;
+  totalUnits: number;
+  itemCount: number;
+  preview: string;
+  timestamp: string;
+}
+
+export const dispenseHistory = async (
+  token: string,
+  lineId: string,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+  kind: string,
+): Promise<{ list: DispenseHistoryRow[]; lastCursor: string | null; hasMore: boolean }> => {
+  const response = await axios.get("/medicine/dispense-history", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { lineId, lastCursor, limit, query, kind },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};
+
+export interface DispenseDetailItem {
+  id: string;
+  medicineName: string;
+  serialNumber: string | null;
+  barcode: string | null;
+  quantity: number;
+  unit: string | null;
+  storageName: string | null;
+  storageRef: string | null;
+}
+export interface DispenseDetail {
+  id: string;
+  kind: number;
+  patientName: string | null;
+  dispenserName: string | null;
+  dispenserUsername: string | null;
+  note: string | null;
+  external: boolean;
+  externalSource: string | null;
+  prescriptionId: string | null;
+  refNumber: string | null;
+  totalUnits: number;
+  timestamp: string;
+  items: DispenseDetailItem[];
+}
+
+export const dispenseDetail = async (
+  token: string,
+  id: string,
+): Promise<{ record: DispenseDetail }> => {
+  const response = await axios.get("/medicine/dispense-history/detail", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { id },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};
+
+/** Bulk direct dispense: one patient, many scanned items → one record. */
+export const directDispenseMulti = async (
+  token: string,
+  body: {
+    lineId: string;
+    patientName?: string;
+    note?: string;
+    external?: boolean;
+    externalSource?: string;
+    items: Array<{ storageId: string; medicineId?: string; barcode?: string; quantity: number }>;
+  },
+): Promise<{ message: string; recordId: string; itemCount: number }> => {
+  const response = await axios.post("/medicine/direct-dispense/multi", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};
