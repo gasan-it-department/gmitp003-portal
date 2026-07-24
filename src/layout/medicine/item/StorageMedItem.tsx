@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   transferMedicineStock,
   updateMedicineThreshold,
+  editMedicineBatch,
 } from "@/db/statements/medicine";
 import { formatPureDate } from "@/utils/date";
 
@@ -56,6 +57,77 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
   const [onOpen, setOnOpen] = useState(0); // 0=closed, 1=details, 2=transfer
   const queryClient = useQueryClient();
   const today = new Date();
+
+  // Batch being corrected (quantity / per-unit / unit / dates). The server
+  // re-checks access, so this is convenience, not the security boundary.
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    quantity: "",
+    perUnit: "",
+    unitOfMeasure: "",
+    expiration: "",
+    manufacturingDate: "",
+    reason: "",
+  });
+  const [savingBatch, setSavingBatch] = useState(false);
+
+  const isoDay = (d: unknown) => {
+    if (!d) return "";
+    const parsed = new Date(d as string);
+    return isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+  };
+
+  const openBatchEdit = (s: any) => {
+    setEditing(s);
+    setEditForm({
+      quantity: String(s.quantity ?? ""),
+      perUnit: String(s.perQuantity ?? ""),
+      unitOfMeasure: String(s.quality ?? ""),
+      expiration: isoDay(s.expiration),
+      manufacturingDate: isoDay(s.manufacturingDate),
+      reason: "",
+    });
+  };
+
+  const saveBatchEdit = async () => {
+    if (!editing) return;
+    setSavingBatch(true);
+    try {
+      const res = await editMedicineBatch(auth.token as string, {
+        stockId: editing.id,
+        quantity: Number(editForm.quantity),
+        perUnit: Number(editForm.perUnit),
+        unitOfMeasure: editForm.unitOfMeasure.trim(),
+        ...(editForm.expiration
+          ? { expiration: new Date(editForm.expiration).toISOString() }
+          : {}),
+        ...(editForm.manufacturingDate
+          ? {
+              manufacturingDate: new Date(
+                editForm.manufacturingDate,
+              ).toISOString(),
+            }
+          : {}),
+        ...(editForm.reason.trim() ? { reason: editForm.reason.trim() } : {}),
+      });
+      toast.success(
+        res.mergedInto
+          ? "Batch updated — it matched an existing batch and was merged into it."
+          : res.changes?.length
+            ? `Batch updated: ${res.changes.join(", ")}`
+            : "No changes to save.",
+      );
+      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ["medStorage-list"] });
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.message ??
+          (e instanceof Error ? e.message : "Failed to update the batch"),
+      );
+    } finally {
+      setSavingBatch(false);
+    }
+  };
 
   // ONE threshold per MEDICINE — alerts watch the medicine's TOTAL stock.
   const medThreshold = (item as any).lowStockThreshold ?? 0;
@@ -311,9 +383,20 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
                           (×{s.perQuantity} = {s.actualStock} items)
                         </span>
                       </p>
-                      <div className="flex items-center gap-1 text-[10px] text-gray-500">
-                        <CalendarClock className="h-2.5 w-2.5" />
-                        Exp: {formatPureDate(s.expiration as string)}
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                          <CalendarClock className="h-2.5 w-2.5" />
+                          Exp: {formatPureDate(s.expiration as string)}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-[10px] gap-1"
+                          onClick={() => openBatchEdit(s)}
+                        >
+                          <Pencil className="h-2.5 w-2.5" />
+                          Edit
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -525,6 +608,144 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
             )}
           </div>
         </Form>
+      </Modal>
+
+      {/* Correct a batch. Only the storage's creator or a holder of
+          Dispense & Stock Access can save — enforced server-side. */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-amber-50 rounded-md">
+              <Pencil className="h-3.5 w-3.5 text-amber-600" />
+            </div>
+            <span className="text-sm font-semibold">Edit batch</span>
+          </div>
+        }
+        onOpen={!!editing}
+        setOnOpen={() => {
+          if (savingBatch) return;
+          setEditing(null);
+        }}
+        className="max-w-md"
+        footer={true}
+        onFunction={saveBatchEdit}
+        loading={savingBatch}
+        yesTitle="Save changes"
+      >
+        <div className="space-y-3 p-1">
+          <p className="text-[11px] text-gray-500">
+            Correcting <span className="font-medium">{item.name}</span>. If
+            these details end up matching another batch in this storage, the
+            two are merged into one.
+          </p>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-semibold text-gray-700">
+                Quantity
+              </label>
+              <Input
+                type="number"
+                min={0}
+                className="h-8 text-xs"
+                value={editForm.quantity}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, quantity: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-gray-700">
+                Per-unit quantity
+              </label>
+              <Input
+                type="number"
+                min={1}
+                className="h-8 text-xs"
+                value={editForm.perUnit}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, perUnit: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-semibold text-gray-700">
+              Unit of measure
+            </label>
+            <Input
+              className="h-8 text-xs"
+              placeholder="box, bottle, piece…"
+              value={editForm.unitOfMeasure}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, unitOfMeasure: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-semibold text-gray-700">
+                Manufactured
+              </label>
+              <Input
+                type="date"
+                className="h-8 text-xs"
+                value={editForm.manufacturingDate}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    manufacturingDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-semibold text-gray-700">
+                Expires
+              </label>
+              <Input
+                type="date"
+                className="h-8 text-xs"
+                value={editForm.expiration}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, expiration: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-semibold text-gray-700">
+              Reason (optional, saved to the logs)
+            </label>
+            <Input
+              className="h-8 text-xs"
+              placeholder="e.g. encoding correction"
+              value={editForm.reason}
+              onChange={(e) =>
+                setEditForm((f) => ({ ...f, reason: e.target.value }))
+              }
+            />
+          </div>
+
+          <p className="text-[10px] text-gray-400">
+            On-hand becomes quantity × per-unit ={" "}
+            <span className="font-mono text-gray-600">
+              {Math.max(0, Number(editForm.quantity) || 0) *
+                Math.max(0, Number(editForm.perUnit) || 0)}
+            </span>{" "}
+            items.
+          </p>
+
+          {savingBatch && (
+            <div className="flex items-center justify-center gap-1.5 py-1 text-gray-400">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="text-[10px]">Saving…</span>
+            </div>
+          )}
+        </div>
       </Modal>
     </>
   );

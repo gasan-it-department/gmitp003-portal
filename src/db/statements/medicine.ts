@@ -200,3 +200,36 @@ export const directDispense = async (
   if (response.status !== 200) throw new Error(response.data?.message);
   return response.data;
 };
+
+/** Correct a batch's details. The server enforces Dispense & Stock Access
+ *  (or storage ownership), recomputes totals, merges the batch if the edit
+ *  makes it identical to another, and writes an audit log. */
+export const editMedicineBatch = async (
+  token: string,
+  body: {
+    stockId: string;
+    quantity?: number;
+    perUnit?: number;
+    unitOfMeasure?: string;
+    expiration?: string;
+    manufacturingDate?: string;
+    reason?: string;
+  },
+): Promise<{
+  message: string;
+  stockId: string;
+  mergedInto: string | null;
+  actualStock: number;
+  changes: string[];
+}> => {
+  const response = await axios.patch("/medicine/stock/edit", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};
