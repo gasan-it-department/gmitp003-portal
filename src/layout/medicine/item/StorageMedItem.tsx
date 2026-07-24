@@ -34,6 +34,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Save,
+  Pencil,
 } from "lucide-react";
 
 import type {
