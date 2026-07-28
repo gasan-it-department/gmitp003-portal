@@ -30,9 +30,18 @@ interface Props {
   token: string;
   onChange: (...event: any[]) => void;
   currentValue: string;
+  /** Storage to hide from the list (e.g. the transfer SOURCE — you can't
+   *  transfer a batch into the storage it already lives in). */
+  excludeId?: string;
 }
 
-const SelectStorage = ({ lineId, token, onChange, currentValue }: Props) => {
+const SelectStorage = ({
+  lineId,
+  token,
+  onChange,
+  currentValue,
+  excludeId,
+}: Props) => {
   const [text, setText] = useState("");
   const [query] = useDebounce(text, 1000);
 
@@ -65,7 +74,9 @@ const SelectStorage = ({ lineId, token, onChange, currentValue }: Props) => {
     refetch();
   }, [query, refetch]);
 
-  const allItems = data?.pages.flatMap((page) => page.list) || [];
+  const allItems = (data?.pages.flatMap((page) => page.list) || []).filter(
+    (item) => item.id !== excludeId,
+  );
 
   return (
     <div>

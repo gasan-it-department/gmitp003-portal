@@ -551,6 +551,7 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
                       lineId={lineId}
                       currentValue={field.value}
                       token={auth.token as string}
+                      excludeId={storageId}
                     />
                   </FormControl>
                   <FormDescription className="text-[10px]">
