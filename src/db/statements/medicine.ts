@@ -335,3 +335,40 @@ export const directDispenseMulti = async (
   if (response.status !== 200) throw new Error(response.data?.message);
   return response.data;
 };
+
+// ── Dispense insights (procurement decision-support) ─────────────────────
+export interface InsightRow {
+  medicineId: string;
+  name: string;
+  serialNumber: string | null;
+  units: number;
+  events?: number;
+  onHand: number;
+  shortfall?: number;
+}
+export interface DispenseInsights {
+  windowDays: number;
+  totalDispensedUnits: number;
+  distinctMedicinesDispensed: number;
+  top: InsightRow[];
+  slow: InsightRow[];
+  reorder: InsightRow[];
+  trend: Array<{ label: string; units: number }>;
+}
+
+export const medicineInsights = async (
+  token: string,
+  lineId: string,
+  days: number,
+): Promise<DispenseInsights> => {
+  const response = await axios.get("/medicine/insights", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: { lineId, days },
+  });
+  if (response.status !== 200) throw new Error(response.data?.message);
+  return response.data;
+};

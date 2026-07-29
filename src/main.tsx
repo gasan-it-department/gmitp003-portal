@@ -117,6 +117,7 @@ import StorageMedUpdate from "./layout/medicine/StorageMedUpdate.tsx";
 import History from "./route/medicine/History.tsx";
 import PrescriptionData from "./route/medicine/PrescriptionData.tsx";
 import DispenseDetail from "./route/medicine/DispenseDetail.tsx";
+import MedicineInsights from "./route/medicine/Insights.tsx";
 import MedicineExpiration from "./route/medicine/Expiration.tsx";
 //Prescribe
 import PrescribeIndex from "./route/prescribe/Index.tsx";
@@ -337,6 +338,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route index={true} element={<StorageList />} />
                 <Route path="storage/:storageId" element={<Storage />} />
                 <Route path="config" element={<StorageConfig />} />
+                <Route path="insights" element={<MedicineInsights />} />
                 <Route path="logs" element={<History />} />
                 <Route path="expiration" element={<MedicineExpiration />} />
                 <Route

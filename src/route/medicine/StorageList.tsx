@@ -51,6 +51,7 @@ import {
   Plus,
   Bell,
   Loader2,
+  ChartColumnBig,
 } from "lucide-react";
 
 import type {
@@ -224,6 +225,23 @@ const StorageList = () => {
                   </TooltipTrigger>
                   <TooltipContent className="text-[10px]">
                     Dispense without a prescription (Ctrl+J)
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip delayDuration={500}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => nav(`insights`)}
+                      className="h-7 text-[10px] gap-1.5"
+                    >
+                      <ChartColumnBig className="h-3 w-3" />
+                      <span className="hidden sm:inline">Dashboard</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-[10px]">
+                    Dispensing dashboard — what to buy more of
                   </TooltipContent>
                 </Tooltip>
 
