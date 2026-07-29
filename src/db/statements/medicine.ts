@@ -257,6 +257,8 @@ export const dispenseHistory = async (
   limit: string,
   query: string,
   kind: string,
+  dateFrom = "",
+  dateTo = "",
 ): Promise<{ list: DispenseHistoryRow[]; lastCursor: string | null; hasMore: boolean }> => {
   const response = await axios.get("/medicine/dispense-history", {
     headers: {
@@ -264,10 +266,66 @@ export const dispenseHistory = async (
       Accept: "application/json",
       "X-Requested-With": "XMLHttpRequest",
     },
-    params: { lineId, lastCursor, limit, query, kind },
+    params: { lineId, lastCursor, limit, query, kind, dateFrom, dateTo },
   });
   if (response.status !== 200) throw new Error(response.data?.message);
   return response.data;
+};
+
+/**
+ * Download the per-patient Dispense History summary as an .xlsx (columns:
+ * No, Full Name, Address, No. of Medicines Dispensed). Honors the same
+ * search / kind / date-range filters as the list. Triggers a browser download
+ * and returns nothing; throws on failure so the caller can toast an error.
+ */
+export const dispenseHistoryExport = async (
+  token: string,
+  lineId: string,
+  opts: {
+    query?: string;
+    kind?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    periodLabel?: string;
+  },
+): Promise<void> => {
+  const response = await axios.get("/medicine/dispense-history/export", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    params: {
+      lineId,
+      query: opts.query ?? "",
+      kind: opts.kind ?? "",
+      dateFrom: opts.dateFrom ?? "",
+      dateTo: opts.dateTo ?? "",
+      periodLabel: opts.periodLabel ?? "",
+    },
+    responseType: "blob",
+  });
+  if (response.status !== 200) throw new Error("Export failed");
+
+  // Prefer the server-provided filename, fall back to a period-labelled one.
+  const cd = response.headers["content-disposition"] as string | undefined;
+  let filename = `Dispense_Report_${(opts.periodLabel || "All").replace(/[^A-Za-z0-9]+/g, "_")}.xlsx`;
+  const match = cd?.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+  if (match?.[1]) filename = match[1].replace(/['"]/g, "");
+
+  const url = window.URL.createObjectURL(
+    new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode?.removeChild(link);
+  window.URL.revokeObjectURL(url);
 };
 
 export interface DispenseDetailItem {
