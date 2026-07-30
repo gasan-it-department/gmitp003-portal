@@ -46,7 +46,7 @@ const PrivacyPolicy = () => {
         <Section title="1. Who we are">
           <p>
             The <strong>Gasan LGU</strong> mobile application and the{" "}
-            <strong>Gasan Municipal Portal</strong> (www.lgu-portal.xyz) are
+            <strong>Gasan Municipal Portal</strong> (portal.gasan.ph) are
             official internal systems of the Municipal Government of Gasan,
             Marinduque. They are used by authorized municipal employees and
             health personnel to carry out government functions such as human
