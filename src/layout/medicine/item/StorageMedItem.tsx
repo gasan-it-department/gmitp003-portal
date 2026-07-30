@@ -8,6 +8,7 @@ import {
   transferMedicineStock,
   updateMedicineThreshold,
   editMedicineBatch,
+  directDispenseMulti,
 } from "@/db/statements/medicine";
 import { formatPureDate } from "@/utils/date";
 
@@ -35,6 +36,7 @@ import {
   CheckCircle2,
   Save,
   Pencil,
+  HandHeart,
 } from "lucide-react";
 
 import type {
@@ -131,6 +133,54 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId, canW
       );
     } finally {
       setSavingBatch(false);
+    }
+  };
+
+  // ── Dispense directly from THIS storage ───────────────────────────────
+  // One patient, this medicine, FEFO across the storage's batches — goes
+  // through the same hardened /medicine/direct-dispense/multi endpoint (strict
+  // storage access, atomic, one Dispense History record). Server re-checks.
+  const [dispenseOpen, setDispenseOpen] = useState(false);
+  const [dispensing, setDispensing] = useState(false);
+  const [dispenseForm, setDispenseForm] = useState({
+    quantity: "",
+    patientName: "",
+    note: "",
+  });
+
+  const onHandHere = (item as any).totalStock ?? 0;
+
+  const saveDispense = async () => {
+    const qty = Math.trunc(Number(dispenseForm.quantity));
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast.error("Enter a quantity greater than 0.");
+      return;
+    }
+    if (qty > onHandHere) {
+      toast.error(`Only ${onHandHere} on hand in this storage.`);
+      return;
+    }
+    setDispensing(true);
+    try {
+      await directDispenseMulti(auth.token as string, {
+        lineId,
+        patientName: dispenseForm.patientName.trim() || undefined,
+        note: dispenseForm.note.trim() || undefined,
+        items: [{ storageId, medicineId: item.id, quantity: qty }],
+      });
+      toast.success(
+        `Dispensed ${qty} ${qty === 1 ? "unit" : "units"} of ${item.name}.`,
+      );
+      setDispenseOpen(false);
+      setDispenseForm({ quantity: "", patientName: "", note: "" });
+      queryClient.invalidateQueries({ queryKey: ["medStorage-list"] });
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.message ??
+          (e instanceof Error ? e.message : "Failed to dispense"),
+      );
+    } finally {
+      setDispensing(false);
     }
   };
 
@@ -452,20 +502,34 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId, canW
           </div>
 
           {canWrite ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full h-7 text-[10px] gap-1.5"
-              onClick={openTransfer}
-              disabled={stocks.length === 0}
-            >
-              <FolderSync className="h-3 w-3" />
-              Transfer to Another Storage
-            </Button>
+            <div className="space-y-1.5">
+              <Button
+                size="sm"
+                className="w-full h-8 text-[11px] gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => {
+                  setDispenseForm({ quantity: "", patientName: "", note: "" });
+                  setDispenseOpen(true);
+                }}
+                disabled={onHandHere <= 0}
+              >
+                <HandHeart className="h-3.5 w-3.5" />
+                Dispense from this storage
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-7 text-[10px] gap-1.5"
+                onClick={openTransfer}
+                disabled={stocks.length === 0}
+              >
+                <FolderSync className="h-3 w-3" />
+                Transfer to Another Storage
+              </Button>
+            </div>
           ) : (
             <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 text-center">
-              View only — editing and transferring stock here needs Dispense &
-              Stock Access on this storage (or being its creator).
+              View only — dispensing, editing and transferring stock here needs
+              Dispense & Stock Access on this storage (or being its creator).
             </p>
           )}
         </div>
@@ -623,6 +687,75 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId, canW
             )}
           </div>
         </Form>
+      </Modal>
+
+      {/* Dispense directly from THIS storage (FEFO). Access re-checked server-side. */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-green-50 rounded-md">
+              <HandHeart className="h-3.5 w-3.5 text-green-600" />
+            </div>
+            <span className="text-sm font-semibold">Dispense — {item.name}</span>
+          </div>
+        }
+        onOpen={dispenseOpen}
+        setOnOpen={() => {
+          if (dispensing) return;
+          setDispenseOpen(false);
+        }}
+        className="max-w-md"
+        footer={true}
+        onFunction={saveDispense}
+        loading={dispensing}
+        yesTitle="Dispense"
+      >
+        <div className="space-y-3 p-1">
+          <p className="text-[11px] text-gray-500">
+            Dispensing from this storage (soonest to expire first).{" "}
+            <span className="font-medium">{onHandHere}</span> on hand here.
+          </p>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-700">
+              Quantity *
+            </label>
+            <Input
+              type="number"
+              min={1}
+              max={onHandHere}
+              className="h-8 text-xs"
+              value={dispenseForm.quantity}
+              onChange={(e) =>
+                setDispenseForm((f) => ({ ...f, quantity: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-700">
+              Patient name (optional)
+            </label>
+            <Input
+              className="h-8 text-xs"
+              placeholder="Leave blank for a walk-in"
+              value={dispenseForm.patientName}
+              onChange={(e) =>
+                setDispenseForm((f) => ({ ...f, patientName: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-700">
+              Note (optional)
+            </label>
+            <Input
+              className="h-8 text-xs"
+              value={dispenseForm.note}
+              onChange={(e) =>
+                setDispenseForm((f) => ({ ...f, note: e.target.value }))
+              }
+            />
+          </div>
+        </div>
       </Modal>
 
       {/* Correct a batch. Only the storage's creator or a holder of
