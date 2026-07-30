@@ -52,9 +52,13 @@ interface Props {
   lineId: string;
   auth: ProtectedRouteProps;
   storageId: string;
+  // Creator OR Dispense & Stock Access holder for this storage. When false the
+  // batch Edit + Transfer controls are hidden (server re-checks regardless).
+  // Defaults to true so a missing flag never falsely hides a legit control.
+  canWrite?: boolean;
 }
 
-const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Props) => {
+const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId, canWrite = true }: Props) => {
   const [onOpen, setOnOpen] = useState(0); // 0=closed, 1=details, 2=transfer
   const queryClient = useQueryClient();
   const today = new Date();
@@ -389,15 +393,17 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
                           <CalendarClock className="h-2.5 w-2.5" />
                           Exp: {formatPureDate(s.expiration as string)}
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-[10px] gap-1"
-                          onClick={() => openBatchEdit(s)}
-                        >
-                          <Pencil className="h-2.5 w-2.5" />
-                          Edit
-                        </Button>
+                        {canWrite && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] gap-1"
+                            onClick={() => openBatchEdit(s)}
+                          >
+                            <Pencil className="h-2.5 w-2.5" />
+                            Edit
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -445,16 +451,23 @@ const StorageMedItem = ({ item, no, onMultiSelect, lineId, auth, storageId }: Pr
             </p>
           </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full h-7 text-[10px] gap-1.5"
-            onClick={openTransfer}
-            disabled={stocks.length === 0}
-          >
-            <FolderSync className="h-3 w-3" />
-            Transfer to Another Storage
-          </Button>
+          {canWrite ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-7 text-[10px] gap-1.5"
+              onClick={openTransfer}
+              disabled={stocks.length === 0}
+            >
+              <FolderSync className="h-3 w-3" />
+              Transfer to Another Storage
+            </Button>
+          ) : (
+            <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 text-center">
+              View only — editing and transferring stock here needs Dispense &
+              Stock Access on this storage (or being its creator).
+            </p>
+          )}
         </div>
       </Modal>
 

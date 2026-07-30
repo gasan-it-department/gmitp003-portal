@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/input-group";
 import StorageMedItem from "./item/StorageMedItem";
 import PrintMedicineReport from "./PrintMedicineReport";
-import { Search, PenLine, Loader2, Package } from "lucide-react";
+import { Search, PenLine, Loader2, Package, Lock } from "lucide-react";
 
 import type { Medicine, ProtectedRouteProps } from "@/interface/data";
 
@@ -36,6 +36,9 @@ interface ListProps {
   list: Medicine[];
   lastCursor: string | null;
   hasMore: boolean;
+  // creator OR Dispense & Stock Access holder for THIS storage. Governs whether
+  // the write controls (Update / Edit / Transfer) are shown. Server re-checks.
+  canWrite?: boolean;
 }
 
 const StorageMedList = ({ storageId, auth, lineId }: Props) => {
@@ -84,6 +87,11 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
   const allMedicines = data?.pages.flatMap((page) => page.list) || [];
   const totalCount = allMedicines.length;
 
+  // Only the storage's creator or a Dispense & Stock Access holder may write.
+  // Default to true until the flag arrives so we never falsely hide controls
+  // from a legit user; the server is the real boundary either way.
+  const canWrite = data?.pages?.[0]?.canWrite !== false;
+
   return (
     <div className="w-full h-full flex flex-col">
 
@@ -114,14 +122,24 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
             />
           </InputGroup>
           <PrintMedicineReport storageId={storageId as string} />
-          <Button
-            onClick={() => nav(`update`)}
-            size="sm"
-            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
-          >
-            <PenLine className="h-3 w-3" />
-            <span className="hidden sm:inline">Update</span>
-          </Button>
+          {canWrite ? (
+            <Button
+              onClick={() => nav(`update`)}
+              size="sm"
+              className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+            >
+              <PenLine className="h-3 w-3" />
+              <span className="hidden sm:inline">Update</span>
+            </Button>
+          ) : (
+            <span
+              className="h-7 inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 text-[10px] font-medium text-amber-700"
+              title="You need Dispense & Stock Access on this storage (or to be its creator) to make changes."
+            >
+              <Lock className="h-3 w-3" />
+              <span className="hidden sm:inline">View only</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -174,6 +192,7 @@ const StorageMedList = ({ storageId, auth, lineId }: Props) => {
                   onMultiSelect={false}
                   lineId={lineId}
                   auth={auth}
+                  canWrite={canWrite}
                 />
               ))
             ) : (
