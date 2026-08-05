@@ -30,6 +30,8 @@ import Invite from "./route/human_resources/Invite.tsx";
 import SalaryGrade from "./route/human_resources/SalaryGrade.tsx";
 import SalaryGradeDetail from "./route/human_resources/SalaryGradeDetail.tsx";
 import Leaves from "./route/human_resources/Leaves.tsx";
+import Attendance from "./route/human_resources/Attendance.tsx";
+import AttendanceDetail from "./route/human_resources/AttendanceDetail.tsx";
 import Payroll from "./route/human_resources/Payroll.tsx";
 import ServicesIndex from "./route/services/ServicesIndex.tsx";
 import Complaints from "./route/services/Complaints.tsx";
@@ -401,6 +403,11 @@ createRoot(document.getElementById("root")!).render(
                   element={<SalaryGradeDetail />}
                 />
                 <Route path="leaves" element={<Leaves />} />
+                <Route path="attendance" element={<Attendance />} />
+                <Route
+                  path="attendance/:eventId"
+                  element={<AttendanceDetail />}
+                />
                 <Route path="payroll" element={<Payroll />} />
                 <Route path="areas" element={<Areas />} />
                 <Route path="units" element={<Department />} />

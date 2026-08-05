@@ -18,6 +18,7 @@ import {
   Clock4,
   Archive,
   Wrench,
+  QrCode,
 } from "lucide-react";
 import SIdeBarItem from "./SIdeBarItem";
 
@@ -51,6 +52,7 @@ export const menuGroups = [
   {
     section: "Operations",
     items: [
+      { title: "Attendance",    path: "attendance", Icon: QrCode,     children: [], accord: false },
       { title: "Leaves",        path: "leaves",   Icon: CalendarDays, children: [], accord: false },
       { title: "Payroll",       path: "payroll",  Icon: Wallet,       children: [], accord: false },
       { title: "Document Room", path: "document", Icon: FileText,     children: [], accord: false },
