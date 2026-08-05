@@ -43,6 +43,7 @@ export interface AttendanceRecordRow {
   timestamp: string;
   remarks?: string | null;
   profilePicture?: string | null;
+  office?: string | null;
   scannedBy?: string | null;
   values: Record<string, string>;
 }
@@ -133,10 +134,24 @@ export const deleteAttendanceEvent = async (token: string, eventId: string) => {
 };
 
 // ─── Records ───────────────────────────────────────────────────────
+export interface AttendanceRecordFilters {
+  page?: number;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  departmentId?: string;
+}
+
+export interface AttendanceOffice {
+  id: string;
+  name: string;
+  count: number;
+}
+
 export const attendanceRecords = async (
   token: string,
   eventId: string,
-  params: { page?: number; search?: string } = {},
+  params: AttendanceRecordFilters = {},
 ) => {
   const res = await axios.get(`/attendance/event/${eventId}/records`, {
     headers: jsonHeaders(token),
@@ -144,6 +159,7 @@ export const attendanceRecords = async (
   });
   return res.data as {
     columns: AttendanceColumn[];
+    departments: AttendanceOffice[];
     records: AttendanceRecordRow[];
     total: number;
     page: number;
@@ -166,9 +182,12 @@ export const exportAttendance = async (
   token: string,
   eventId: string,
   fallbackName = "Attendance",
+  /** Same filters as the table — the export mirrors what's on screen. */
+  filters: Omit<AttendanceRecordFilters, "page"> = {},
 ) => {
   const res = await axios.get(`/attendance/event/${eventId}/export`, {
     headers: jsonHeaders(token),
+    params: filters,
     responseType: "blob",
   });
 

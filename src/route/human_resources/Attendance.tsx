@@ -74,14 +74,6 @@ const fmtDate = (v?: string | null) =>
       })
     : "—";
 
-/** `datetime-local` wants `YYYY-MM-DDTHH:mm` in LOCAL time. */
-const toLocalInput = (d: Date) => {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(
-    d.getHours(),
-  )}:${p(d.getMinutes())}`;
-};
-
 const GROUP_ORDER: AttendanceFieldDef["group"][] = [
   "Identity",
   "Contact",
@@ -205,8 +197,6 @@ const Attendance = () => {
     title: "",
     description: "",
     location: "",
-    startAt: toLocalInput(new Date()),
-    endAt: "",
   });
   const [fields, setFields] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<AttendanceEvent | null>(
@@ -244,8 +234,6 @@ const Attendance = () => {
         title: form.title,
         description: form.description || undefined,
         location: form.location || undefined,
-        startAt: form.startAt ? new Date(form.startAt).toISOString() : undefined,
-        endAt: form.endAt ? new Date(form.endAt).toISOString() : undefined,
         fields,
       }),
     onSuccess: (ev) => {
@@ -291,8 +279,6 @@ const Attendance = () => {
       title: "",
       description: "",
       location: "",
-      startAt: toLocalInput(new Date()),
-      endAt: "",
     });
     setFields(catalogue.data?.defaults ?? []);
     setOpenCreate(true);
@@ -554,27 +540,14 @@ const Attendance = () => {
               className="mt-1"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-gray-600">Venue</label>
-              <Input
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="e.g. Municipal Gymnasium"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">
-                Starts
-              </label>
-              <Input
-                type="datetime-local"
-                value={form.startAt}
-                onChange={(e) => setForm({ ...form, startAt: e.target.value })}
-                className="mt-1"
-              />
-            </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600">Venue</label>
+            <Input
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              placeholder="e.g. Municipal Gymnasium"
+              className="mt-1"
+            />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">

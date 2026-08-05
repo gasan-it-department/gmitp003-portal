@@ -14,10 +14,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Modal from "@/components/custom/Modal";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Building2,
   CalendarDays,
   Download,
   Loader2,
@@ -25,9 +33,11 @@ import {
   LockOpen,
   MapPin,
   QrCode,
+  RefreshCw,
   Search,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 
 const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
@@ -51,6 +61,8 @@ const fmtDate = (v?: string | null) =>
       })
     : "—";
 
+const ALL = "__all__";
+
 const AttendanceDetail = () => {
   const { lineId, eventId } = useParams();
   const auth = useAuth();
@@ -58,28 +70,40 @@ const AttendanceDetail = () => {
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [departmentId, setDepartmentId] = useState(ALL);
   const [page, setPage] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
+  // What actually goes to the server — shared by the table and the export so
+  // you always download exactly what you're looking at.
+  const filters = {
+    search: search || undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    departmentId: departmentId === ALL ? undefined : departmentId,
+  };
+  const hasFilters = !!search || !!dateFrom || !!dateTo || departmentId !== ALL;
+
   const event = useQuery({
     queryKey: ["attendance-event", eventId],
-    queryFn: () => attendanceEventDetail(auth.token as string, eventId as string),
+    queryFn: () =>
+      attendanceEventDetail(auth.token as string, eventId as string),
     enabled: !!auth.token && !!eventId,
   });
 
   const records = useQuery({
-    queryKey: ["attendance-records", eventId, page, search],
+    queryKey: ["attendance-records", eventId, page, filters],
     queryFn: () =>
       attendanceRecords(auth.token as string, eventId as string, {
         page,
-        search,
+        ...filters,
       }),
     enabled: !!auth.token && !!eventId,
-    // The sheet fills up live while people are being scanned at the door.
-    refetchInterval: event.data?.status === "open" ? 15000 : false,
   });
 
   const invalidate = () => {
@@ -100,8 +124,7 @@ const AttendanceDetail = () => {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) =>
-      deleteAttendanceRecord(auth.token as string, id),
+    mutationFn: (id: string) => deleteAttendanceRecord(auth.token as string, id),
     onSuccess: () => {
       toast.success("Record removed");
       setConfirmRemove(null);
@@ -116,12 +139,22 @@ const AttendanceDetail = () => {
         auth.token as string,
         eventId as string,
         event.data?.title ?? "Attendance",
+        filters,
       ),
     onSuccess: (name) => toast.success(`Downloaded ${name}`),
     onError: (e) => toast.error(surfaceErr(e, "Export failed")),
   });
 
+  const clearFilters = () => {
+    setSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setDepartmentId(ALL);
+    setPage(0);
+  };
+
   const columns = records.data?.columns ?? event.data?.columns ?? [];
+  const offices = records.data?.departments ?? [];
   const rows = records.data?.records ?? [];
 
   return (
@@ -174,7 +207,7 @@ const AttendanceDetail = () => {
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                   <span className="inline-flex items-center gap-1">
                     <CalendarDays className="h-3 w-3" />
-                    {fmtDate(event.data?.startAt)}
+                    Created {fmtDate(event.data?.startAt)}
                   </span>
                   {event.data?.location ? (
                     <span className="inline-flex items-center gap-1">
@@ -186,6 +219,21 @@ const AttendanceDetail = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  disabled={records.isFetching}
+                  onClick={() => records.refetch()}
+                  title="Reload the attendance list"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${
+                      records.isFetching ? "animate-spin" : ""
+                    }`}
+                  />
+                  Refresh
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -221,37 +269,97 @@ const AttendanceDetail = () => {
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-blue-50 px-3 py-2">
               <Users className="h-4 w-4 text-blue-600" />
               <p className="text-sm text-blue-900">
-                <span className="font-semibold">
-                  {records.data?.total ?? event.data?.attendees ?? 0}
-                </span>{" "}
-                attendee
-                {(records.data?.total ?? 0) === 1 ? "" : "s"} recorded
+                <span className="font-semibold">{records.data?.total ?? 0}</span>{" "}
+                attendee{(records.data?.total ?? 0) === 1 ? "" : "s"}
+                {hasFilters ? " match this filter" : " recorded"}
               </p>
-              {event.data?.status === "open" ? (
-                <span className="ml-auto text-[11px] text-blue-700">
-                  Live — refreshes every 15s
+              {hasFilters && event.data?.attendees != null ? (
+                <span className="text-xs text-blue-700">
+                  of {event.data.attendees} on the sheet
                 </span>
               ) : null}
             </div>
           </div>
 
-          {/* ── Records ──────────────────────────────────────────────── */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              placeholder="Search this page's records…"
-              className="pl-8 h-9"
-            />
+          {/* ── Filters ──────────────────────────────────────────────── */}
+          <div className="rounded-lg border bg-white p-3 space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(0);
+                  }}
+                  placeholder="Search name or any recorded value…"
+                  className="pl-8 h-9"
+                />
+              </div>
+
+              <Select
+                value={departmentId}
+                onValueChange={(v) => {
+                  setDepartmentId(v);
+                  setPage(0);
+                }}
+              >
+                <SelectTrigger className="w-[220px] h-9">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Building2 className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                    <SelectValue placeholder="All offices" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>All offices / units</SelectItem>
+                  {offices.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.name} ({o.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">Recorded between</span>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setPage(0);
+                }}
+                className="h-9 w-[160px]"
+              />
+              <span className="text-xs text-gray-400">and</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(0);
+                }}
+                className="h-9 w-[160px]"
+              />
+              {hasFilters ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-9 gap-1 text-gray-600"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           </div>
 
+          {/* ── Records ──────────────────────────────────────────────── */}
           {records.isLoading ? (
             <div className="flex items-center justify-center py-16 text-gray-400">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -260,13 +368,23 @@ const AttendanceDetail = () => {
             <div className="rounded-lg border border-dashed py-14 text-center">
               <QrCode className="h-8 w-8 text-gray-300 mx-auto mb-2" />
               <p className="text-sm font-medium text-gray-700">
-                {search ? "No records matched" : "Nobody scanned in yet"}
+                {hasFilters ? "No records matched" : "Nobody scanned in yet"}
               </p>
               <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                {search
-                  ? "Try a different search term."
-                  : "Open the mobile app, choose this sheet, and scan an employee's ID QR code."}
+                {hasFilters
+                  ? "Try widening the date range or clearing the office filter."
+                  : "Open the mobile app, choose this sheet, and scan an employee's ID QR code — then press Refresh."}
               </p>
+              {hasFilters ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={clearFilters}
+                >
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div className="rounded-lg border overflow-x-auto">
@@ -322,8 +440,7 @@ const AttendanceDetail = () => {
                           onClick={() =>
                             setConfirmRemove({
                               id: r.id,
-                              name:
-                                r.values[columns[0]?.key] ?? "this attendee",
+                              name: r.values[columns[0]?.key] ?? "this attendee",
                             })
                           }
                           title="Remove this record"
