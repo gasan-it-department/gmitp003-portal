@@ -11,6 +11,7 @@ import {
   Archive,
   Send,
   PenLine,
+  ShieldCheck,
   Inbox,
   ExternalLink,
   Loader2,
@@ -97,6 +98,14 @@ const TILES: Tile[] = [
       "Upload your own PDF, drop signature boxes, sign every field in one click.",
     Icon: PenLine,
     path: "self-sign",
+  },
+  {
+    name: "Verify a Document",
+    description:
+      "Check whether a signed PDF is genuine and unaltered. Anyone can use it — share the link with recipients outside the LGU.",
+    Icon: ShieldCheck,
+    // Absolute: the verifier is a public page outside the module shell.
+    path: "/verify-document",
   },
 ];
 

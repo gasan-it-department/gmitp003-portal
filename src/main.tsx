@@ -134,6 +134,7 @@ import AdminRouter from "./provider/AdminRouter.tsx";
 import Test from "./route/Test.tsx";
 import RootRedirect from "./route/RootRedirect.tsx";
 import PrivacyPolicy from "./route/PrivacyPolicy.tsx";
+import VerifyDocument from "./route/VerifyDocument.tsx";
 import PurchaseRequest from "./layout/supplies/PurchaseRequest.tsx";
 import DispenseRecordData from "./layout/supplies/DispenseRecordData.tsx";
 import UserDispenseRecord from "./layout/supplies/UserDispenseRecord.tsx";
@@ -188,6 +189,9 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/invitation/:invitationId" element={<InviteLink />} />
             <Route path="/job-post/:municipalId" element={<JobPost />} />
             <Route path="/verify-id" element={<VerifyId />} />
+            {/* Public document verifier — a supplier/auditor/citizen handed a
+                signed document must be able to check it with no account. */}
+            <Route path="/verify-document" element={<VerifyDocument />} />
             <Route path="/public" element={<TempAuthProvider />}>
               <Route
                 path="application/:applicationId"
