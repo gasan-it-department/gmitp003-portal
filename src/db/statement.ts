@@ -410,6 +410,28 @@ export const provisionalPersonnel = async (
   return response.data;
 };
 
+/**
+ * The people hired into ONE provisional position, cursor-paginated for the
+ * infinite-scroll list. Returns the position too so the page header does not
+ * need a second request.
+ */
+export const provisionalPositionPersonnel = async (
+  token: string,
+  lineId: string,
+  positionId: string,
+  lastCursor: string | null,
+  limit: string,
+  query: string,
+) => {
+  const response = await axios.get("/provisional/position/personnel", {
+    headers: provHeaders(token),
+    params: { id: lineId, positionId, lastCursor, limit, query },
+  });
+  if (response.status !== 200)
+    throw new Error("Failed to load the position's personnel");
+  return response.data;
+};
+
 export const provisionalTransfer = async (
   token: string,
   payload: {

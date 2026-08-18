@@ -34,6 +34,7 @@ import Attendance from "./route/human_resources/Attendance.tsx";
 import AttendanceDetail from "./route/human_resources/AttendanceDetail.tsx";
 import MessageQueue from "./route/human_resources/MessageQueue.tsx";
 import MessageBatchDetail from "./route/human_resources/MessageBatchDetail.tsx";
+import ProvisionalPositionPersonnel from "./route/human_resources/ProvisionalPositionPersonnel.tsx";
 import Payroll from "./route/human_resources/Payroll.tsx";
 import ServicesIndex from "./route/services/ServicesIndex.tsx";
 import Complaints from "./route/services/Complaints.tsx";
@@ -380,6 +381,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="employee/:employeeId" element={<UserProfile />} />
                 <Route path="employees/add" element={<AddEmployee />} />
                 <Route path="provisional" element={<Provisional />} />
+                <Route
+                  path="provisional/position/:positionId"
+                  element={<ProvisionalPositionPersonnel />}
+                />
                 <Route path="archived" element={<Archived />} />
                 <Route path="tools" element={<Tools />} />
                 <Route

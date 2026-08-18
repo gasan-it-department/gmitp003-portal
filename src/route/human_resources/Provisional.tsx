@@ -68,6 +68,7 @@ import {
   X,
 } from "lucide-react";
 
+// The CSC categories HR can assign to a person.
 const EMP_TYPES = [
   "Job Order",
   "Contract of Service",
@@ -75,6 +76,11 @@ const EMP_TYPES = [
   "Contractual",
   "Temporary",
 ];
+// What the personnel FILTER offers. Hires start out carrying the position's
+// placeholder ("Non-Plantilla") or the quick-register default ("Provisional")
+// until HR narrows them to a real category, so those have to be filterable or
+// most of the list is unreachable from the dropdown.
+const FILTER_EMP_TYPES = [...EMP_TYPES, "Non-Plantilla", "Provisional"];
 // Positions no longer carry an employment type, but the backend still requires
 // one — store a neutral placeholder so creation validates.
 const DEFAULT_PROV_EMP_TYPE = "Non-Plantilla";
@@ -95,6 +101,8 @@ interface ProvPosition {
   filled: number;
   pending: number;
   open: number;
+  /** Outstanding invitations beyond the seats left. */
+  overCommitted: number;
   salaryGrade?: { id: string; grade: number; amount: number } | null;
 }
 interface Personnel {
@@ -672,10 +680,38 @@ const Provisional = () => {
                           ? "text-[10px] px-2 bg-amber-50 text-amber-700 border-amber-200"
                           : "text-[10px] px-2 bg-emerald-50 text-emerald-700 border-emerald-200"
                       }
+                      title={`${p.filled} filled, ${p.open} open of ${p.slots} slots`}
                     >
                       <Users className="h-2.5 w-2.5 mr-1" />
-                      {p.open} open / {p.slots}
+                      {p.filled}/{p.slots} filled · {p.open} open
                     </Badge>
+                    {p.overCommitted > 0 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-2 bg-amber-50 text-amber-700 border-amber-200"
+                        title="More invitations are outstanding than there are seats left"
+                      >
+                        {p.pending} invited · {p.overCommitted} over
+                      </Badge>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px] gap-1 px-2 bg-white"
+                      onClick={() =>
+                        nav(
+                          `/${lineId}/human-resources/provisional/position/${p.id}`,
+                        )
+                      }
+                      title="See everyone hired into this position"
+                    >
+                      <Users className="h-3 w-3 text-gray-600" /> Personnel
+                      {p.filled > 0 && (
+                        <span className="tabular-nums text-gray-500">
+                          ({p.filled})
+                        </span>
+                      )}
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -749,7 +785,7 @@ const Provisional = () => {
                   <SelectItem value="all" className="text-xs">
                     All types
                   </SelectItem>
-                  {EMP_TYPES.map((t) => (
+                  {FILTER_EMP_TYPES.map((t) => (
                     <SelectItem key={t} value={t} className="text-xs">
                       {t}
                     </SelectItem>
