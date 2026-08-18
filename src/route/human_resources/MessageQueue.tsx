@@ -1,28 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 //
 import {
-  deleteMessageTemplate,
+  createMessageBatch,
   listMessageBatches,
   listMessageTemplates,
-  messageBatchDetail,
-  messagePlaceholders,
-  previewMessageFor,
-  retryMessageBatch,
-  saveMessageTemplate,
-  searchMessageRecipients,
-  sendMessageBatch,
-  type Audience,
+  type MessageBatchRow,
   type MessageChannel,
-  type RecipientRow,
 } from "@/db/statements/hrMessage";
 //
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -36,18 +26,15 @@ import {
   Send,
   Search,
   Loader2,
-  Trash2,
   Mail,
   MessageSquare,
-  RotateCw,
-  Save,
-  Users,
+  Plus,
+  Inbox,
+  ChevronRight,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
-  Eye,
-  History,
-  X,
+  FileEdit,
+  Users,
 } from "lucide-react";
 
 const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
@@ -71,813 +58,436 @@ const fmtDate = (v?: string | null) =>
       })
     : "—";
 
-/** SMS is billed per 160-character segment — show HR what a message costs. */
-const SEGMENT = 160;
+const AUDIENCE_LABEL: Record<string, string> = {
+  plantilla: "Plantilla",
+  "non-plantilla": "Non-Plantilla",
+  custom: "Selected employees",
+};
 
-// ── Compose ───────────────────────────────────────────────────────────────
-const Compose = ({ token }: { token: string }) => {
+/** One coloured pill telling you the outcome at a glance. */
+const StatusPill = ({ batch }: { batch: MessageBatchRow }) => {
+  if (batch.status === "draft")
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        <FileEdit className="h-3.5 w-3.5" />
+        Draft
+      </span>
+    );
+  if (batch.failedCount === 0)
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        All sent
+      </span>
+    );
+  if (batch.sentCount === 0)
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
+        <XCircle className="h-3.5 w-3.5" />
+        All failed
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+      <XCircle className="h-3.5 w-3.5" />
+      {batch.failedCount} failed
+    </span>
+  );
+};
+
+/** Delivery split as a bar — reads faster than two numbers. */
+const DeliveryBar = ({ batch }: { batch: MessageBatchRow }) => {
+  const total = Math.max(1, batch.total);
+  const sent = (batch.sentCount / total) * 100;
+  const failed = (batch.failedCount / total) * 100;
+  return (
+    <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden flex">
+      <div className="bg-emerald-500 h-full" style={{ width: `${sent}%` }} />
+      <div className="bg-red-500 h-full" style={{ width: `${failed}%` }} />
+    </div>
+  );
+};
+
+const StatCard = ({
+  label,
+  value,
+  Icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  Icon: typeof Send;
+  tone: "gray" | "emerald" | "red" | "blue";
+}) => {
+  const tones = {
+    gray: "bg-gray-50 text-gray-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+    blue: "bg-blue-50 text-blue-600",
+  } as const;
+  return (
+    <div className="bg-white rounded-lg border shadow-sm p-4 flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${tones[tone]}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-gray-900 leading-none tabular-nums">
+          {value}
+        </p>
+        <p className="text-xs text-gray-500 mt-1 truncate">{label}</p>
+      </div>
+    </div>
+  );
+};
+
+const MessageQueue = () => {
+  const auth = useAuth();
+  const token = auth.token as string;
+  const { lineId } = useParams();
+  const navigate = useNavigate();
   const qc = useQueryClient();
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const [channel, setChannel] = useState<MessageChannel>("sms");
-  const [audience, setAudience] = useState<Audience>("plantilla");
   const [search, setSearch] = useState("");
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [picked, setPicked] = useState<Record<string, RecipientRow>>({});
-  const [templateId, setTemplateId] = useState<string>("");
-  const [saveOpen, setSaveOpen] = useState(false);
-  const [tplName, setTplName] = useState("");
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [confirmSend, setConfirmSend] = useState(false);
+  const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(0);
 
-  const placeholders = useQuery({
-    queryKey: ["hr-msg-placeholders"],
-    queryFn: () => messagePlaceholders(token),
+  const [newOpen, setNewOpen] = useState(false);
+  const [form, setForm] = useState<{
+    name: string;
+    channel: MessageChannel;
+    templateId: string;
+  }>({ name: "", channel: "sms", templateId: "" });
+
+  const batches = useQuery({
+    queryKey: ["hr-msg-batches", page, search, status],
+    queryFn: () =>
+      listMessageBatches(token, {
+        page,
+        search: search || undefined,
+        status: status === "all" ? undefined : status,
+      }),
     enabled: !!token,
-    staleTime: 60 * 60 * 1000,
   });
 
   const templates = useQuery({
     queryKey: ["hr-msg-templates"],
     queryFn: () => listMessageTemplates(token),
-    enabled: !!token,
+    enabled: !!token && newOpen,
   });
 
-  const recipients = useQuery({
-    queryKey: ["hr-msg-recipients", audience, search, channel],
-    queryFn: () =>
-      searchMessageRecipients(token, {
-        audience: audience === "custom" ? undefined : audience,
-        query: search || undefined,
-        channel,
-      }),
-    enabled: !!token,
-  });
-
-  const MAX = recipients.data?.max ?? 20;
-  const chosen = Object.values(picked);
-
-  // Switching channel invalidates every pick: the address that made someone
-  // sendable by SMS says nothing about whether they have a Gmail account.
-  useEffect(() => {
-    setPicked({});
-  }, [channel]);
-
-  const insertToken = (tok: string) => {
-    const el = bodyRef.current;
-    if (!el) {
-      setBody((b) => b + tok);
-      return;
-    }
-    const start = el.selectionStart ?? body.length;
-    const end = el.selectionEnd ?? body.length;
-    const next = body.slice(0, start) + tok + body.slice(end);
-    setBody(next);
-    // Put the caret after the inserted token so HR can keep typing.
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + tok.length, start + tok.length);
-    });
-  };
-
-  const loadTemplate = (id: string) => {
-    setTemplateId(id);
-    const t = templates.data?.templates.find((x) => x.id === id);
-    if (!t) return;
-    setChannel(t.channel);
-    setSubject(t.subject ?? "");
-    setBody(t.body);
-  };
-
-  const toggle = (r: RecipientRow) => {
-    setPicked((p) => {
-      if (p[r.id]) {
-        const { [r.id]: _drop, ...rest } = p;
-        return rest;
-      }
-      if (Object.keys(p).length >= MAX) {
-        toast.error(`You can send to at most ${MAX} people at a time.`);
-        return p;
-      }
-      return { ...p, [r.id]: r };
-    });
-  };
-
-  const saveTpl = useMutation({
+  const create = useMutation({
     mutationFn: () =>
-      saveMessageTemplate(token, {
-        id: templateId || undefined,
-        name: tplName.trim(),
-        channel,
-        subject: channel === "email" ? subject : undefined,
-        body,
+      createMessageBatch(token, {
+        name: form.name.trim() || undefined,
+        channel: form.channel,
+        templateId: form.templateId || undefined,
       }),
-    onSuccess: (t) => {
-      toast.success("Template saved");
-      setSaveOpen(false);
-      setTemplateId(t.id);
-      qc.invalidateQueries({ queryKey: ["hr-msg-templates"] });
-    },
-    onError: (e) => toast.error(surfaceErr(e, "Could not save the template")),
-  });
-
-  const removeTpl = useMutation({
-    mutationFn: (id: string) => deleteMessageTemplate(token, id),
-    onSuccess: () => {
-      toast.success("Template deleted");
-      setTemplateId("");
-      qc.invalidateQueries({ queryKey: ["hr-msg-templates"] });
-    },
-    onError: (e) => toast.error(surfaceErr(e, "Could not delete the template")),
-  });
-
-  const preview = useQuery({
-    queryKey: ["hr-msg-preview", body, chosen[0]?.id],
-    queryFn: () => previewMessageFor(token, { body, userId: chosen[0].id }),
-    enabled: previewOpen && !!chosen[0]?.id && !!body.trim(),
-  });
-
-  const send = useMutation({
-    mutationFn: () =>
-      sendMessageBatch(token, {
-        templateId: templateId || undefined,
-        channel,
-        subject: channel === "email" ? subject : undefined,
-        body,
-        audience,
-        userIds: chosen.map((r) => r.id),
-      }),
-    onSuccess: (r) => {
-      setConfirmSend(false);
-      if (r.failed === 0) toast.success(`Sent to all ${r.sent} recipients.`);
-      else if (r.sent === 0)
-        toast.error(`All ${r.failed} failed — open History to retry.`);
-      else
-        toast.warning(
-          `${r.sent} sent, ${r.failed} failed — open History to retry the failures.`,
-        );
-      setPicked({});
+    onSuccess: (b) => {
+      setNewOpen(false);
+      setForm({ name: "", channel: "sms", templateId: "" });
       qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
+      navigate(`/${lineId}/hr/messages/${b.id}`);
     },
-    onError: (e) => toast.error(surfaceErr(e, "Could not send")),
-  });
-
-  const list = recipients.data?.recipients ?? [];
-  const unsendablePicked = chosen.filter((r) => !r.sendable);
-  const segments = Math.max(1, Math.ceil(body.length / SEGMENT));
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] mt-3">
-      {/* ── Left: the message ─────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <div className="rounded-lg border bg-white p-3 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-md border overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setChannel("sms")}
-                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 ${
-                  channel === "sms"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <MessageSquare className="h-3.5 w-3.5" />
-                Text message
-              </button>
-              <button
-                type="button"
-                onClick={() => setChannel("email")}
-                className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 border-l ${
-                  channel === "email"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Email (Gmail)
-              </button>
-            </div>
-
-            <div className="flex-1 min-w-[180px]">
-              <Select
-                value={templateId || "none"}
-                onValueChange={(v) =>
-                  v === "none" ? setTemplateId("") : loadTemplate(v)
-                }
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Start from a template…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No template</SelectItem>
-                  {(templates.data?.templates ?? []).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name} · {t.channel === "email" ? "Email" : "SMS"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {templateId && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-red-600 hover:text-red-700"
-                onClick={() => removeTpl.mutate(templateId)}
-                disabled={removeTpl.isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
-          {channel === "email" && (
-            <Input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Subject"
-              className="h-9"
-            />
-          )}
-
-          <Textarea
-            ref={bodyRef}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={8}
-            placeholder="Good day, {{fullName}} of {{office}}…"
-            className="text-sm"
-          />
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-            <span>
-              {body.length} characters
-              {channel === "sms" && (
-                <>
-                  {" · "}
-                  <span className={segments > 1 ? "text-amber-600" : ""}>
-                    {segments} SMS segment{segments > 1 ? "s" : ""} each
-                  </span>
-                </>
-              )}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-1.5"
-                onClick={() => {
-                  if (!chosen.length) {
-                    toast.error("Pick a recipient to preview against");
-                    return;
-                  }
-                  setPreviewOpen(true);
-                }}
-              >
-                <Eye className="h-3.5 w-3.5" />
-                Preview
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-8 gap-1.5"
-                onClick={() => {
-                  if (!body.trim()) {
-                    toast.error("The message is empty");
-                    return;
-                  }
-                  setTplName(
-                    templates.data?.templates.find((t) => t.id === templateId)
-                      ?.name ?? "",
-                  );
-                  setSaveOpen(true);
-                }}
-              >
-                <Save className="h-3.5 w-3.5" />
-                Save as template
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Placeholder palette */}
-        <div className="rounded-lg border bg-white p-3">
-          <p className="text-xs font-semibold text-gray-700 mb-2">
-            Insert a placeholder
-          </p>
-          <p className="text-[11px] text-gray-500 mb-2">
-            Each one is replaced with that person's own information when the
-            message is sent.
-          </p>
-          <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
-            {(placeholders.data?.placeholders ?? []).map((p) => (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => insertToken(p.token)}
-                title={p.token}
-                className="px-2 py-1 rounded border text-[11px] bg-gray-50 hover:bg-blue-50 hover:border-blue-300 text-gray-700"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Right: who gets it ────────────────────────────────────────── */}
-      <div className="space-y-3">
-        <div className="rounded-lg border bg-white p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5" />
-              Recipients
-            </p>
-            <Badge
-              variant={chosen.length >= MAX ? "destructive" : "secondary"}
-              className="text-[10px]"
-            >
-              {chosen.length} / {MAX}
-            </Badge>
-          </div>
-
-          <Select
-            value={audience}
-            onValueChange={(v) => setAudience(v as Audience)}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="plantilla">Plantilla</SelectItem>
-              <SelectItem value="non-plantilla">Non-Plantilla</SelectItem>
-              <SelectItem value="custom">Everyone</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, position or office…"
-              className="pl-8 h-9"
-            />
-          </div>
-
-          {chosen.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-1">
-              {chosen.map((r) => (
-                <span
-                  key={r.id}
-                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] ${
-                    r.sendable
-                      ? "bg-blue-50 text-blue-700"
-                      : "bg-amber-50 text-amber-700"
-                  }`}
-                >
-                  {r.name}
-                  <button type="button" onClick={() => toggle(r)}>
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="border rounded-md divide-y max-h-[420px] overflow-y-auto">
-            {recipients.isLoading ? (
-              <div className="p-4 flex justify-center">
-                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-              </div>
-            ) : list.length === 0 ? (
-              <p className="p-4 text-xs text-center text-gray-500">
-                No employees match this filter.
-              </p>
-            ) : (
-              list.map((r) => {
-                const on = !!picked[r.id];
-                return (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => toggle(r)}
-                    className={`w-full text-left px-2.5 py-2 flex items-start gap-2 hover:bg-gray-50 ${
-                      on ? "bg-blue-50/60" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      readOnly
-                      checked={on}
-                      className="mt-0.5 h-3.5 w-3.5 accent-blue-600"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-medium text-gray-900 truncate">
-                        {r.name}
-                      </span>
-                      <span className="block text-[11px] text-gray-500 truncate">
-                        {r.position ?? "—"}
-                        {r.office ? ` · ${r.office}` : ""}
-                      </span>
-                      {r.sendable ? (
-                        <span className="block text-[11px] text-gray-400 truncate">
-                          {r.to}
-                        </span>
-                      ) : (
-                        <span className="flex text-[11px] text-amber-600 items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          {r.reason}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {unsendablePicked.length > 0 && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-800">
-            {unsendablePicked.length} selected{" "}
-            {unsendablePicked.length === 1 ? "person has" : "people have"} no
-            usable {channel === "email" ? "Gmail address" : "mobile number"}.
-            They will be recorded as failed so you can fix the record and retry.
-          </div>
-        )}
-
-        <Button
-          className="w-full gap-1.5"
-          disabled={!chosen.length || !body.trim() || send.isPending}
-          onClick={() => {
-            if (channel === "email" && !subject.trim()) {
-              toast.error("Email needs a subject");
-              return;
-            }
-            setConfirmSend(true);
-          }}
-        >
-          {send.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-          Send to {chosen.length}{" "}
-          {chosen.length === 1 ? "recipient" : "recipients"}
-        </Button>
-      </div>
-
-      {/* ── Save template ─────────────────────────────────────────────── */}
-      <Modal
-        title="Save as template"
-        onOpen={saveOpen}
-        setOnOpen={() => setSaveOpen(false)}
-        className="sm:max-w-md"
-        footer={true}
-        loading={saveTpl.isPending}
-        yesTitle={templateId ? "Update template" : "Save template"}
-        onFunction={() => {
-          if (!tplName.trim()) {
-            toast.error("Give the template a name");
-            return;
-          }
-          saveTpl.mutate();
-        }}
-      >
-        <div className="space-y-2">
-          <Input
-            value={tplName}
-            onChange={(e) => setTplName(e.target.value)}
-            placeholder="e.g. Payroll reminder"
-            className="h-9"
-          />
-          {templateId && (
-            <p className="text-[11px] text-gray-500">
-              This overwrites the template you loaded. Change the name to keep
-              both.
-            </p>
-          )}
-        </div>
-      </Modal>
-
-      {/* ── Preview ───────────────────────────────────────────────────── */}
-      <Modal
-        title={`Preview for ${chosen[0]?.name ?? ""}`}
-        onOpen={previewOpen}
-        setOnOpen={() => setPreviewOpen(false)}
-        className="sm:max-w-lg"
-        footer={false}
-      >
-        {preview.isLoading ? (
-          <div className="p-4 flex justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {channel === "email" && (
-              <p className="text-xs">
-                <span className="text-gray-500">Subject:</span>{" "}
-                <span className="font-medium">{subject || "—"}</span>
-              </p>
-            )}
-            <pre className="whitespace-pre-wrap text-sm bg-gray-50 border rounded p-3 font-sans">
-              {preview.data?.rendered ?? ""}
-            </pre>
-            {!!preview.data?.unresolved?.length && (
-              <p className="text-[11px] text-amber-700 flex items-start gap-1">
-                <AlertTriangle className="h-3.5 w-3.5 mt-px flex-shrink-0" />
-                These placeholders have no value for this person and will be
-                sent as-is: {preview.data.unresolved.join(", ")}
-              </p>
-            )}
-          </div>
-        )}
-      </Modal>
-
-      {/* ── Confirm ───────────────────────────────────────────────────── */}
-      <Modal
-        title="Send this message?"
-        onOpen={confirmSend}
-        setOnOpen={() => setConfirmSend(false)}
-        className="sm:max-w-md"
-        footer={true}
-        loading={send.isPending}
-        yesTitle={`Send to ${chosen.length}`}
-        onFunction={() => send.mutate()}
-      >
-        <div className="text-sm text-gray-600 space-y-2">
-          <p>
-            {chosen.length} {chosen.length === 1 ? "person" : "people"} will
-            receive this by{" "}
-            <strong>{channel === "email" ? "email" : "text message"}</strong>.
-          </p>
-          {channel === "sms" && segments > 1 && (
-            <p className="text-amber-700">
-              Each message is {segments} SMS segments — that is{" "}
-              {segments * chosen.length} segments in total.
-            </p>
-          )}
-          <p className="text-xs text-gray-500">
-            This cannot be undone. Sent messages appear under History.
-          </p>
-        </div>
-      </Modal>
-    </div>
-  );
-};
-
-// ── History ───────────────────────────────────────────────────────────────
-const HistoryTab = ({ token }: { token: string }) => {
-  const qc = useQueryClient();
-  const [page, setPage] = useState(0);
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  const batches = useQuery({
-    queryKey: ["hr-msg-batches", page],
-    queryFn: () => listMessageBatches(token, page),
-    enabled: !!token,
-  });
-
-  const detail = useQuery({
-    queryKey: ["hr-msg-batch", openId],
-    queryFn: () => messageBatchDetail(token, openId as string),
-    enabled: !!openId,
-  });
-
-  const retry = useMutation({
-    mutationFn: (v: { batchId: string; recipientIds?: string[] }) =>
-      retryMessageBatch(token, v),
-    onSuccess: (r) => {
-      if (r.nowSent) toast.success(`${r.nowSent} of ${r.retried} went through.`);
-      else toast.error(`Retried ${r.retried} — all still failing.`);
-      qc.invalidateQueries({ queryKey: ["hr-msg-batch", openId] });
-      qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
-    },
-    onError: (e) => toast.error(surfaceErr(e, "Retry failed")),
+    onError: (e) => toast.error(surfaceErr(e, "Could not create the batch")),
   });
 
   const rows = batches.data?.batches ?? [];
-  const recips = detail.data?.recipients ?? [];
-  const failedCount = recips.filter((r) => r.status === "failed").length;
+
+  const stats = useMemo(() => {
+    const s = { total: 0, sent: 0, failed: 0, drafts: 0 };
+    for (const b of rows) {
+      s.total++;
+      s.sent += b.sentCount;
+      s.failed += b.failedCount;
+      if (b.status === "draft") s.drafts++;
+    }
+    return s;
+  }, [rows]);
 
   return (
-    <div className="space-y-3 mt-3">
-      {batches.isLoading ? (
-        <div className="p-8 flex justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="rounded-lg border bg-white p-10 text-center">
-          <History className="h-8 w-8 mx-auto text-gray-300" />
-          <p className="mt-2 text-sm font-medium text-gray-900">
-            Nothing sent yet
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Messages you send will be listed here with who received them.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-lg border bg-white divide-y">
-          {rows.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setOpenId(b.id)}
-              className="w-full text-left p-3 hover:bg-gray-50 flex items-start gap-3"
+    <div className="w-full h-full bg-gray-50">
+      {/* ── Header ───────────────────────────────────────────────────── */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+                <Send className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Message Queue
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Each batch is one message and the people it goes to. Open a
+                  batch to see who received it.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setNewOpen(true)}
+              className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
             >
-              {b.channel === "email" ? (
-                <Mail className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-              ) : (
-                <MessageSquare className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {b.subject || b.body.slice(0, 80) || "(no content)"}
-                </p>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {fmtDate(b.createdAt)}
-                  {b.createdByName ? ` · ${b.createdByName}` : ""}
-                  {b.audience !== "custom" ? ` · ${b.audience}` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <Badge className="bg-green-100 text-green-800 text-[10px] hover:bg-green-100">
-                  {b.sentCount} sent
-                </Badge>
-                {b.failedCount > 0 && (
-                  <Badge variant="destructive" className="text-[10px]">
-                    {b.failedCount} failed
-                  </Badge>
-                )}
-              </div>
-            </button>
-          ))}
+              <Plus className="h-4 w-4" />
+              New batch
+            </Button>
+          </div>
         </div>
-      )}
+      </div>
 
-      {(batches.data?.pages ?? 0) > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-xs text-gray-500 self-center">
-            Page {page + 1} of {batches.data?.pages}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page + 1 >= (batches.data?.pages ?? 1)}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {/* ── Stats ──────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label="Batches on this page" value={stats.total} Icon={Inbox} tone="blue" />
+          <StatCard label="Messages delivered" value={stats.sent} Icon={CheckCircle2} tone="emerald" />
+          <StatCard label="Deliveries failed" value={stats.failed} Icon={XCircle} tone="red" />
+          <StatCard label="Still in draft" value={stats.drafts} Icon={FileEdit} tone="gray" />
         </div>
-      )}
 
-      {/* ── Who received it ───────────────────────────────────────────── */}
-      <Modal
-        title="Delivery report"
-        onOpen={!!openId}
-        setOnOpen={() => setOpenId(null)}
-        className="sm:max-w-2xl"
-        footer={false}
-      >
-        {detail.isLoading ? (
-          <div className="p-4 flex justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        {/* ── Toolbar ────────────────────────────────────────────────── */}
+        <div className="bg-white rounded-lg border shadow-sm p-3 flex flex-wrap gap-2">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search by batch name, subject or message text…"
+              className="pl-9 h-10"
+            />
+          </div>
+          <Select
+            value={status}
+            onValueChange={(v) => {
+              setStatus(v);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="h-10 w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All batches</SelectItem>
+              <SelectItem value="draft">Drafts only</SelectItem>
+              <SelectItem value="sent">Sent only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* ── Batches ────────────────────────────────────────────────── */}
+        {batches.isLoading ? (
+          <div className="bg-white rounded-lg border shadow-sm p-16 flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="bg-white rounded-lg border shadow-sm flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="bg-gray-50 rounded-full p-4 mb-4">
+              <Inbox className="h-12 w-12 text-gray-300" strokeWidth={1.5} />
+            </div>
+            <p className="text-gray-500 font-medium">
+              {search || status !== "all"
+                ? "No batches match this filter"
+                : "No message batches yet"}
+            </p>
+            <p className="text-sm text-gray-400 mt-1 max-w-sm">
+              {search || status !== "all"
+                ? "Try a different search, or clear the filter."
+                : "Create a batch, write the message once, then choose who receives it."}
+            </p>
+            {!search && status === "all" && (
+              <Button
+                onClick={() => setNewOpen(true)}
+                variant="outline"
+                className="mt-4 gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New batch
+              </Button>
+            )}
           </div>
         ) : (
-          <div className="space-y-3">
-            {failedCount > 0 && (
-              <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
-                <span className="text-xs text-amber-800">
-                  {failedCount} {failedCount === 1 ? "message" : "messages"}{" "}
-                  failed to send.
-                </span>
-                <Button
-                  size="sm"
-                  className="h-7 gap-1.5"
-                  disabled={retry.isPending}
-                  onClick={() => retry.mutate({ batchId: openId as string })}
+          <div className="bg-white rounded-lg border shadow-sm overflow-hidden divide-y">
+            {rows.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => navigate(`/${lineId}/hr/messages/${b.id}`)}
+                className="group w-full text-left px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors duration-150 flex items-start gap-4"
+              >
+                <div
+                  className={`p-2 rounded-lg border flex-shrink-0 ${
+                    b.channel === "email"
+                      ? "bg-indigo-50 border-indigo-100 text-indigo-600"
+                      : "bg-blue-50 border-blue-100 text-blue-600"
+                  }`}
                 >
-                  {retry.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {b.channel === "email" ? (
+                    <Mail className="h-5 w-5" />
                   ) : (
-                    <RotateCw className="h-3.5 w-3.5" />
-                  )}
-                  Retry all failed
-                </Button>
-              </div>
-            )}
-
-            <div className="border rounded-md divide-y max-h-[55vh] overflow-y-auto">
-              {recips.map((r) => (
-                <div key={r.id} className="p-2.5 flex items-start gap-2">
-                  {r.status === "sent" ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-900">
-                      {r.name}
-                    </p>
-                    <p className="text-[11px] text-gray-500 truncate">
-                      {r.toAddress || "— no contact detail —"}
-                      {r.sentAt ? ` · ${fmtDate(r.sentAt)}` : ""}
-                      {r.attempts > 1 ? ` · ${r.attempts} attempts` : ""}
-                    </p>
-                    {r.error && (
-                      <p className="text-[11px] text-red-600 mt-0.5">
-                        {r.error}
-                      </p>
-                    )}
-                    <details className="mt-1">
-                      <summary className="text-[11px] text-blue-600 cursor-pointer">
-                        What was sent
-                      </summary>
-                      <pre className="whitespace-pre-wrap text-[11px] bg-gray-50 border rounded p-2 mt-1 font-sans">
-                        {r.renderedBody}
-                      </pre>
-                    </details>
-                  </div>
-                  {r.status === "failed" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-[11px] flex-shrink-0"
-                      disabled={retry.isPending}
-                      onClick={() =>
-                        retry.mutate({
-                          batchId: openId as string,
-                          recipientIds: [r.id],
-                        })
-                      }
-                    >
-                      Retry
-                    </Button>
+                    <MessageSquare className="h-5 w-5" />
                   )}
                 </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {b.name || b.subject || "Untitled batch"}
+                    </p>
+                    <StatusPill batch={b} />
+                  </div>
+                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">
+                    {b.body?.trim() || "No message written yet."}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    {b.status === "sent"
+                      ? `Sent ${fmtDate(b.sentAt)}`
+                      : `Created ${fmtDate(b.createdAt)}`}
+                    {b.createdByName ? ` · ${b.createdByName}` : ""}
+                    {` · ${AUDIENCE_LABEL[b.audience] ?? b.audience}`}
+                  </p>
+                  {b.status === "sent" && b.total > 0 && (
+                    <div className="mt-2 max-w-xs">
+                      <DeliveryBar batch={b} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 flex-shrink-0 self-center">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-semibold text-gray-900 tabular-nums flex items-center gap-1.5 justify-end">
+                      <Users className="h-3.5 w-3.5 text-gray-400" />
+                      {b.total}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {b.total === 1 ? "recipient" : "recipients"}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {(batches.data?.pages ?? 0) > 1 && (
+          <div className="flex justify-center items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-gray-500 tabular-nums">
+              Page {page + 1} of {batches.data?.pages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page + 1 >= (batches.data?.pages ?? 1)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ── New batch ────────────────────────────────────────────────── */}
+      <Modal
+        title="New message batch"
+        onOpen={newOpen}
+        setOnOpen={() => setNewOpen(false)}
+        className="sm:max-w-lg"
+        footer={true}
+        loading={create.isPending}
+        yesTitle="Create batch"
+        onFunction={() => create.mutate()}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Batch name
+            </label>
+            <Input
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. October payroll reminder"
+              className="h-10 mt-1.5"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Only for finding it later. Optional.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              How it will be sent
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-1.5">
+              {(
+                [
+                  { v: "sms", label: "Text message", sub: "SMS", Icon: MessageSquare },
+                  { v: "email", label: "Email", sub: "Gmail only", Icon: Mail },
+                ] as const
+              ).map((c) => (
+                <button
+                  key={c.v}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, channel: c.v }))}
+                  className={`flex items-center gap-2.5 p-3 rounded-lg border text-left transition-colors ${
+                    form.channel === c.v
+                      ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  }`}
+                >
+                  <c.Icon
+                    className={`h-5 w-5 ${
+                      form.channel === c.v ? "text-blue-600" : "text-gray-400"
+                    }`}
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">
+                      {c.label}
+                    </span>
+                    <span className="block text-xs text-gray-500">{c.sub}</span>
+                  </span>
+                </button>
               ))}
             </div>
           </div>
-        )}
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">
+              Start from a template
+            </label>
+            <Select
+              value={form.templateId || "none"}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, templateId: v === "none" ? "" : v }))
+              }
+            >
+              <SelectTrigger className="h-10 mt-1.5">
+                <SelectValue placeholder="Blank message" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Blank message</SelectItem>
+                {(templates.data?.templates ?? []).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name} · {t.channel === "email" ? "Email" : "SMS"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">
+              You can still edit the message afterwards.
+            </p>
+          </div>
+        </div>
       </Modal>
-    </div>
-  );
-};
-
-// ── Page ──────────────────────────────────────────────────────────────────
-const MessageQueue = () => {
-  const auth = useAuth();
-  const token = auth.token as string;
-
-  const header = useMemo(
-    () => (
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <Send className="h-5 w-5 text-blue-600" />
-          Message Queue
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Write once with placeholders, pick who it goes to, and send it as a
-          text message or email.
-        </p>
-      </div>
-    ),
-    [],
-  );
-
-  return (
-    <div className="p-4 sm:p-6 space-y-4">
-      {header}
-      <Tabs defaultValue="compose">
-        <TabsList>
-          <TabsTrigger value="compose" className="gap-1.5">
-            <Send className="h-3.5 w-3.5" />
-            Compose
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-1.5">
-            <History className="h-3.5 w-3.5" />
-            History
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="compose">
-          <Compose token={token} />
-        </TabsContent>
-        <TabsContent value="history">
-          <HistoryTab token={token} />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };
