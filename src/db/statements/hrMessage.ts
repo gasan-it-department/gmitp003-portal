@@ -268,6 +268,8 @@ export const sendMessageBatch = async (
   return res.data as {
     batchId: string;
     dispatched: number;
+    /** How many of the dispatched had already been contacted before. */
+    resent: number;
     pending: number;
     sent: number;
     failed: number;

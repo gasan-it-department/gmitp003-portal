@@ -142,8 +142,10 @@ const MessageBatchDetail = () => {
   // "draft" = nothing dispatched yet (message still editable).
   // "sending" = waves in progress; recipients can still be added and sent.
   const isDraft = batch?.status === "draft";
+  // "sent" only means nobody is waiting right now. The batch stays open to
+  // more recipients and to a deliberate re-send, so sending is never closed.
   const isDone = batch?.status === "sent";
-  const canSend = !isDone;
+  const canSend = true;
 
   // Seed the editable fields once the batch arrives. Keyed on identity +
   // status so a send (draft -> sent) re-syncs, but typing is never clobbered
@@ -171,11 +173,13 @@ const MessageBatchDetail = () => {
       setConfirmSend(false);
       setWave({});
       const tail = r.done ? "" : ` ${r.pending} still waiting.`;
-      if (r.failed === 0)
-        toast.success(`${r.dispatched} sent.${tail}`);
+      const what = r.resent
+        ? `${r.dispatched} sent (${r.resent} re-sent)`
+        : `${r.dispatched} sent`;
+      if (r.failed === 0) toast.success(`${what}.${tail}`);
       else
         toast.warning(
-          `${r.dispatched} dispatched — ${r.sent} delivered, ${r.failed} failed so far.${tail}`,
+          `${what} — ${r.sent} delivered, ${r.failed} failed so far.${tail}`,
         );
       qc.invalidateQueries({ queryKey: ["hr-msg-batch", batchId] });
       qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
@@ -280,9 +284,14 @@ const MessageBatchDetail = () => {
   const totalCount = counts?.total ?? 0;
   const doneCount = (counts?.sent ?? 0) + failedCount;
   const waveIds = Object.keys(wave);
-  // With nothing ticked the server takes the next people in line, so the
-  // button always says exactly how many will go out.
+  // With nothing ticked the server takes the next people still waiting, so
+  // the button always says exactly how many will go out.
   const thisWave = waveIds.length || Math.min(pendingCount, PER_SEND);
+  // Ticking someone already contacted is how HR sends a reminder — worth
+  // saying out loud on the button and in the confirmation.
+  const resendCount = recipients.filter(
+    (r) => wave[r.id] && r.status !== "pending",
+  ).length;
   const wavesLeft = Math.ceil(pendingCount / PER_SEND);
   const unreachable = recipients.filter(
     (r) => r.status === "pending" && !r.toAddress,
@@ -390,7 +399,7 @@ const MessageBatchDetail = () => {
                   Retry {failedCount} failed
                 </Button>
               )}
-              {canSend && pendingCount > 0 && (
+              {(pendingCount > 0 || waveIds.length > 0) && (
                 <Button
                   className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
                   disabled={!draft.body.trim() || send.isPending}
@@ -402,7 +411,9 @@ const MessageBatchDetail = () => {
                     <Send className="h-4 w-4" />
                   )}
                   {waveIds.length
-                    ? `Send to ${waveIds.length} selected`
+                    ? resendCount === waveIds.length
+                      ? `Send again to ${waveIds.length}`
+                      : `Send to ${waveIds.length} selected`
                     : `Send next ${thisWave}`}
                 </Button>
               )}
@@ -708,20 +719,36 @@ const MessageBatchDetail = () => {
             </Select>
           </div>
 
-          {canSend && pendingCount > 0 && (
+          {!isDraft || pendingCount > 0 ? (
             <div className="px-5 py-2.5 border-b bg-blue-50/40 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm text-gray-700">
                 {waveIds.length ? (
                   <>
                     <strong className="tabular-nums">{waveIds.length}</strong>{" "}
                     picked for this send
+                    {resendCount > 0 && (
+                      <>
+                        {" — "}
+                        <span className="text-amber-700">
+                          {resendCount}{" "}
+                          {resendCount === 1
+                            ? "has already been messaged"
+                            : "have already been messaged"}
+                        </span>
+                      </>
+                    )}
                   </>
-                ) : (
+                ) : pendingCount > 0 ? (
                   <>
                     Sends go out {PER_SEND} at a time. Tick people below, or
                     just send the next{" "}
                     <strong className="tabular-nums">{thisWave}</strong> in
                     order.
+                  </>
+                ) : (
+                  <>
+                    Everyone here has been messaged. Tick anyone to send it to
+                    them again, or add more recipients.
                   </>
                 )}
               </p>
@@ -740,14 +767,19 @@ const MessageBatchDetail = () => {
                   variant="outline"
                   className="h-8"
                   onClick={() => {
+                    // Prefer people still waiting; once none are left this
+                    // selects for a re-send instead.
                     const next: Record<string, true> = {};
-                    for (const r of recipients) {
-                      if (r.status !== "pending") continue;
+                    const order = [
+                      ...recipients.filter((r) => r.status === "pending"),
+                      ...(pendingCount === 0 ? recipients : []),
+                    ];
+                    for (const r of order) {
                       if (Object.keys(next).length >= PER_SEND) break;
                       next[r.id] = true;
                     }
                     if (!Object.keys(next).length) {
-                      toast.error("Nobody on this page is still waiting.");
+                      toast.error("Nobody on this page to select.");
                       return;
                     }
                     setWave(next);
@@ -757,7 +789,7 @@ const MessageBatchDetail = () => {
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
 
           {unreachable > 0 && canSend && (
             <div className="mx-5 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 flex items-start gap-2">
@@ -787,7 +819,7 @@ const MessageBatchDetail = () => {
                   ? "Try a different search."
                   : `Add everyone who needs this message — it goes out ${PER_SEND} at a time.`}
               </p>
-              {canSend && !rSearch && rStatus === "all" && (
+              {!rSearch && rStatus === "all" && (
                 <Button
                   variant="outline"
                   className="mt-4 gap-2"
@@ -807,12 +839,16 @@ const MessageBatchDetail = () => {
                     wave[r.id] ? "bg-blue-50/60" : "hover:bg-gray-50/60"
                   }`}
                 >
-                  {canSend && r.status === "pending" ? (
+                  {canSend ? (
                     <button
                       type="button"
                       onClick={() => toggleWave(r.id)}
                       className="mt-0.5 flex-shrink-0"
-                      title="Include in this send"
+                      title={
+                        r.status === "pending"
+                          ? "Include in this send"
+                          : "Send this person the message again"
+                      }
                     >
                       <input
                         type="checkbox"
@@ -996,7 +1032,13 @@ const MessageBatchDetail = () => {
 
       {/* ── Confirm send ─────────────────────────────────────────────── */}
       <Modal
-        title={pendingCount > thisWave ? "Send this wave?" : "Send this message?"}
+        title={
+          resendCount > 0
+            ? "Send this message again?"
+            : pendingCount > thisWave
+              ? "Send this wave?"
+              : "Send this message?"
+        }
         onOpen={confirmSend}
         setOnOpen={() => setConfirmSend(false)}
         className="sm:max-w-md"
@@ -1014,6 +1056,15 @@ const MessageBatchDetail = () => {
             </strong>
             {waveIds.length ? " — the ones you ticked." : " — the next in order."}
           </p>
+          {resendCount > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-amber-800">
+                <strong className="tabular-nums">{resendCount}</strong> of them
+                already received this message. They will get it a second time.
+              </p>
+            </div>
+          )}
           {pendingCount > thisWave && (
             <p>
               <strong className="text-gray-900 tabular-nums">
