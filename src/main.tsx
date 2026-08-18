@@ -32,6 +32,7 @@ import SalaryGradeDetail from "./route/human_resources/SalaryGradeDetail.tsx";
 import Leaves from "./route/human_resources/Leaves.tsx";
 import Attendance from "./route/human_resources/Attendance.tsx";
 import AttendanceDetail from "./route/human_resources/AttendanceDetail.tsx";
+import MessageQueue from "./route/human_resources/MessageQueue.tsx";
 import Payroll from "./route/human_resources/Payroll.tsx";
 import ServicesIndex from "./route/services/ServicesIndex.tsx";
 import Complaints from "./route/services/Complaints.tsx";
@@ -408,6 +409,7 @@ createRoot(document.getElementById("root")!).render(
                 />
                 <Route path="leaves" element={<Leaves />} />
                 <Route path="attendance" element={<Attendance />} />
+                <Route path="messages" element={<MessageQueue />} />
                 <Route
                   path="attendance/:eventId"
                   element={<AttendanceDetail />}
