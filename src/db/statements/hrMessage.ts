@@ -10,7 +10,7 @@ const jsonHeaders = (token: string) => ({
 // ─── Types ─────────────────────────────────────────────────────────
 export type MessageChannel = "sms" | "email";
 export type Audience = "plantilla" | "non-plantilla" | "custom";
-export type BatchStatus = "draft" | "sent";
+export type BatchStatus = "draft" | "sending" | "sent";
 export type RecipientStatus = "pending" | "sent" | "failed";
 
 export interface MessagePlaceholder {
@@ -143,7 +143,11 @@ export const searchMessageEmployees = async (
     headers: jsonHeaders(token),
     params,
   });
-  return res.data as { employees: EmployeeRow[]; max: number };
+  return res.data as {
+    employees: EmployeeRow[];
+    maxPerSend: number;
+    maxPerBatch: number;
+  };
 };
 
 // ─── Batches ───────────────────────────────────────────────────────
@@ -176,7 +180,7 @@ export const createMessageBatch = async (
 export const messageBatchDetail = async (
   token: string,
   id: string,
-  params: { search?: string; status?: string } = {},
+  params: { search?: string; status?: string; page?: number } = {},
 ) => {
   const res = await axios.get(`/hr/message/batch/${id}`, {
     headers: jsonHeaders(token),
@@ -186,7 +190,12 @@ export const messageBatchDetail = async (
     batch: MessageBatchRow;
     recipients: BatchRecipientRow[];
     counts: BatchCounts;
-    max: number;
+    /** How many rows match the current search/filter, for pagination. */
+    matching: number;
+    page: number;
+    pages: number;
+    maxPerSend: number;
+    maxPerBatch: number;
   };
 };
 
@@ -241,17 +250,28 @@ export const removeBatchRecipient = async (
 };
 
 // ─── Dispatch ──────────────────────────────────────────────────────
-export const sendMessageBatch = async (token: string, id: string) => {
+/**
+ * Sends ONE wave of at most `maxPerSend`. Pass recipientIds for a specific
+ * selection, or omit to take the next people still waiting. Call again for
+ * the next wave.
+ */
+export const sendMessageBatch = async (
+  token: string,
+  id: string,
+  recipientIds?: string[],
+) => {
   const res = await axios.post(
     `/hr/message/batch/${id}/send`,
-    {},
+    { recipientIds },
     { headers: jsonHeaders(token) },
   );
   return res.data as {
     batchId: string;
+    dispatched: number;
     pending: number;
     sent: number;
     failed: number;
+    done: boolean;
   };
 };
 

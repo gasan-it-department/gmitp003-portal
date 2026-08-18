@@ -34,6 +34,7 @@ import {
   CheckCircle2,
   XCircle,
   FileEdit,
+  Clock,
   Users,
 } from "lucide-react";
 
@@ -73,6 +74,16 @@ const StatusPill = ({ batch }: { batch: MessageBatchRow }) => {
         Draft
       </span>
     );
+  // Part-way through: waves are still going out.
+  if (batch.status === "sending") {
+    const done = batch.sentCount + batch.failedCount;
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 tabular-nums">
+        <Clock className="h-3.5 w-3.5" />
+        {done} of {batch.total} sent
+      </span>
+    );
+  }
   if (batch.failedCount === 0)
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
@@ -194,12 +205,12 @@ const MessageQueue = () => {
   const rows = batches.data?.batches ?? [];
 
   const stats = useMemo(() => {
-    const s = { total: 0, sent: 0, failed: 0, drafts: 0 };
+    const s = { total: 0, sent: 0, failed: 0, waiting: 0 };
     for (const b of rows) {
       s.total++;
       s.sent += b.sentCount;
       s.failed += b.failedCount;
-      if (b.status === "draft") s.drafts++;
+      s.waiting += Math.max(0, b.total - b.sentCount - b.failedCount);
     }
     return s;
   }, [rows]);
@@ -241,7 +252,7 @@ const MessageQueue = () => {
           <StatCard label="Batches on this page" value={stats.total} Icon={Inbox} tone="blue" />
           <StatCard label="Messages delivered" value={stats.sent} Icon={CheckCircle2} tone="emerald" />
           <StatCard label="Deliveries failed" value={stats.failed} Icon={XCircle} tone="red" />
-          <StatCard label="Still in draft" value={stats.drafts} Icon={FileEdit} tone="gray" />
+          <StatCard label="Still to send" value={stats.waiting} Icon={Clock} tone="gray" />
         </div>
 
         {/* ── Toolbar ────────────────────────────────────────────────── */}
@@ -341,13 +352,15 @@ const MessageQueue = () => {
                     {b.body?.trim() || "No message written yet."}
                   </p>
                   <p className="text-xs text-gray-400 mt-1.5">
-                    {b.status === "sent"
-                      ? `Sent ${fmtDate(b.sentAt)}`
-                      : `Created ${fmtDate(b.createdAt)}`}
+                    {b.status === "draft"
+                      ? `Created ${fmtDate(b.createdAt)}`
+                      : b.status === "sending"
+                        ? `Last sent ${fmtDate(b.sentAt)}`
+                        : `Sent ${fmtDate(b.sentAt)}`}
                     {b.createdByName ? ` · ${b.createdByName}` : ""}
                     {` · ${AUDIENCE_LABEL[b.audience] ?? b.audience}`}
                   </p>
-                  {b.status === "sent" && b.total > 0 && (
+                  {b.status !== "draft" && b.total > 0 && (
                     <div className="mt-2 max-w-xs">
                       <DeliveryBar batch={b} />
                     </div>

@@ -106,6 +106,9 @@ const MessageBatchDetail = () => {
 
   const [rSearch, setRSearch] = useState("");
   const [rStatus, setRStatus] = useState("all");
+  const [rPage, setRPage] = useState(0);
+  /** Pending rows ticked for THIS wave. Empty means "send the next ones". */
+  const [wave, setWave] = useState<Record<string, true>>({});
   const [addOpen, setAddOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
@@ -121,20 +124,26 @@ const MessageBatchDetail = () => {
   } | null>(null);
 
   const detail = useQuery({
-    queryKey: ["hr-msg-batch", batchId, rSearch, rStatus],
+    queryKey: ["hr-msg-batch", batchId, rSearch, rStatus, rPage],
     queryFn: () =>
       messageBatchDetail(token, batchId as string, {
         search: rSearch || undefined,
         status: rStatus === "all" ? undefined : rStatus,
+        page: rPage,
       }),
     enabled: !!token && !!batchId,
   });
 
   const batch = detail.data?.batch;
   const counts = detail.data?.counts;
-  const MAX = detail.data?.max ?? 20;
+  const PER_SEND = detail.data?.maxPerSend ?? 20;
+  const PER_BATCH = detail.data?.maxPerBatch ?? 1000;
   const recipients = detail.data?.recipients ?? [];
+  // "draft" = nothing dispatched yet (message still editable).
+  // "sending" = waves in progress; recipients can still be added and sent.
   const isDraft = batch?.status === "draft";
+  const isDone = batch?.status === "sent";
+  const canSend = !isDone;
 
   // Seed the editable fields once the batch arrives. Keyed on identity +
   // status so a send (draft -> sent) re-syncs, but typing is never clobbered
@@ -156,13 +165,18 @@ const MessageBatchDetail = () => {
   });
 
   const send = useMutation({
-    mutationFn: () => sendMessageBatch(token, batchId as string),
+    mutationFn: (ids?: string[]) =>
+      sendMessageBatch(token, batchId as string, ids),
     onSuccess: (r) => {
       setConfirmSend(false);
-      if (r.failed === 0) toast.success(`Sent to all ${r.sent} recipients.`);
-      else if (r.sent === 0)
-        toast.error(`All ${r.failed} failed. Fix the details below and retry.`);
-      else toast.warning(`${r.sent} sent, ${r.failed} failed.`);
+      setWave({});
+      const tail = r.done ? "" : ` ${r.pending} still waiting.`;
+      if (r.failed === 0)
+        toast.success(`${r.dispatched} sent.${tail}`);
+      else
+        toast.warning(
+          `${r.dispatched} dispatched — ${r.sent} delivered, ${r.failed} failed so far.${tail}`,
+        );
       qc.invalidateQueries({ queryKey: ["hr-msg-batch", batchId] });
       qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
     },
@@ -262,9 +276,32 @@ const MessageBatchDetail = () => {
 
   const segments = Math.max(1, Math.ceil((draft.body || "").length / SEGMENT));
   const failedCount = counts?.failed ?? 0;
+  const pendingCount = counts?.pending ?? 0;
+  const totalCount = counts?.total ?? 0;
+  const doneCount = (counts?.sent ?? 0) + failedCount;
+  const waveIds = Object.keys(wave);
+  // With nothing ticked the server takes the next people in line, so the
+  // button always says exactly how many will go out.
+  const thisWave = waveIds.length || Math.min(pendingCount, PER_SEND);
+  const wavesLeft = Math.ceil(pendingCount / PER_SEND);
   const unreachable = recipients.filter(
     (r) => r.status === "pending" && !r.toAddress,
   ).length;
+
+  const toggleWave = (id: string) =>
+    setWave((w) => {
+      if (w[id]) {
+        const { [id]: _drop, ...rest } = w;
+        return rest;
+      }
+      if (Object.keys(w).length >= PER_SEND) {
+        toast.error(
+          `${PER_SEND} is the most that can go out at once. Send these, then pick the next ${PER_SEND}.`,
+        );
+        return w;
+      }
+      return { ...w, [id]: true };
+    });
 
   return (
     <div className="w-full h-full bg-gray-50">
@@ -304,9 +341,13 @@ const MessageBatchDetail = () => {
                     <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                       Draft
                     </span>
-                  ) : (
+                  ) : isDone ? (
                     <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                       Sent {fmtDate(batch.sentAt)}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 tabular-nums">
+                      Sending · {doneCount} of {totalCount}
                     </span>
                   )}
                 </div>
@@ -314,50 +355,56 @@ const MessageBatchDetail = () => {
                   {batch.channel === "email"
                     ? "Sent by email (Gmail addresses only)"
                     : "Sent as a text message"}
-                  {` · ${counts?.total ?? 0} of ${MAX} recipients`}
+                  {` · ${totalCount} ${totalCount === 1 ? "recipient" : "recipients"}`}
+                  {pendingCount > 0 &&
+                    ` · ${pendingCount} still waiting, ${wavesLeft} ${
+                      wavesLeft === 1 ? "send" : "sends"
+                    } of ${PER_SEND} to go`}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              {isDraft ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Delete draft</span>
-                  </Button>
-                  <Button
-                    className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
-                    disabled={!counts?.pending || !draft.body.trim() || send.isPending}
-                    onClick={() => setConfirmSend(true)}
-                  >
-                    {send.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                    Send to {counts?.pending ?? 0}
-                  </Button>
-                </>
-              ) : (
-                failedCount > 0 && (
-                  <Button
-                    className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
-                    disabled={retry.isPending}
-                    onClick={() => retry.mutate(undefined)}
-                  >
-                    {retry.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <RotateCw className="h-4 w-4" />
-                    )}
-                    Retry {failedCount} failed
-                  </Button>
-                )
+              {isDraft && (
+                <Button
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete draft</span>
+                </Button>
+              )}
+              {failedCount > 0 && (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled={retry.isPending}
+                  onClick={() => retry.mutate(undefined)}
+                >
+                  {retry.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCw className="h-4 w-4" />
+                  )}
+                  Retry {failedCount} failed
+                </Button>
+              )}
+              {canSend && pendingCount > 0 && (
+                <Button
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
+                  disabled={!draft.body.trim() || send.isPending}
+                  onClick={() => setConfirmSend(true)}
+                >
+                  {send.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {waveIds.length
+                    ? `Send to ${waveIds.length} selected`
+                    : `Send next ${thisWave}`}
+                </Button>
               )}
             </div>
           </div>
@@ -365,26 +412,57 @@ const MessageBatchDetail = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* ── Outcome strip (after sending) ──────────────────────────── */}
+        {/* ── Progress ───────────────────────────────────────────────── */}
         {!isDraft && (
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-white rounded-lg border shadow-sm p-4">
-              <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
-                {counts?.sent ?? 0}
+          <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-5 space-y-3.5">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <p className="text-sm font-semibold text-gray-900">
+                {isDone
+                  ? "Everyone on this batch has been contacted"
+                  : `${doneCount} of ${totalCount} contacted`}
               </p>
-              <p className="text-xs text-gray-500 mt-1.5">Delivered</p>
+              {!isDone && (
+                <p className="text-xs text-gray-500 tabular-nums">
+                  {pendingCount} waiting · {wavesLeft}{" "}
+                  {wavesLeft === 1 ? "more send" : "more sends"} of {PER_SEND}
+                </p>
+              )}
             </div>
-            <div className="bg-white rounded-lg border shadow-sm p-4">
-              <p className="text-2xl font-bold text-red-600 tabular-nums leading-none">
-                {counts?.failed ?? 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-1.5">Failed</p>
+
+            <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden flex">
+              <div
+                className="bg-emerald-500 h-full transition-all duration-300"
+                style={{
+                  width: `${((counts?.sent ?? 0) / Math.max(1, totalCount)) * 100}%`,
+                }}
+              />
+              <div
+                className="bg-red-500 h-full transition-all duration-300"
+                style={{
+                  width: `${(failedCount / Math.max(1, totalCount)) * 100}%`,
+                }}
+              />
             </div>
-            <div className="bg-white rounded-lg border shadow-sm p-4">
-              <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
-                {counts?.total ?? 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-1.5">Total recipients</p>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
+                  {counts?.sent ?? 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-1.5">Delivered</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-red-600 tabular-nums leading-none">
+                  {failedCount}
+                </p>
+                <p className="text-xs text-gray-500 mt-1.5">Failed</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                  {pendingCount}
+                </p>
+                <p className="text-xs text-gray-500 mt-1.5">Not sent yet</p>
+              </div>
             </div>
           </div>
         )}
@@ -576,16 +654,21 @@ const MessageBatchDetail = () => {
                 Recipients
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-white border text-xs text-gray-600 tabular-nums">
-                {counts?.total ?? 0} / {MAX}
+                {totalCount}
               </span>
+              {pendingCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 text-xs text-blue-700 tabular-nums">
+                  {pendingCount} waiting
+                </span>
+              )}
             </div>
-            {isDraft && (
+            {canSend && (
               <Button
                 size="sm"
                 variant="outline"
                 className="gap-1.5"
                 onClick={() => setAddOpen(true)}
-                disabled={(counts?.total ?? 0) >= MAX}
+                disabled={totalCount >= PER_BATCH}
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 Add recipients
@@ -598,12 +681,21 @@ const MessageBatchDetail = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 value={rSearch}
-                onChange={(e) => setRSearch(e.target.value)}
+                onChange={(e) => {
+                  setRSearch(e.target.value);
+                  setRPage(0);
+                }}
                 placeholder="Search this list by name…"
                 className="pl-9 h-9"
               />
             </div>
-            <Select value={rStatus} onValueChange={setRStatus}>
+            <Select
+              value={rStatus}
+              onValueChange={(v) => {
+                setRStatus(v);
+                setRPage(0);
+              }}
+            >
               <SelectTrigger className="h-9 w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
@@ -616,7 +708,58 @@ const MessageBatchDetail = () => {
             </Select>
           </div>
 
-          {unreachable > 0 && isDraft && (
+          {canSend && pendingCount > 0 && (
+            <div className="px-5 py-2.5 border-b bg-blue-50/40 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-gray-700">
+                {waveIds.length ? (
+                  <>
+                    <strong className="tabular-nums">{waveIds.length}</strong>{" "}
+                    picked for this send
+                  </>
+                ) : (
+                  <>
+                    Sends go out {PER_SEND} at a time. Tick people below, or
+                    just send the next{" "}
+                    <strong className="tabular-nums">{thisWave}</strong> in
+                    order.
+                  </>
+                )}
+              </p>
+              <div className="flex items-center gap-2">
+                {waveIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setWave({})}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    Clear selection
+                  </button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => {
+                    const next: Record<string, true> = {};
+                    for (const r of recipients) {
+                      if (r.status !== "pending") continue;
+                      if (Object.keys(next).length >= PER_SEND) break;
+                      next[r.id] = true;
+                    }
+                    if (!Object.keys(next).length) {
+                      toast.error("Nobody on this page is still waiting.");
+                      return;
+                    }
+                    setWave(next);
+                  }}
+                >
+                  Select up to {PER_SEND} here
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {unreachable > 0 && canSend && (
             <div className="mx-5 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-amber-800">
@@ -642,9 +785,9 @@ const MessageBatchDetail = () => {
               <p className="text-sm text-gray-400 mt-1">
                 {rSearch || rStatus !== "all"
                   ? "Try a different search."
-                  : `Add up to ${MAX} people to this batch.`}
+                  : `Add everyone who needs this message — it goes out ${PER_SEND} at a time.`}
               </p>
-              {isDraft && !rSearch && rStatus === "all" && (
+              {canSend && !rSearch && rStatus === "all" && (
                 <Button
                   variant="outline"
                   className="mt-4 gap-2"
@@ -660,8 +803,25 @@ const MessageBatchDetail = () => {
               {recipients.map((r) => (
                 <div
                   key={r.id}
-                  className="px-5 py-3.5 flex items-start gap-3 hover:bg-gray-50/60 transition-colors"
+                  className={`px-5 py-3.5 flex items-start gap-3 transition-colors ${
+                    wave[r.id] ? "bg-blue-50/60" : "hover:bg-gray-50/60"
+                  }`}
                 >
+                  {canSend && r.status === "pending" ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleWave(r.id)}
+                      className="mt-0.5 flex-shrink-0"
+                      title="Include in this send"
+                    >
+                      <input
+                        type="checkbox"
+                        readOnly
+                        checked={!!wave[r.id]}
+                        className="h-4 w-4 accent-blue-600"
+                      />
+                    </button>
+                  ) : null}
                   <RecipientIcon status={r.status} />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900">
@@ -722,6 +882,31 @@ const MessageBatchDetail = () => {
               ))}
             </div>
           )}
+
+          {(detail.data?.pages ?? 0) > 1 && (
+            <div className="px-5 py-3 border-t flex items-center justify-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={rPage === 0}
+                onClick={() => setRPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-gray-500 tabular-nums">
+                Page {rPage + 1} of {detail.data?.pages} ·{" "}
+                {detail.data?.matching} shown
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={rPage + 1 >= (detail.data?.pages ?? 1)}
+                onClick={() => setRPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -733,7 +918,7 @@ const MessageBatchDetail = () => {
         batchId={batchId as string}
         channel={batch.channel}
         audience={batch.audience}
-        remaining={MAX - (counts?.total ?? 0)}
+        remaining={PER_BATCH - totalCount}
         onAdded={() => {
           qc.invalidateQueries({ queryKey: ["hr-msg-batch", batchId] });
           qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
@@ -811,32 +996,44 @@ const MessageBatchDetail = () => {
 
       {/* ── Confirm send ─────────────────────────────────────────────── */}
       <Modal
-        title="Send this message?"
+        title={pendingCount > thisWave ? "Send this wave?" : "Send this message?"}
         onOpen={confirmSend}
         setOnOpen={() => setConfirmSend(false)}
         className="sm:max-w-md"
         footer={true}
         loading={send.isPending}
-        yesTitle={`Send to ${counts?.pending ?? 0}`}
-        onFunction={() => send.mutate()}
+        yesTitle={`Send to ${thisWave}`}
+        onFunction={() => send.mutate(waveIds.length ? waveIds : undefined)}
       >
         <div className="text-sm text-gray-600 space-y-2.5">
           <p>
-            <strong className="text-gray-900">{counts?.pending ?? 0}</strong>{" "}
-            {counts?.pending === 1 ? "person" : "people"} will receive this by{" "}
+            <strong className="text-gray-900 tabular-nums">{thisWave}</strong>{" "}
+            {thisWave === 1 ? "person" : "people"} will receive this by{" "}
             <strong className="text-gray-900">
               {batch.channel === "email" ? "email" : "text message"}
             </strong>
-            .
+            {waveIds.length ? " — the ones you ticked." : " — the next in order."}
           </p>
+          {pendingCount > thisWave && (
+            <p>
+              <strong className="text-gray-900 tabular-nums">
+                {pendingCount - thisWave}
+              </strong>{" "}
+              will still be waiting afterwards. Come back and send the next{" "}
+              {PER_SEND} whenever you are ready.
+            </p>
+          )}
           {batch.channel === "sms" && segments > 1 && (
             <p className="text-amber-700">
-              Each message is {segments} SMS segments — {segments * (counts?.pending ?? 0)}{" "}
-              segments in total.
+              Each message is {segments} SMS segments — {segments * thisWave}{" "}
+              segments in this send.
             </p>
           )}
           <p className="text-xs text-gray-500">
-            This cannot be undone. The batch becomes read-only once sent.
+            This cannot be undone.
+            {isDraft
+              ? " Once the first message goes out the wording is locked."
+              : ""}
           </p>
         </div>
       </Modal>
