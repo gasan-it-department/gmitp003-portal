@@ -210,7 +210,7 @@ const MessageBatchDetail = () => {
     onSuccess: () => {
       toast.success("Draft deleted");
       qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
-      navigate(`/${lineId}/hr/messages`);
+      navigate(`/${lineId}/human-resources/messages`);
     },
     onError: (e) => toast.error(surfaceErr(e, "Could not delete")),
   });
@@ -310,7 +310,7 @@ const MessageBatchDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <button
             type="button"
-            onClick={() => navigate(`/${lineId}/hr/messages`)}
+            onClick={() => navigate(`/${lineId}/human-resources/messages`)}
             className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1.5 mb-2 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />

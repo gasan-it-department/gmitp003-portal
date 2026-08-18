@@ -197,7 +197,7 @@ const MessageQueue = () => {
       setNewOpen(false);
       setForm({ name: "", channel: "sms", templateId: "" });
       qc.invalidateQueries({ queryKey: ["hr-msg-batches"] });
-      navigate(`/${lineId}/hr/messages/${b.id}`);
+      navigate(`/${lineId}/human-resources/messages/${b.id}`);
     },
     onError: (e) => toast.error(surfaceErr(e, "Could not create the batch")),
   });
@@ -324,7 +324,7 @@ const MessageQueue = () => {
               <button
                 key={b.id}
                 type="button"
-                onClick={() => navigate(`/${lineId}/hr/messages/${b.id}`)}
+                onClick={() => navigate(`/${lineId}/human-resources/messages/${b.id}`)}
                 className="group w-full text-left px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors duration-150 flex items-start gap-4"
               >
                 <div
