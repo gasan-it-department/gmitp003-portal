@@ -91,12 +91,15 @@ const AttendanceQrScanner = ({
   onClose,
   eventId,
   eventTitle,
+  entries,
   onRecorded,
 }: {
   open: boolean;
   onClose: () => void;
   eventId: string;
   eventTitle: string;
+  /** The sheet's scan entries, in HR's order. */
+  entries: string[];
   onRecorded?: () => void;
 }) => {
   const qc = useQueryClient();
@@ -118,7 +121,21 @@ const AttendanceQrScanner = ({
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
   const [count, setCount] = useState<number | null>(null);
+  /** The segment being scanned. On a multi-entry sheet HR switches this as
+   *  the day moves on: AM In in the morning, AM Out at noon, and so on. */
+  const [entry, setEntry] = useState<string>(entries[0] ?? "Attendance");
+  const entryRef = useRef(entry);
+  useEffect(() => {
+    entryRef.current = entry;
+  }, [entry]);
+  // A fresh sheet (or a changed one) resets to its first entry.
+  useEffect(() => {
+    setEntry(entries[0] ?? "Attendance");
+  }, [entries.join("|")]);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
+
+  /** More than one entry means HR must say which segment they are scanning. */
+  const multi = entries.length > 1;
 
   const stop = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -132,19 +149,28 @@ const AttendanceQrScanner = ({
   /** One call per scan: /attendance/confirm takes the raw code and answers
    *  with the name, whether it was a duplicate, and the running headcount. */
   const record = useMutation({
-    mutationFn: (code: string) => confirmAttendanceScan(token, eventId, code),
+    mutationFn: (code: string) =>
+      confirmAttendanceScan(token, eventId, code, entryRef.current),
     onSuccess: (r) => {
-      if (typeof r.attendees === "number") setCount(r.attendees);
+      // On a multi-entry sheet the number HR watches is the count for THIS
+      // segment, not the sheet total.
+      const shown = multi ? r.entryCount : r.attendees;
+      if (typeof shown === "number") setCount(shown);
+      const where = r.entry ?? entryRef.current;
       if (r.duplicate) {
-        resultToast("warn", r.fullName ?? "Already recorded", "Already on this sheet");
+        resultToast(
+          "warn",
+          r.fullName ?? "Already recorded",
+          multi ? `Already scanned for ${where}` : "Already on this sheet",
+        );
         setFlash("bad");
       } else {
         resultToast(
           "ok",
           r.fullName ?? "Recorded",
-          typeof r.attendees === "number"
-            ? `Recorded · ${r.attendees} on the sheet`
-            : "Recorded",
+          [multi ? where : null, typeof shown === "number" ? `${shown} recorded` : null]
+            .filter(Boolean)
+            .join(" · ") || "Recorded",
         );
         setFlash("ok");
         qc.invalidateQueries({ queryKey: ["attendance-records", eventId] });
@@ -374,6 +400,39 @@ const AttendanceQrScanner = ({
         </div>
       </div>
 
+      {/* ── Which entry these scans go to ──────────────────────────────── */}
+      {multi && (
+        <div className="relative z-10 px-4 pb-1">
+          <div className="mx-auto max-w-3xl">
+            <p className="text-[11px] text-white/60 mb-1.5 text-center">
+              Scanning into
+            </p>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {entries.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => {
+                    setEntry(e);
+                    // Let the same badge be scanned again straight away for
+                    // the new segment.
+                    lastCodeRef.current = null;
+                    setCount(null);
+                  }}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    entry === e
+                      ? "bg-white text-gray-900"
+                      : "bg-white/15 text-white hover:bg-white/25"
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Aiming frame ───────────────────────────────────────────────── */}
       <div className="relative z-10 flex-1 flex items-center justify-center">
         {!secure ? (
@@ -428,8 +487,14 @@ const AttendanceQrScanner = ({
       <div className="relative z-10 px-4 py-4 text-center bg-gradient-to-t from-black/80 to-transparent">
         <p className="text-xs text-white/70">
           Each scan is recorded straight onto{" "}
-          <span className="text-white/90 font-medium">{eventTitle}</span>. Press
-          Esc to stop.
+          <span className="text-white/90 font-medium">{eventTitle}</span>
+          {multi ? (
+            <>
+              {" "}
+              as <span className="text-white/90 font-medium">{entry}</span>
+            </>
+          ) : null}
+          . Press Esc to stop.
         </p>
       </div>
     </div>,

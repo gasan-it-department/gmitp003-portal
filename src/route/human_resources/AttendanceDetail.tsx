@@ -76,6 +76,7 @@ const AttendanceDetail = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [departmentId, setDepartmentId] = useState(ALL);
+  const [entryFilter, setEntryFilter] = useState(ALL);
   const [page, setPage] = useState(0);
   const [confirmRemove, setConfirmRemove] = useState<{
     id: string;
@@ -89,8 +90,14 @@ const AttendanceDetail = () => {
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     departmentId: departmentId === ALL ? undefined : departmentId,
+    entry: entryFilter === ALL ? undefined : entryFilter,
   };
-  const hasFilters = !!search || !!dateFrom || !!dateTo || departmentId !== ALL;
+  const hasFilters =
+    !!search ||
+    !!dateFrom ||
+    !!dateTo ||
+    departmentId !== ALL ||
+    entryFilter !== ALL;
 
   const event = useQuery({
     queryKey: ["attendance-event", eventId],
@@ -159,6 +166,8 @@ const AttendanceDetail = () => {
   };
 
   const columns = records.data?.columns ?? event.data?.columns ?? [];
+  const sheetEntries = records.data?.entries ?? event.data?.entries ?? [];
+  const multiEntry = sheetEntries.length > 1;
   const offices = records.data?.departments ?? [];
   const rows = records.data?.records ?? [];
 
@@ -315,6 +324,31 @@ const AttendanceDetail = () => {
                 />
               </div>
 
+              {multiEntry && (
+                <Select
+                  value={entryFilter}
+                  onValueChange={(v) => {
+                    setEntryFilter(v);
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger className="w-[180px] h-9">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <ScanLine className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                      <SelectValue placeholder="All entries" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={ALL}>All entries</SelectItem>
+                    {sheetEntries.map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <Select
                 value={departmentId}
                 onValueChange={(v) => {
@@ -417,6 +451,11 @@ const AttendanceDetail = () => {
                         {c.label}
                       </th>
                     ))}
+                    {multiEntry && (
+                      <th className="px-3 py-2 font-medium text-gray-600 whitespace-nowrap">
+                        Entry
+                      </th>
+                    )}
                     <th className="px-3 py-2 font-medium text-gray-600 whitespace-nowrap">
                       Recorded
                     </th>
@@ -439,6 +478,16 @@ const AttendanceDetail = () => {
                           )}
                         </td>
                       ))}
+                      {multiEntry && (
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2 bg-blue-50 text-blue-700 border-blue-200"
+                          >
+                            {r.entry}
+                          </Badge>
+                        </td>
+                      )}
                       <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
                         {fmtDate(r.timestamp)}
                         {r.scannedBy ? (
@@ -506,6 +555,9 @@ const AttendanceDetail = () => {
           onClose={() => setScanning(false)}
           eventId={eventId}
           eventTitle={event.data?.title ?? "this sheet"}
+          entries={
+            records.data?.entries ?? event.data?.entries ?? ["Attendance"]
+          }
           onRecorded={invalidate}
         />
       ) : null}

@@ -30,6 +30,7 @@ export interface AttendanceEvent {
   endAt?: string | null;
   status: "open" | "closed";
   fields: string[];
+  entries: string[];
   createdById?: string | null;
   createdAt: string;
   attendees?: number;
@@ -40,6 +41,7 @@ export interface AttendanceEvent {
 export interface AttendanceRecordRow {
   id: string;
   userId: string;
+  entry: string;
   timestamp: string;
   remarks?: string | null;
   profilePicture?: string | null;
@@ -76,6 +78,8 @@ export const createAttendanceEvent = async (
     startAt?: string;
     endAt?: string;
     fields: string[];
+    /** Scan entries HR set up, in order. Empty = a single default entry. */
+    entries?: string[];
   },
 ) => {
   const res = await axios.post("/attendance/event", body, {
@@ -118,6 +122,7 @@ export const updateAttendanceEvent = async (
     endAt: string | null;
     status: "open" | "closed";
     fields: string[];
+    entries: string[];
   }>,
 ) => {
   const res = await axios.patch(`/attendance/event/${eventId}`, body, {
@@ -141,18 +146,24 @@ export const deleteAttendanceEvent = async (token: string, eventId: string) => {
 export interface ScanConfirmation {
   record?: { id: string } | null;
   fullName?: string | null;
+  /** Which scan entry the row landed on. */
+  entry?: string;
   duplicate?: boolean;
+  /** Rows on the whole sheet. */
   attendees?: number;
+  /** Rows for this entry alone — the number HR is watching per session. */
+  entryCount?: number;
 }
 
 export const confirmAttendanceScan = async (
   token: string,
   eventId: string,
   code: string,
+  entry?: string,
 ) => {
   const res = await axios.post(
     "/attendance/confirm",
-    { eventId, code, scannedAt: new Date().toISOString() },
+    { eventId, code, entry, scannedAt: new Date().toISOString() },
     { headers: jsonHeaders(token) },
   );
   return res.data as ScanConfirmation;
@@ -165,6 +176,8 @@ export interface AttendanceRecordFilters {
   dateFrom?: string;
   dateTo?: string;
   departmentId?: string;
+  /** One of the sheet's scan entries, e.g. "AM Out". */
+  entry?: string;
 }
 
 export interface AttendanceOffice {
@@ -184,6 +197,8 @@ export const attendanceRecords = async (
   });
   return res.data as {
     columns: AttendanceColumn[];
+    /** The sheet's scan entries, in HR's order. */
+    entries: string[];
     departments: AttendanceOffice[];
     records: AttendanceRecordRow[];
     total: number;

@@ -33,21 +33,23 @@ import {
 import Modal from "@/components/custom/Modal";
 import { toast } from "sonner";
 import {
-  QrCode,
-  Plus,
-  Search,
-  Loader2,
-  Trash2,
-  Download,
-  MapPin,
   CalendarDays,
-  Users,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Download,
+  Loader2,
   Lock,
   LockOpen,
+  MapPin,
+  Plus,
+  QrCode,
   ScanLine,
+  Search,
+  Trash2,
   UserPlus,
+  Users,
   X,
-  ChevronRight,
 } from "lucide-react";
 
 const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
@@ -81,6 +83,162 @@ const GROUP_ORDER: AttendanceFieldDef["group"][] = [
   "Personal",
   "Address",
 ];
+
+/** Common shapes, so HR does not type the usual ones by hand every time. */
+const ENTRY_PRESETS: { label: string; hint: string; entries: string[] }[] = [
+  {
+    label: "Single scan",
+    hint: "One tap per person — a headcount, a seminar, a payout",
+    entries: ["Attendance"],
+  },
+  {
+    label: "In and Out",
+    hint: "Two taps — arrival and departure",
+    entries: ["Time In", "Time Out"],
+  },
+  {
+    label: "AM / PM, in and out",
+    hint: "Four taps — a full working day",
+    entries: ["AM In", "AM Out", "PM In", "PM Out"],
+  },
+];
+
+const MAX_ENTRIES = 8;
+
+/**
+ * Scan entries: the segments a sheet collects. A person can be recorded once
+ * per entry, so a four-entry sheet holds up to four rows for them.
+ *
+ * Presets cover the usual shapes; the list underneath is fully editable
+ * because HR asked to set these up at will.
+ */
+const EntryPicker = ({
+  entries,
+  onChange,
+}: {
+  entries: string[];
+  onChange: (next: string[]) => void;
+}) => {
+  const [draft, setDraft] = useState("");
+
+  const add = () => {
+    const label = draft.trim();
+    if (!label) return;
+    if (entries.length >= MAX_ENTRIES) {
+      toast.error(`A sheet can have at most ${MAX_ENTRIES} entries.`);
+      return;
+    }
+    if (entries.some((e) => e.toLowerCase() === label.toLowerCase())) {
+      toast.error(`"${label}" is already on this sheet.`);
+      return;
+    }
+    onChange([...entries, label]);
+    setDraft("");
+  };
+
+  const move = (i: number, by: number) => {
+    const j = i + by;
+    if (j < 0 || j >= entries.length) return;
+    const next = [...entries];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  const activePreset = ENTRY_PRESETS.find(
+    (p) => JSON.stringify(p.entries) === JSON.stringify(entries),
+  );
+
+  return (
+    <div className="space-y-2.5">
+      <div className="grid gap-2 sm:grid-cols-3">
+        {ENTRY_PRESETS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => onChange(p.entries)}
+            className={`text-left rounded-lg border p-2.5 transition-colors ${
+              activePreset?.label === p.label
+                ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
+                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+            }`}
+          >
+            <span className="block text-xs font-semibold text-gray-900">
+              {p.label}
+            </span>
+            <span className="block text-[11px] text-gray-500 mt-0.5">
+              {p.hint}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-lg border divide-y">
+        {entries.length === 0 ? (
+          <p className="px-3 py-3 text-xs text-gray-500">
+            No entries yet — pick a preset above or add your own below.
+          </p>
+        ) : (
+          entries.map((e, i) => (
+            <div key={`${e}-${i}`} className="flex items-center gap-2 px-3 py-2">
+              <span className="w-5 text-[11px] text-gray-400 tabular-nums">
+                {i + 1}
+              </span>
+              <span className="flex-1 text-sm text-gray-900 truncate">{e}</span>
+              <button
+                type="button"
+                onClick={() => move(i, -1)}
+                disabled={i === 0}
+                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                title="Move up"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => move(i, 1)}
+                disabled={i === entries.length - 1}
+                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                title="Move down"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(entries.filter((_, k) => k !== i))}
+                className="p-1 text-gray-400 hover:text-red-600"
+                title="Remove"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(ev) => setDraft(ev.target.value)}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter") {
+              ev.preventDefault();
+              add();
+            }
+          }}
+          placeholder="Add an entry, e.g. Break Out"
+          className="h-9"
+        />
+        <Button type="button" variant="outline" className="h-9" onClick={add}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        Each person can be scanned once per entry. Leave it as a single entry
+        for a plain headcount.
+      </p>
+    </div>
+  );
+};
 
 // ── The column picker: what the sheet captures from each employee ─────────
 const ColumnPicker = ({
@@ -199,6 +357,7 @@ const Attendance = () => {
     location: "",
   });
   const [fields, setFields] = useState<string[]>([]);
+  const [entries, setEntries] = useState<string[]>(["Attendance"]);
   const [confirmDelete, setConfirmDelete] = useState<AttendanceEvent | null>(
     null,
   );
@@ -235,6 +394,7 @@ const Attendance = () => {
         description: form.description || undefined,
         location: form.location || undefined,
         fields,
+        entries,
       }),
     onSuccess: (ev) => {
       toast.success("Attendance sheet created");
@@ -275,6 +435,7 @@ const Attendance = () => {
   });
 
   const startCreate = () => {
+    setEntries(["Attendance"]);
     setForm({
       title: "",
       description: "",
@@ -561,6 +722,15 @@ const Attendance = () => {
               placeholder="Optional notes about this activity"
               className="mt-1 min-h-[60px]"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600">
+              How many times is each person scanned?
+            </label>
+            <div className="mt-1.5">
+              <EntryPicker entries={entries} onChange={setEntries} />
+            </div>
           </div>
 
           <div>
