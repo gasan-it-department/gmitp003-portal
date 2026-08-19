@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
+import HrImpersonationBanner from "./layout/HrImpersonationBanner.tsx";
 //
 import { BrowserRouter, Route, Routes } from "react-router";
 import Login from "./route/Login.tsx";
@@ -155,6 +156,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <BrowserRouter>
+          {/* Super-admin impersonation strip. Outside <Routes> so it shows
+              on every page of the borrowed session, the HR module included. */}
+          <HrImpersonationBanner />
           <Routes>
             <Route
               path="line/register/user/:lineId/:lineInvitationId/:unitPosId/:sgId"

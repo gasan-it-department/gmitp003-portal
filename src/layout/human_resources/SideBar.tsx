@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, NavLink } from "react-router";
+import { getHrImpersonation, exitLineHr } from "@/utils/impersonation";
 import {
   Archive,
   Blocks,
@@ -13,6 +14,7 @@ import {
   IdCardLanyard,
   Landmark,
   Link,
+  LogOut,
   Megaphone,
   PanelLeftClose,
   PanelLeftOpen,
@@ -72,6 +74,8 @@ export const menuGroups = [
 const SideBar = () => {
   const { lineId } = useParams();
   const [collapsed, setCollapsed] = useState(false);
+  // Non-null only while a super-admin is driving this line's HR.
+  const impersonation = getHrImpersonation();
 
   return (
     <aside
@@ -135,6 +139,34 @@ const SideBar = () => {
           </div>
         ))}
       </nav>
+
+      {/* ── Super-admin escape hatch ────────────────────────────────── */}
+      {/* The banner at the top of the page scrolls away; the sidebar does
+          not, so the way out is always one click from anywhere in HR. */}
+      {impersonation && (
+        <div className="p-2 border-t bg-amber-50">
+          <button
+            type="button"
+            onClick={exitLineHr}
+            title={`Leave ${impersonation.lineName} and return to the super-admin panel`}
+            className={`w-full flex items-center gap-2 rounded-md bg-amber-500 hover:bg-amber-600 text-white transition-colors ${
+              collapsed ? "justify-center p-2" : "px-2.5 py-2"
+            }`}
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {!collapsed && (
+              <span className="min-w-0 text-left">
+                <span className="block text-xs font-semibold leading-tight">
+                  Return to admin
+                </span>
+                <span className="block text-[10px] text-amber-50 truncate">
+                  Managing {impersonation.lineName}
+                </span>
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

@@ -4,7 +4,6 @@ import "./App.css";
 
 import SideBarProfile from "./layout/SideBarProfile";
 import MainHeader from "./layout/MainHeader";
-import HrImpersonationBanner from "./layout/HrImpersonationBanner";
 
 function App() {
   // Mobile drawer state for the right side panel. On lg+ the panel is
@@ -13,9 +12,6 @@ function App() {
 
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
-      {/* Super-admin impersonation strip (only renders when active) */}
-      <HrImpersonationBanner />
-
       <div className="flex-1 min-h-0 flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         {/* ── Main column ────────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
