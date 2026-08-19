@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import Modal from "@/components/custom/Modal";
 import { toast } from "sonner";
+
+import AttendanceQrScanner from "@/layout/human_resources/AttendanceQrScanner";
 import {
   ArrowLeft,
   Building2,
@@ -283,6 +285,17 @@ const AttendanceDetail = () => {
               ) : null}
             </div>
           </div>
+
+          {/* ── Live camera scanning ─────────────────────────────────── */}
+          {/* Only on an open sheet: a closed one refuses writes server-side,
+              so offering a camera there would just produce errors. */}
+          {event.data?.status === "open" && eventId ? (
+            <AttendanceQrScanner
+              eventId={eventId}
+              eventTitle={event.data?.title ?? "this sheet"}
+              onRecorded={invalidate}
+            />
+          ) : null}
 
           {/* ── Filters ──────────────────────────────────────────────── */}
           <div className="rounded-lg border bg-white p-3 space-y-2">
