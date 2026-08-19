@@ -1290,3 +1290,93 @@ export const documentReceiveCreate = async (
   });
   return res.data as { record: DocumentReceiveRecord; existing: boolean };
 };
+
+// ─── Room configuration ────────────────────────────────────────────
+export type RoomMemberType = 0 | 1 | 2; // owner | signatory | receiver
+
+export interface RoomMember {
+  id: string;
+  userId: string | null;
+  type: RoomMemberType;
+  role: "Owner" | "Signatory" | "Receiver";
+  addedAt: string;
+  name: string;
+  position: string | null;
+  office: string | null;
+  profilePicture: string | null;
+}
+
+export interface RoomCandidate {
+  id: string;
+  name: string;
+  position: string | null;
+  office: string | null;
+  profilePicture: string | null;
+  /** Already in the room — shown but not selectable. */
+  added: boolean;
+}
+
+export const roomConfig = async (token: string, roomId: string) => {
+  const res = await axios.get("/document/room/config", {
+    headers: jsonHeaders(token),
+    params: { roomId },
+  });
+  return res.data as {
+    room: { id: string; code: string; address: string | null; status: number };
+    members: RoomMember[];
+  };
+};
+
+export const roomCandidates = async (
+  token: string,
+  roomId: string,
+  query?: string,
+) => {
+  const res = await axios.get("/document/room/config/candidates", {
+    headers: jsonHeaders(token),
+    params: { roomId, query },
+  });
+  return res.data as { candidates: RoomCandidate[] };
+};
+
+export const updateRoomConfig = async (
+  token: string,
+  body: { roomId: string; code?: string; address?: string },
+) => {
+  const res = await axios.patch("/document/room/config", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as { id: string; code: string; address: string | null };
+};
+
+export const addRoomMembers = async (
+  token: string,
+  body: { roomId: string; userIds: string[]; type: RoomMemberType },
+) => {
+  const res = await axios.post("/document/room/config/members", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as { added: number; notified: number };
+};
+
+export const updateRoomMember = async (
+  token: string,
+  body: { roomId: string; memberId: string; type: RoomMemberType },
+) => {
+  const res = await axios.patch("/document/room/config/member", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as { message: string };
+};
+
+export const removeRoomMember = async (
+  token: string,
+  roomId: string,
+  memberId: string,
+) => {
+  const res = await axios.delete("/document/room/config/member", {
+    headers: jsonHeaders(token),
+    params: { roomId, memberId },
+  });
+  return res.data as { message: string };
+};

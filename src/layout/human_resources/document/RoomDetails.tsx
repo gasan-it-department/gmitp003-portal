@@ -8,6 +8,7 @@ import { formatDate } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
+import RoomConfig from "./RoomConfig";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import ManageRoom from "./ManageRoom";
@@ -276,7 +277,9 @@ const RoomDetails = () => {
           value="manage"
           className="flex-1 min-h-0 m-0 overflow-auto focus-visible:outline-none"
         >
-          <div className="p-3 max-w-2xl mx-auto">
+          <RoomConfig roomId={roomId as string} />
+
+          <div className="p-3 max-w-4xl mx-auto">
             <div className="border rounded-lg bg-white overflow-hidden">
               <div className="px-3 py-2 border-b bg-gray-50 flex items-center gap-1.5">
                 <Settings className="h-3 w-3 text-blue-500" />
