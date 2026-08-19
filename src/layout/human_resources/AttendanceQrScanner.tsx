@@ -1,32 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import jsQR from "jsqr";
 import { toast } from "sonner";
 //
-import {
-  resolveAttendanceScan,
-  confirmAttendanceScan,
-  type ScanResolution,
-} from "@/db/statements/attendance";
+import { confirmAttendanceScan } from "@/db/statements/attendance";
 //
-import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Camera,
+  ArrowLeft,
   CameraOff,
   Loader2,
   CheckCircle2,
+  XCircle,
   AlertTriangle,
-  UserRound,
-  RotateCw,
-  X,
+  SwitchCamera,
+  Users,
 } from "lucide-react";
 
 const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
@@ -50,19 +39,62 @@ const NativeDetector = (
 ).BarcodeDetector;
 
 /**
- * Live QR scanning from the laptop/desktop webcam, for an open attendance
- * sheet. Reads the same employee ID QR the mobile scanner reads.
+ * A scan result toast. The Toaster is mounted without `richColors`, so the
+ * default success/error styling is monochrome — the colour that tells HR at a
+ * glance whether the person got in is built here rather than assumed.
+ */
+const resultToast = (
+  tone: "ok" | "warn" | "bad",
+  title: string,
+  detail?: string,
+) => {
+  const skin = {
+    ok: { bar: "bg-emerald-500", ring: "border-emerald-200", text: "text-emerald-700", Icon: CheckCircle2 },
+    warn: { bar: "bg-amber-500", ring: "border-amber-200", text: "text-amber-700", Icon: AlertTriangle },
+    bad: { bar: "bg-red-500", ring: "border-red-200", text: "text-red-700", Icon: XCircle },
+  }[tone];
+  toast.custom(
+    () => (
+      <div
+        className={`flex items-stretch gap-0 overflow-hidden rounded-lg border ${skin.ring} bg-white shadow-lg w-[340px]`}
+      >
+        <div className={`w-1.5 ${skin.bar}`} />
+        <div className="flex items-start gap-2.5 px-3.5 py-3 min-w-0">
+          <skin.Icon className={`h-5 w-5 ${skin.text} flex-shrink-0 mt-0.5`} />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">
+              {title}
+            </p>
+            {detail && (
+              <p className="text-xs text-gray-500 mt-0.5">{detail}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    ),
+    { duration: tone === "ok" ? 2200 : 4000 },
+  );
+};
+
+/**
+ * Full-page live QR scanning for an open attendance sheet, off the computer's
+ * own webcam. Reads the same employee ID QR the mobile scanner reads and posts
+ * to the same /attendance/confirm, so the auth gate, the snapshot-frozen
+ * columns and the duplicate handling are all shared.
  *
- * Two decoders on purpose: the browser's own BarcodeDetector when it exists
- * (native, no per-frame allocation), otherwise jsQR over a canvas frame. HR
- * machines are mostly Chrome/Edge, but a scanner that silently does nothing on
- * Firefox is worse than a slightly slower one.
+ * Two decoders: the browser's native BarcodeDetector where it exists
+ * (Chrome/Edge), otherwise jsQR over a canvas frame. A scanner that silently
+ * does nothing on Firefox is worse than a slightly slower one.
  */
 const AttendanceQrScanner = ({
+  open,
+  onClose,
   eventId,
   eventTitle,
   onRecorded,
 }: {
+  open: boolean;
+  onClose: () => void;
   eventId: string;
   eventTitle: string;
   onRecorded?: () => void;
@@ -70,23 +102,23 @@ const AttendanceQrScanner = ({
   const qc = useQueryClient();
   const auth = useAuth();
   const token = auth.token as string;
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const detectorRef = useRef<BarcodeDetectorLike | null>(null);
-  /** Set while a scan is being resolved/confirmed so the loop stops firing. */
+  /** True while a scan is in flight, so the loop does not double-fire. */
   const busyRef = useRef(false);
-  /** Last code handled, to ignore the same badge sitting in frame. */
+  /** Last code handled, to ignore a badge left sitting in frame. */
   const lastCodeRef = useRef<{ code: string; at: number } | null>(null);
 
-  const [on, setOn] = useState(false);
-  const [starting, setStarting] = useState(false);
+  const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
-  const [pending, setPending] = useState<ScanResolution | null>(null);
-  const [recent, setRecent] = useState<{ name: string; at: string }[]>([]);
+  const [count, setCount] = useState<number | null>(null);
+  const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
 
   const stop = useCallback(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -94,41 +126,46 @@ const AttendanceQrScanner = ({
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    setOn(false);
+    setLive(false);
   }, []);
 
-  // Never leave the camera light on when the page goes away.
-  useEffect(() => stop, [stop]);
-
-  const resolve = useMutation({
-    mutationFn: (code: string) => resolveAttendanceScan(token, eventId, code),
-    onSuccess: (r) => setPending(r),
+  /** One call per scan: /attendance/confirm takes the raw code and answers
+   *  with the name, whether it was a duplicate, and the running headcount. */
+  const record = useMutation({
+    mutationFn: (code: string) => confirmAttendanceScan(token, eventId, code),
+    onSuccess: (r) => {
+      if (typeof r.attendees === "number") setCount(r.attendees);
+      if (r.duplicate) {
+        resultToast("warn", r.fullName ?? "Already recorded", "Already on this sheet");
+        setFlash("bad");
+      } else {
+        resultToast(
+          "ok",
+          r.fullName ?? "Recorded",
+          typeof r.attendees === "number"
+            ? `Recorded · ${r.attendees} on the sheet`
+            : "Recorded",
+        );
+        setFlash("ok");
+        qc.invalidateQueries({ queryKey: ["attendance-records", eventId] });
+        qc.invalidateQueries({ queryKey: ["attendance-event", eventId] });
+        onRecorded?.();
+      }
+      busyRef.current = false;
+    },
     onError: (e) => {
-      toast.error(surfaceErr(e, "Could not read that ID"));
+      resultToast("bad", "Not recorded", surfaceErr(e, "Could not read that ID"));
+      setFlash("bad");
       busyRef.current = false;
     },
   });
 
-  const confirm = useMutation({
-    mutationFn: (userId: string) => confirmAttendanceScan(token, eventId, userId),
-    onSuccess: (_r, userId) => {
-      const name =
-        pending?.user.id === userId ? pending.user.fullName : "Employee";
-      toast.success(`${name} recorded`);
-      setRecent((r) => [
-        { name, at: new Date().toLocaleTimeString() },
-        ...r.slice(0, 7),
-      ]);
-      setPending(null);
-      busyRef.current = false;
-      qc.invalidateQueries({ queryKey: ["attendance-records", eventId] });
-      onRecorded?.();
-    },
-    onError: (e) => {
-      toast.error(surfaceErr(e, "Could not record that scan"));
-      busyRef.current = false;
-    },
-  });
+  // Clear the edge flash shortly after each scan.
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 550);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   /** One decode attempt against the current video frame. */
   const readFrame = useCallback(async (): Promise<string | null> => {
@@ -139,8 +176,7 @@ const AttendanceQrScanner = ({
     if (detectorRef.current) {
       try {
         const hits = await detectorRef.current.detect(video);
-        if (hits.length) return hits[0].rawValue;
-        return null;
+        return hits.length ? hits[0].rawValue : null;
       } catch {
         // A detector that starts throwing is worse than none — drop to jsQR.
         detectorRef.current = null;
@@ -154,6 +190,8 @@ const AttendanceQrScanner = ({
     canvas.height = h;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
+    // Drawn from the raw video, so the mirrored PREVIEW never reaches the
+    // decoder — a flipped frame would not decode.
     ctx.drawImage(video, 0, 0, w, h);
     const hit = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, {
       inversionAttempts: "dontInvert",
@@ -163,328 +201,239 @@ const AttendanceQrScanner = ({
 
   const loop = useCallback(async () => {
     if (!streamRef.current) return;
-    if (!busyRef.current && !pending) {
+    if (!busyRef.current) {
       const code = await readFrame();
       if (code) {
         const last = lastCodeRef.current;
-        // The badge stays in frame after a scan; ignore it for a few seconds
-        // rather than hammering the API with the same code.
         const repeat = last?.code === code && Date.now() - last.at < 4000;
         if (!repeat) {
           lastCodeRef.current = { code, at: Date.now() };
           busyRef.current = true;
-          resolve.mutate(code);
+          record.mutate(code);
         }
       }
     }
     rafRef.current = requestAnimationFrame(() => void loop());
-  }, [pending, readFrame, resolve]);
+  }, [readFrame, record]);
 
-  const start = useCallback(async () => {
-    setError(null);
-    setStarting(true);
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error(
-          "This browser cannot open a camera. Use Chrome or Edge.",
-        );
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: deviceId
-          ? { deviceId: { exact: deviceId } }
-          : { facingMode: "environment", width: { ideal: 1280 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => undefined);
-      }
-
-      // Labels only populate once permission has been granted.
-      const list = (await navigator.mediaDevices.enumerateDevices()).filter(
-        (d) => d.kind === "videoinput",
-      );
-      setDevices(list);
-      if (!deviceId && list[0]?.deviceId) setDeviceId(list[0].deviceId);
-
-      if (NativeDetector && !detectorRef.current) {
-        try {
-          detectorRef.current = new NativeDetector({ formats: ["qr_code"] });
-        } catch {
-          detectorRef.current = null;
+  const start = useCallback(
+    async (id?: string) => {
+      setError(null);
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("This browser cannot open a camera. Use Chrome or Edge.");
         }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: id
+            ? { deviceId: { exact: id } }
+            : { facingMode: "environment", width: { ideal: 1280 } },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => undefined);
+        }
+
+        // Labels only populate once permission has been granted.
+        const list = (await navigator.mediaDevices.enumerateDevices()).filter(
+          (d) => d.kind === "videoinput",
+        );
+        setDevices(list);
+        const active = stream.getVideoTracks()[0]?.getSettings?.().deviceId;
+        if (active) setDeviceId(active);
+
+        if (NativeDetector && !detectorRef.current) {
+          try {
+            detectorRef.current = new NativeDetector({ formats: ["qr_code"] });
+          } catch {
+            detectorRef.current = null;
+          }
+        }
+
+        setLive(true);
+        rafRef.current = requestAnimationFrame(() => void loop());
+      } catch (e) {
+        const err = e as DOMException & { message?: string };
+        setError(
+          err?.name === "NotAllowedError"
+            ? "Camera access was blocked. Allow it from the icon in the address bar, then reopen the scanner."
+            : err?.name === "NotFoundError"
+              ? "No camera found on this computer."
+              : err?.name === "NotReadableError"
+                ? "The camera is already in use by another program."
+                : (err?.message ?? "Could not start the camera."),
+        );
+        stop();
       }
+    },
+    [loop, stop],
+  );
 
-      setOn(true);
-      rafRef.current = requestAnimationFrame(() => void loop());
-    } catch (e) {
-      const err = e as DOMException & { message?: string };
-      setError(
-        err?.name === "NotAllowedError"
-          ? "Camera access was blocked. Allow it in the browser's address bar, then try again."
-          : err?.name === "NotFoundError"
-            ? "No camera found on this computer."
-            : err?.name === "NotReadableError"
-              ? "The camera is already in use by another program."
-              : (err?.message ?? "Could not start the camera."),
-      );
+  // Open → camera on. Close (or unmount) → camera off, so the indicator light
+  // never stays on after HR leaves the page.
+  useEffect(() => {
+    if (!open) {
       stop();
-    } finally {
-      setStarting(false);
+      return;
     }
-  }, [deviceId, loop, stop]);
+    void start(deviceId || undefined);
+    return stop;
+    // deviceId changes go through the explicit switcher below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-  // Restart cleanly when HR picks a different camera.
-  const switchCamera = (id: string) => {
-    setDeviceId(id);
-    if (on) {
-      stop();
-      setTimeout(() => void start(), 150);
-    }
+  // Escape closes, and the page behind must not scroll while this is up.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onClose]);
+
+  const cycleCamera = () => {
+    if (devices.length < 2) return;
+    const i = devices.findIndex((d) => d.deviceId === deviceId);
+    const next = devices[(i + 1) % devices.length];
+    setDeviceId(next.deviceId);
+    stop();
+    setTimeout(() => void start(next.deviceId), 150);
   };
+
+  if (!open) return null;
 
   const secure =
     typeof window !== "undefined" &&
     (window.isSecureContext || location.hostname === "localhost");
 
-  return (
-    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-      <div className="border-b bg-gray-50/50 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] bg-black text-white flex flex-col">
+      {/* ── Camera ─────────────────────────────────────────────────────── */}
+      <video
+        ref={videoRef}
+        playsInline
+        muted
+        // Mirrored so moving the badge left moves it left on screen — the
+        // decoder reads the raw frame, so this is presentation only.
+        style={{ transform: "scaleX(-1)" }}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Result flash around the edge of the whole screen */}
+      {flash && (
+        <div
+          className={`pointer-events-none absolute inset-0 ring-[6px] ring-inset transition-opacity duration-300 ${
+            flash === "ok" ? "ring-emerald-400" : "ring-red-500"
+          }`}
+        />
+      )}
+
+      {/* ── Top bar ────────────────────────────────────────────────────── */}
+      <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-2 rounded-md px-2.5 py-1.5 hover:bg-white/10 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="text-sm font-medium">Back to sheet</span>
+        </button>
+
+        <div className="min-w-0 text-center hidden sm:block">
+          <p className="text-sm font-semibold truncate">{eventTitle}</p>
+          <p className="text-[11px] text-white/60">
+            {live ? "Scanning — hold an ID to the camera" : "Starting camera…"}
+          </p>
+        </div>
+
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Live QR scan</h2>
-          {on && (
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 text-red-700 text-[11px] font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-              Camera on
+          {count !== null && (
+            <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs tabular-nums">
+              <Users className="h-3.5 w-3.5" />
+              {count}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
           {devices.length > 1 && (
-            <Select value={deviceId} onValueChange={switchCamera}>
-              <SelectTrigger className="h-8 w-48 text-xs">
-                <SelectValue placeholder="Camera" />
-              </SelectTrigger>
-              <SelectContent>
-                {devices.map((d, i) => (
-                  <SelectItem key={d.deviceId} value={d.deviceId}>
-                    {d.label || `Camera ${i + 1}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {on ? (
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={stop}>
-              <CameraOff className="h-3.5 w-3.5" />
-              Stop
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              className="gap-1.5 bg-blue-600 hover:bg-blue-700"
-              disabled={starting || !secure}
-              onClick={() => void start()}
+            <button
+              type="button"
+              onClick={cycleCamera}
+              title="Switch camera"
+              className="rounded-md p-2 hover:bg-white/10 transition-colors"
             >
-              {starting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Camera className="h-3.5 w-3.5" />
-              )}
-              Start camera
-            </Button>
+              <SwitchCamera className="h-5 w-5" />
+            </button>
           )}
         </div>
       </div>
 
-      <div className="p-5 space-y-3">
-        {!secure && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-amber-800">
-              Browsers only allow the camera on a secure (https) page. Open the
-              portal over https and reload.
-            </p>
+      {/* ── Aiming frame ───────────────────────────────────────────────── */}
+      <div className="relative z-10 flex-1 flex items-center justify-center">
+        {!secure ? (
+          <div className="mx-6 max-w-md rounded-lg bg-amber-500/95 px-4 py-3 text-sm text-white">
+            Browsers only allow the camera on a secure (https) page. Open the
+            portal over https and reload.
+          </div>
+        ) : error ? (
+          <div className="mx-6 max-w-md rounded-lg bg-white text-gray-900 px-4 py-4 shadow-xl">
+            <div className="flex items-start gap-2.5">
+              <CameraOff className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Camera unavailable</p>
+                <p className="text-sm text-gray-600 mt-1">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => void start(deviceId || undefined)}
+                  className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !live ? (
+          <Loader2 className="h-8 w-8 animate-spin text-white/70" />
+        ) : (
+          <div className="relative w-[min(70vw,320px)] aspect-square">
+            <div className="absolute inset-0 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+            {/* corner brackets */}
+            {[
+              "top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl",
+              "top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl",
+              "bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl",
+              "bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl",
+            ].map((c) => (
+              <span
+                key={c}
+                className={`absolute h-10 w-10 border-white/90 ${c}`}
+              />
+            ))}
+            {record.isPending && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+              </div>
+            )}
           </div>
         )}
-
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-red-800">{error}</p>
-          </div>
-        )}
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          {/* ── Viewfinder ─────────────────────────────────────────────── */}
-          <div className="relative rounded-lg overflow-hidden bg-gray-900 aspect-video">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${on ? "" : "opacity-0"}`}
-            />
-            <canvas ref={canvasRef} className="hidden" />
-
-            {!on && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                <Camera className="h-10 w-10 text-gray-600" strokeWidth={1.5} />
-                <p className="text-sm text-gray-300 mt-3 font-medium">
-                  Camera is off
-                </p>
-                <p className="text-xs text-gray-500 mt-1 max-w-xs">
-                  Start it, then hold an employee ID up to the lens. Each scan
-                  is confirmed before it lands on {eventTitle}.
-                </p>
-              </div>
-            )}
-
-            {on && !pending && (
-              <>
-                {/* Aiming frame */}
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 border-2 border-white/70 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-                </div>
-                <p className="absolute bottom-2 inset-x-0 text-center text-xs text-white/90">
-                  {resolve.isPending ? "Reading…" : "Hold the ID QR in the frame"}
-                </p>
-              </>
-            )}
-          </div>
-
-          {/* ── Confirm / recent ───────────────────────────────────────── */}
-          <div className="space-y-3">
-            {pending ? (
-              <div className="rounded-lg border p-3.5 space-y-3">
-                <div className="flex items-start gap-3">
-                  {pending.user.profilePicture ? (
-                    <img
-                      src={pending.user.profilePicture}
-                      alt=""
-                      className="h-14 w-14 rounded-lg object-cover border flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="h-14 w-14 rounded-lg bg-gray-100 border flex items-center justify-center flex-shrink-0">
-                      <UserRound className="h-7 w-7 text-gray-400" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {pending.user.fullName}
-                    </p>
-                    {pending.user.inactive && (
-                      <p className="text-xs text-amber-700 flex items-center gap-1 mt-0.5">
-                        <AlertTriangle className="h-3 w-3" />
-                        This employee is inactive or archived
-                      </p>
-                    )}
-                    {pending.alreadyRecorded && (
-                      <p className="text-xs text-blue-700 mt-0.5">
-                        Already recorded
-                        {pending.recordedAt
-                          ? ` at ${new Date(pending.recordedAt).toLocaleTimeString()}`
-                          : ""}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {pending.columns.length > 0 && (
-                  <dl className="text-xs divide-y rounded-md border bg-gray-50/60">
-                    {pending.columns.map((c) => (
-                      <div key={c.key} className="flex gap-2 px-2.5 py-1.5">
-                        <dt className="text-gray-500 w-28 flex-shrink-0 truncate">
-                          {c.label}
-                        </dt>
-                        <dd className="text-gray-900 min-w-0 truncate">
-                          {c.value || "—"}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 gap-1.5 bg-blue-600 hover:bg-blue-700"
-                    disabled={confirm.isPending || pending.alreadyRecorded}
-                    onClick={() => confirm.mutate(pending.user.id)}
-                  >
-                    {confirm.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                    {pending.alreadyRecorded ? "Already in" : "Confirm"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => {
-                      setPending(null);
-                      busyRef.current = false;
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                    Skip
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed p-5 text-center">
-                <p className="text-sm text-gray-500 font-medium">
-                  Nothing scanned yet
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  The employee appears here for you to confirm before they are
-                  written to the sheet.
-                </p>
-              </div>
-            )}
-
-            {recent.length > 0 && (
-              <div className="rounded-lg border">
-                <p className="text-xs font-semibold text-gray-700 px-3 py-2 border-b bg-gray-50/60">
-                  Recorded this session
-                </p>
-                <ul className="divide-y max-h-44 overflow-y-auto">
-                  {recent.map((r, i) => (
-                    <li
-                      key={`${r.name}-${i}`}
-                      className="px-3 py-2 flex items-center gap-2"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
-                      <span className="text-xs text-gray-900 truncate flex-1">
-                        {r.name}
-                      </span>
-                      <span className="text-[11px] text-gray-400 tabular-nums">
-                        {r.at}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {on && (
-              <button
-                type="button"
-                onClick={() => {
-                  lastCodeRef.current = null;
-                  setPending(null);
-                  busyRef.current = false;
-                }}
-                className="w-full text-xs text-blue-600 hover:text-blue-700 flex items-center justify-center gap-1.5 py-1"
-              >
-                <RotateCw className="h-3 w-3" />
-                Reset scanner
-              </button>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+
+      {/* ── Bottom hint ────────────────────────────────────────────────── */}
+      <div className="relative z-10 px-4 py-4 text-center bg-gradient-to-t from-black/80 to-transparent">
+        <p className="text-xs text-white/70">
+          Each scan is recorded straight onto{" "}
+          <span className="text-white/90 font-medium">{eventTitle}</span>. Press
+          Esc to stop.
+        </p>
+      </div>
+    </div>,
+    document.body,
   );
 };
 

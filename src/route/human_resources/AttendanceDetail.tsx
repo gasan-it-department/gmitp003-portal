@@ -11,9 +11,9 @@ import {
   updateAttendanceEvent,
 } from "@/db/statements/attendance";
 //
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -36,6 +36,7 @@ import {
   MapPin,
   QrCode,
   RefreshCw,
+  ScanLine,
   Search,
   Trash2,
   Users,
@@ -107,6 +108,8 @@ const AttendanceDetail = () => {
       }),
     enabled: !!auth.token && !!eventId,
   });
+
+  const [scanning, setScanning] = useState(false);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["attendance-records", eventId] });
@@ -255,6 +258,16 @@ const AttendanceDetail = () => {
                     </>
                   )}
                 </Button>
+                {event.data?.status === "open" && (
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setScanning(true)}
+                  >
+                    <ScanLine className="h-3.5 w-3.5" />
+                    Scan QR
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
@@ -285,17 +298,6 @@ const AttendanceDetail = () => {
               ) : null}
             </div>
           </div>
-
-          {/* ── Live camera scanning ─────────────────────────────────── */}
-          {/* Only on an open sheet: a closed one refuses writes server-side,
-              so offering a camera there would just produce errors. */}
-          {event.data?.status === "open" && eventId ? (
-            <AttendanceQrScanner
-              eventId={eventId}
-              eventTitle={event.data?.title ?? "this sheet"}
-              onRecorded={invalidate}
-            />
-          ) : null}
 
           {/* ── Filters ──────────────────────────────────────────────── */}
           <div className="rounded-lg border bg-white p-3 space-y-2">
@@ -495,6 +497,18 @@ const AttendanceDetail = () => {
           ) : null}
         </>
       )}
+
+      {/* Full-page scanner. Only offered on an OPEN sheet: a closed one
+          refuses writes server-side, so a camera there only makes errors. */}
+      {eventId ? (
+        <AttendanceQrScanner
+          open={scanning}
+          onClose={() => setScanning(false)}
+          eventId={eventId}
+          eventTitle={event.data?.title ?? "this sheet"}
+          onRecorded={invalidate}
+        />
+      ) : null}
 
       <Modal
         title="Remove this attendance record?"

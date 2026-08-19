@@ -134,47 +134,28 @@ export const deleteAttendanceEvent = async (token: string, eventId: string) => {
 };
 
 // ─── Live scanning (web camera) ─────────────────────────────────────
-// The same two endpoints the mobile scanner uses. They are gated by
+// The same endpoint the mobile scanner posts to, gated by
 // attendanceMobileAuth: super-admin, the line's HRMO, or an explicit grant.
-export interface ScanResolution {
-  event: { id: string; title: string };
-  user: {
-    id: string;
-    fullName: string;
-    profilePicture: string | null;
-    inactive: boolean;
-  };
-  columns: { key: string; label: string; value: string }[];
-  alreadyRecorded: boolean;
-  recordedAt: string | null;
+// It accepts the raw scanned code, so one round trip both records the person
+// and answers with everything the result toast needs.
+export interface ScanConfirmation {
+  record?: { id: string } | null;
+  fullName?: string | null;
+  duplicate?: boolean;
+  attendees?: number;
 }
 
-/** Decode a scanned QR into the employee it belongs to, without writing. */
-export const resolveAttendanceScan = async (
+export const confirmAttendanceScan = async (
   token: string,
   eventId: string,
   code: string,
 ) => {
   const res = await axios.post(
-    "/attendance/resolve",
-    { eventId, code },
-    { headers: jsonHeaders(token) },
-  );
-  return res.data as ScanResolution;
-};
-
-/** Write the scan onto the sheet. */
-export const confirmAttendanceScan = async (
-  token: string,
-  eventId: string,
-  userId: string,
-) => {
-  const res = await axios.post(
     "/attendance/confirm",
-    { eventId, userId, scannedAt: new Date().toISOString() },
+    { eventId, code, scannedAt: new Date().toISOString() },
     { headers: jsonHeaders(token) },
   );
-  return res.data as { message?: string; record?: { id: string } };
+  return res.data as ScanConfirmation;
 };
 
 // ─── Records ───────────────────────────────────────────────────────
