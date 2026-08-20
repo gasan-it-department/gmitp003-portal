@@ -41,12 +41,15 @@ export interface AttendanceEvent {
 export interface AttendanceRecordRow {
   id: string;
   userId: string;
+  /** Who the row is FOR — always present, whatever columns the sheet captures. */
+  attendee: string;
   entry: string;
   timestamp: string;
   remarks?: string | null;
   profilePicture?: string | null;
   office?: string | null;
   scannedBy?: string | null;
+  scannedById?: string | null;
   values: Record<string, string>;
 }
 

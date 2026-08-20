@@ -443,6 +443,9 @@ const AttendanceDetail = () => {
                     <th className="px-3 py-2 font-medium text-gray-600 w-12">
                       No.
                     </th>
+                    <th className="px-3 py-2 font-medium text-gray-600 whitespace-nowrap">
+                      Employee
+                    </th>
                     {columns.map((c) => (
                       <th
                         key={c.key}
@@ -468,6 +471,12 @@ const AttendanceDetail = () => {
                       <td className="px-3 py-2 text-gray-400 tabular-nums">
                         {page * 25 + i + 1}
                       </td>
+                      {/* Always the ATTENDEE, never the operator. A sheet that
+                          captures no name column used to leave "scanned by
+                          <operator>" as the only name on the row. */}
+                      <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">
+                        {r.attendee}
+                      </td>
                       {columns.map((c) => (
                         <td
                           key={c.key}
@@ -492,7 +501,7 @@ const AttendanceDetail = () => {
                         {fmtDate(r.timestamp)}
                         {r.scannedBy ? (
                           <span className="block text-[11px] text-gray-400">
-                            by {r.scannedBy}
+                            Scanned by {r.scannedBy}
                           </span>
                         ) : null}
                       </td>
