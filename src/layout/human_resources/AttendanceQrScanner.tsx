@@ -76,6 +76,17 @@ const resultToast = (
   );
 };
 
+/** "try again in 2m 14s", or nothing if the moment has already passed. */
+const countdown = (nextAllowedAt?: string | null) => {
+  if (!nextAllowedAt) return null;
+  const ms = new Date(nextAllowedAt).getTime() - Date.now();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const total = Math.ceil(ms / 1000);
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `try again in ${m ? `${m}m ` : ""}${sec}s`;
+};
+
 /**
  * Full-page live QR scanning for an open attendance sheet, off the computer's
  * own webcam. Reads the same employee ID QR the mobile scanner reads and posts
@@ -113,8 +124,20 @@ const AttendanceQrScanner = ({
   const detectorRef = useRef<BarcodeDetectorLike | null>(null);
   /** True while a scan is in flight, so the loop does not double-fire. */
   const busyRef = useRef(false);
-  /** Last code handled, to ignore a badge left sitting in frame. */
-  const lastCodeRef = useRef<{ code: string; at: number } | null>(null);
+  /**
+   * Per badge PER ENTRY, the moment it becomes worth reading again.
+   *
+   * A flat few-second window used to be enough, because a second scan was
+   * refused forever and the toast said so once. Now the server enforces a
+   * three-minute cool-down, so a badge left in front of the lens would earn
+   * a fresh "Duplicate Entry" warning every few seconds for three minutes.
+   * The client holds it off until the server would actually count it.
+   *
+   * Keyed by entry as well as code: switching from AM In to AM Out is a
+   * different question, and the same badge must be readable straight away.
+   */
+  const holdRef = useRef(new Map<string, number>());
+  const holdKey = (code: string, forEntry: string) => JSON.stringify([forEntry, code]);
 
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,17 +213,33 @@ const AttendanceQrScanner = ({
   const record = useMutation({
     mutationFn: (code: string) =>
       confirmAttendanceScan(token, eventId, code, entryRef.current),
-    onSuccess: (r) => {
+    onSuccess: (r, code) => {
       // On a multi-entry sheet the number HR watches is the count for THIS
       // segment, not the sheet total.
       const shown = multi ? r.entryCount : r.attendees;
       if (typeof shown === "number") setCount(shown);
       const where = r.entry ?? entryRef.current;
+
+      // Hold this badge, for this entry, until the server would take it
+      // again — recorded or not. Re-reading it before then can only produce
+      // the same answer.
+      const until = r.nextAllowedAt ? new Date(r.nextAllowedAt).getTime() : 0;
+      holdRef.current.set(
+        holdKey(code, where),
+        Number.isFinite(until) && until > Date.now() ? until : Date.now() + 4000,
+      );
+
       if (r.duplicate) {
         resultToast(
           "warn",
-          r.fullName ?? "Already recorded",
-          multi ? `Already scanned for ${where}` : "Already on this sheet",
+          "Duplicate Entry",
+          [
+            r.fullName ?? "Already recorded",
+            multi ? where : null,
+            countdown(r.nextAllowedAt),
+          ]
+            .filter(Boolean)
+            .join(" · "),
         );
         setFlash("bad");
       } else {
@@ -269,10 +308,11 @@ const AttendanceQrScanner = ({
     if (!busyRef.current) {
       const code = await readFrame();
       if (code) {
-        const last = lastCodeRef.current;
-        const repeat = last?.code === code && Date.now() - last.at < 4000;
-        if (!repeat) {
-          lastCodeRef.current = { code, at: Date.now() };
+        const key = holdKey(code, entryRef.current);
+        if ((holdRef.current.get(key) ?? 0) <= Date.now()) {
+          // Provisional hold so the in-flight request is not fired twice;
+          // the reply replaces it with the server's real cool-down.
+          holdRef.current.set(key, Date.now() + 4000);
           busyRef.current = true;
           record.mutate(code);
         }
@@ -528,9 +568,8 @@ const AttendanceQrScanner = ({
                   type="button"
                   onClick={() => {
                     setEntry(e);
-                    // Let the same badge be scanned again straight away for
-                    // the new segment.
-                    lastCodeRef.current = null;
+                    // Holds are keyed by entry, so nothing to clear — the
+                    // same badge is a fresh question for the new segment.
                     setCount(null);
                   }}
                   className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${

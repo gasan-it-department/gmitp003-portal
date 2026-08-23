@@ -151,11 +151,17 @@ export interface ScanConfirmation {
   fullName?: string | null;
   /** Which scan entry the row landed on. */
   entry?: string;
+  /** True when this scan fell inside the person's cool-down for this entry —
+   *  nothing was written, and `record` is the row already there. */
   duplicate?: boolean;
-  /** Rows on the whole sheet. */
+  /** DISTINCT people on the whole sheet. */
   attendees?: number;
-  /** Rows for this entry alone — the number HR is watching per session. */
+  /** DISTINCT people in this entry alone — what HR watches per session. */
   entryCount?: number;
+  /** When this person may scan into this entry again (ISO). */
+  nextAllowedAt?: string | null;
+  /** The cool-down the server is enforcing, in ms. */
+  cooldownMs?: number;
 }
 
 export const confirmAttendanceScan = async (
