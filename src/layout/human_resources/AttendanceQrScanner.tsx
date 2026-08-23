@@ -118,6 +118,10 @@ const AttendanceQrScanner = ({
 
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Exactly what the browser said, kept verbatim. Chrome funnels several
+   *  unrelated failures into NotReadableError, so the raw name and message
+   *  are the only way anyone can tell them apart afterwards. */
+  const [errDetail, setErrDetail] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
   const [count, setCount] = useState<number | null>(null);
@@ -137,7 +141,42 @@ const AttendanceQrScanner = ({
   /** More than one entry means HR must say which segment they are scanning. */
   const multi = entries.length > 1;
 
+  /**
+   * Bumped by every stop().
+   *
+   * getUserMedia is async, and stop() can only release a stream it can see.
+   * Close the scanner while the permission prompt or the driver hand-off is
+   * still in flight and the old code stored the stream AFTER the cleanup had
+   * already run — a live camera with nobody holding it. The next open then
+   * asked Windows for a device this very page was still using, and Chrome
+   * answered NotReadableError. That is the "already in use by another
+   * program" HR kept seeing: the other program was this tab.
+   *
+   * So each start captures the generation it began in, and a stream that
+   * arrives after its generation was torn down is handed straight back.
+   */
+  const genRef = useRef(0);
+  /**
+   * One start at a time; stacked starts hammer the driver, and hammering a
+   * flaky Windows driver is how you MAKE it report the camera as busy.
+   *
+   * A skipped request is remembered rather than dropped. Dropping it is a
+   * bug I shipped into this very fix: close and immediately reopen while the
+   * first getUserMedia is still pending, and the reopen was refused, leaving
+   * a spinner over a camera nobody ever asked for again.
+   */
+  const startingRef = useRef(false);
+  const pendingStartRef = useRef<{ id?: string } | null>(null);
+  const startRef = useRef<((id?: string) => Promise<void>) | null>(null);
+  /** Read by the queued restart, so a scanner closed in the meantime stays
+   *  closed instead of switching the camera light back on. */
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
   const stop = useCallback(() => {
+    genRef.current += 1;
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -244,17 +283,64 @@ const AttendanceQrScanner = ({
 
   const start = useCallback(
     async (id?: string) => {
+      if (startingRef.current) {
+        pendingStartRef.current = { id };
+        return;
+      }
+      startingRef.current = true;
+      // Always release before asking again. A retry that skips this is how a
+      // single failure turns into a camera the page holds against itself.
+      stop();
+      const gen = genRef.current;
       setError(null);
+      setErrDetail(null);
+
+      /**
+       * Progressively looser asks.
+       *
+       * Plenty of Windows webcam drivers — and nearly every virtual camera
+       * (OBS, DroidCam, vendor utilities) — refuse a constrained request and
+       * accept a bare one. A failure on the first shape is not the answer,
+       * it is the first data point.
+       */
+      const attempts: MediaStreamConstraints[] = [
+        ...(id ? [{ video: { deviceId: { exact: id } }, audio: false }] : []),
+        {
+          video: { facingMode: "environment", width: { ideal: 1280 } },
+          audio: false,
+        },
+        { video: true, audio: false },
+      ];
+
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("This browser cannot open a camera. Use Chrome or Edge.");
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: id
-            ? { deviceId: { exact: id } }
-            : { facingMode: "environment", width: { ideal: 1280 } },
-          audio: false,
-        });
+
+        let stream: MediaStream | null = null;
+        let lastErr: unknown = null;
+        for (const constraints of attempts) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            break;
+          } catch (e) {
+            lastErr = e;
+            // A refusal is a decision, not a constraint problem — asking
+            // again in a different shape only re-prompts and re-annoys.
+            if ((e as DOMException)?.name === "NotAllowedError") break;
+          }
+          // Give the driver a beat to let go between attempts.
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        if (!stream) throw lastErr ?? new Error("Could not start the camera.");
+
+        // Torn down while we were waiting: hand the camera straight back
+        // rather than parking a live stream nobody will ever stop.
+        if (gen !== genRef.current) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -284,17 +370,40 @@ const AttendanceQrScanner = ({
         setError(
           err?.name === "NotAllowedError"
             ? "Camera access was blocked. Allow it from the icon in the address bar, then reopen the scanner."
-            : err?.name === "NotFoundError"
+            : err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError"
               ? "No camera found on this computer."
-              : err?.name === "NotReadableError"
-                ? "The camera is already in use by another program."
-                : (err?.message ?? "Could not start the camera."),
+              : err?.name === "NotReadableError" || err?.name === "TrackStartError"
+                ? "Windows would not hand over the camera."
+                : err?.name === "OverconstrainedError"
+                  ? "That camera is no longer available. Pick another one below."
+                  : (err?.message ?? "Could not start the camera."),
         );
+        setErrDetail(
+          [err?.name, err?.message].filter(Boolean).join(": ") || null,
+        );
+        // Offer a picker even on failure — if the default device is a broken
+        // virtual camera, choosing a real one is the whole fix.
+        try {
+          const list = (await navigator.mediaDevices.enumerateDevices()).filter(
+            (d) => d.kind === "videoinput",
+          );
+          setDevices(list);
+        } catch {
+          /* enumeration is a nicety, not a requirement */
+        }
         stop();
+      } finally {
+        startingRef.current = false;
+        const queued = pendingStartRef.current;
+        pendingStartRef.current = null;
+        if (queued && openRef.current) void startRef.current?.(queued.id);
       }
     },
     [loop, stop],
   );
+  useEffect(() => {
+    startRef.current = start;
+  }, [start]);
 
   // Open → camera on. Close (or unmount) → camera off, so the indicator light
   // never stays on after HR leaves the page.
@@ -329,8 +438,7 @@ const AttendanceQrScanner = ({
     const i = devices.findIndex((d) => d.deviceId === deviceId);
     const next = devices[(i + 1) % devices.length];
     setDeviceId(next.deviceId);
-    stop();
-    setTimeout(() => void start(next.deviceId), 150);
+    void start(next.deviceId);
   };
 
   if (!open) return null;
@@ -338,6 +446,12 @@ const AttendanceQrScanner = ({
   const secure =
     typeof window !== "undefined" &&
     (window.isSecureContext || location.hostname === "localhost");
+
+  /** Chrome says NotReadableError whether the camera is genuinely held by
+   *  something else or merely switched off at the hardware or OS level. */
+  const busyish = /NotReadableError|TrackStartError|Could not start/i.test(
+    errDetail ?? "",
+  );
 
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-black text-white flex flex-col">
@@ -444,16 +558,83 @@ const AttendanceQrScanner = ({
           <div className="mx-6 max-w-md rounded-lg bg-white text-gray-900 px-4 py-4 shadow-xl">
             <div className="flex items-start gap-2.5">
               <CameraOff className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-semibold">Camera unavailable</p>
                 <p className="text-sm text-gray-600 mt-1">{error}</p>
-                <button
-                  type="button"
-                  onClick={() => void start(deviceId || undefined)}
-                  className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  Try again
-                </button>
+
+                {/* Chrome reports a busy camera and a switched-off camera
+                    identically, so name the real candidates instead of
+                    asserting one of them. */}
+                {busyish && (
+                  <ul className="mt-2 space-y-1 text-[12px] text-gray-600 list-disc pl-4">
+                    <li>
+                      Check the privacy shutter, or the camera key on the
+                      keyboard (often F8 / F10 with a crossed-out camera).
+                    </li>
+                    <li>
+                      Windows Settings → Privacy &amp; security → Camera: turn
+                      on camera access and &ldquo;Let desktop apps access your
+                      camera&rdquo;.
+                    </li>
+                    <li>
+                      Close Teams, Zoom, Meet or the Camera app — and any other
+                      tab of this portal with the scanner open.
+                    </li>
+                  </ul>
+                )}
+
+                {/* If the default device is a dead virtual camera, choosing a
+                    real one IS the fix — so the picker lives here, not only
+                    on the success path. */}
+                {devices.length > 1 && (
+                  <label className="mt-3 block">
+                    <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                      Camera
+                    </span>
+                    <select
+                      value={deviceId}
+                      onChange={(e) => {
+                        setDeviceId(e.target.value);
+                        void start(e.target.value || undefined);
+                      }}
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-sm"
+                    >
+                      {devices.map((d, i) => (
+                        <option key={d.deviceId || i} value={d.deviceId}>
+                          {d.label || `Camera ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void start(deviceId || undefined)}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    Try again
+                  </button>
+                  {deviceId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeviceId("");
+                        void start(undefined);
+                      }}
+                      className="text-sm font-medium text-gray-600 hover:text-gray-800"
+                    >
+                      Use any camera
+                    </button>
+                  )}
+                </div>
+
+                {errDetail && (
+                  <p className="mt-2.5 font-mono text-[10px] text-gray-400 break-words">
+                    {errDetail}
+                  </p>
+                )}
               </div>
             </div>
           </div>
