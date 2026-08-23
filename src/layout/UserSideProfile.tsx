@@ -26,6 +26,8 @@ import {
   Camera,
 } from "lucide-react";
 
+import IdentityQrCard from "./IdentityQrCard";
+
 import type { User } from "@/interface/data";
 
 const UserSideProfile = () => {
@@ -236,6 +238,13 @@ const UserSideProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Identity QR — view it big, or download it to reprint */}
+      <IdentityQrCard
+        token={auth.token as string}
+        fullName={fullName}
+        username={user.username ?? undefined}
+      />
 
       {/* Work details */}
       <div className="border rounded-lg bg-white overflow-hidden">

@@ -95,3 +95,19 @@ export const removeUser = async (
   }
   return response.data;
 };
+
+/** The signed-in employee's identity QR — the same code printed on their ID.
+ *  Scoped to the session, not to a userId parameter: nobody can ask for
+ *  somebody else's QR, because a QR is enough to be scanned in as them. */
+export const getMyVerifyQr = async (token: string) => {
+  const response = await axios.get("/user/my-verify-qr", {
+    params: { png: "1" },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (response.status !== 200) throw new Error("Couldn't load your QR code");
+  return response.data as { code: string; url: string; qr: string };
+};
