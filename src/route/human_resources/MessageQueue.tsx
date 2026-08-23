@@ -20,6 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import Modal from "@/components/custom/Modal";
 import { toast } from "sonner";
 import {
@@ -69,8 +82,8 @@ const AUDIENCE_LABEL: Record<string, string> = {
 const StatusPill = ({ batch }: { batch: MessageBatchRow }) => {
   if (batch.status === "draft")
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-        <FileEdit className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700">
+        <FileEdit className="h-2.5 w-2.5" />
         Draft
       </span>
     );
@@ -78,29 +91,29 @@ const StatusPill = ({ batch }: { batch: MessageBatchRow }) => {
   if (batch.status === "sending") {
     const done = batch.sentCount + batch.failedCount;
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 tabular-nums">
-        <Clock className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 tabular-nums">
+        <Clock className="h-2.5 w-2.5" />
         {done} of {batch.total} sent
       </span>
     );
   }
   if (batch.failedCount === 0)
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-        <CheckCircle2 className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">
+        <CheckCircle2 className="h-2.5 w-2.5" />
         All sent
       </span>
     );
   if (batch.sentCount === 0)
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
-        <XCircle className="h-3.5 w-3.5" />
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-700">
+        <XCircle className="h-2.5 w-2.5" />
         All failed
       </span>
     );
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
-      <XCircle className="h-3.5 w-3.5" />
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700">
+      <XCircle className="h-2.5 w-2.5" />
       {batch.failedCount} failed
     </span>
   );
@@ -137,19 +150,20 @@ const StatCard = ({
     blue: "bg-blue-50 text-blue-600",
   } as const;
   return (
-    <div className="bg-white rounded-lg border shadow-sm p-4 flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${tones[tone]}`}>
-        <Icon className="h-5 w-5" />
+    <div className="bg-white rounded-lg border px-2.5 py-2 flex items-center gap-2">
+      <div className={`p-1.5 rounded-md ${tones[tone]}`}>
+        <Icon className="h-3.5 w-3.5" />
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-bold text-gray-900 leading-none tabular-nums">
+        <p className="text-sm font-bold text-gray-900 leading-none tabular-nums">
           {value}
         </p>
-        <p className="text-xs text-gray-500 mt-1 truncate">{label}</p>
+        <p className="text-[10px] text-gray-500 mt-0.5 truncate">{label}</p>
       </div>
     </div>
   );
 };
+
 
 const MessageQueue = () => {
   const auth = useAuth();
@@ -216,195 +230,248 @@ const MessageQueue = () => {
   }, [rows]);
 
   return (
-    <div className="w-full h-full bg-gray-50">
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
-                <Send className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Message Queue
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Each batch is one message and the people it goes to. Open a
-                  batch to see who received it.
-                </p>
-              </div>
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <Send className="h-3.5 w-3.5 text-white" />
             </div>
-            <Button
-              onClick={() => setNewOpen(true)}
-              className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
-            >
-              <Plus className="h-4 w-4" />
-              New batch
-            </Button>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                Message Queue
+              </h1>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                One batch is one message and the people it goes to
+              </p>
+            </div>
           </div>
+          <Button
+            onClick={() => setNewOpen(true)}
+            size="sm"
+            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-3 w-3" />
+            New Batch
+          </Button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-        {/* ── Stats ──────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* Toolbar */}
+      <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-wrap flex-shrink-0">
+        <InputGroup className="bg-white flex-1 max-w-xs">
+          <InputGroupAddon>
+            <Search className="h-3 w-3 text-gray-400" />
+          </InputGroupAddon>
+          <InputGroupInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+            placeholder="Search name, subject or message..."
+            className="h-7 text-[11px]"
+          />
+        </InputGroup>
+        <Select
+          value={status}
+          onValueChange={(v) => {
+            setStatus(v);
+            setPage(0);
+          }}
+        >
+          <SelectTrigger className="w-[130px] h-7 text-[10px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-[11px]">
+              All batches
+            </SelectItem>
+            <SelectItem value="draft" className="text-[11px]">
+              Drafts only
+            </SelectItem>
+            <SelectItem value="sent" className="text-[11px]">
+              Sent only
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-[10px] text-gray-500 ml-auto">
+          {batches.data?.total ?? rows.length} batch
+          {(batches.data?.total ?? rows.length) !== 1 ? "es" : ""}
+        </span>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-auto p-3 space-y-3">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <StatCard label="Batches on this page" value={stats.total} Icon={Inbox} tone="blue" />
           <StatCard label="Messages delivered" value={stats.sent} Icon={CheckCircle2} tone="emerald" />
           <StatCard label="Deliveries failed" value={stats.failed} Icon={XCircle} tone="red" />
           <StatCard label="Still to send" value={stats.waiting} Icon={Clock} tone="gray" />
         </div>
 
-        {/* ── Toolbar ────────────────────────────────────────────────── */}
-        <div className="bg-white rounded-lg border shadow-sm p-3 flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              placeholder="Search by batch name, subject or message text…"
-              className="pl-9 h-10"
-            />
-          </div>
-          <Select
-            value={status}
-            onValueChange={(v) => {
-              setStatus(v);
-              setPage(0);
-            }}
-          >
-            <SelectTrigger className="h-10 w-full sm:w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All batches</SelectItem>
-              <SelectItem value="draft">Drafts only</SelectItem>
-              <SelectItem value="sent">Sent only</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Batches */}
+        <div className="border rounded-lg bg-white overflow-hidden">
+          <Table>
+            <TableHeader className="bg-gray-50 sticky top-0 z-10">
+              <TableRow>
+                <TableHead className="text-[10px] font-semibold text-gray-700 w-10">
+                  No
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[200px]">
+                  Batch
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[150px]">
+                  Delivery
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-24">
+                  Recipients
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[150px]">
+                  When
+                </TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-24">
+                  Status
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {batches.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span className="text-[10px]">Loading...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                        <Inbox className="h-5 w-5 text-gray-300" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700">
+                        {search || status !== "all"
+                          ? "No batches match this filter"
+                          : "No message batches yet"}
+                      </p>
+                      <p className="text-[10px] text-gray-500 max-w-[260px]">
+                        {search || status !== "all"
+                          ? "Try a different search, or clear the filter."
+                          : "Create a batch, write the message once, then choose who receives it."}
+                      </p>
+                      {!search && status === "all" && (
+                        <Button
+                          onClick={() => setNewOpen(true)}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] gap-1.5 mt-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                          New Batch
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((b, i) => (
+                  <TableRow
+                    key={b.id}
+                    className="hover:bg-gray-50 cursor-pointer group"
+                    onClick={() =>
+                      navigate(`/${lineId}/human-resources/messages/${b.id}`)
+                    }
+                  >
+                    <TableCell className="text-[10px] text-gray-400 tabular-nums">
+                      {page * 20 + i + 1}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {b.channel === "email" ? (
+                          <Mail className="h-3 w-3 text-indigo-600 flex-shrink-0" />
+                        ) : (
+                          <MessageSquare className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                        )}
+                        <p className="text-[11px] font-medium text-gray-900 truncate">
+                          {b.name || b.subject || "Untitled batch"}
+                        </p>
+                        <ChevronRight className="h-3 w-3 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
+                      </div>
+                      <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                        {b.body?.trim() || "No message written yet."}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      {b.status !== "draft" && b.total > 0 ? (
+                        <div className="space-y-1">
+                          <DeliveryBar batch={b} />
+                          <p className="text-[10px] text-gray-500 tabular-nums">
+                            {b.sentCount} sent
+                            {b.failedCount ? ` · ${b.failedCount} failed` : ""}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-gray-300">
+                          Not sent yet
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700 tabular-nums">
+                        <Users className="h-2.5 w-2.5 text-gray-400" />
+                        {b.total}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-[10px] text-gray-600 whitespace-nowrap">
+                      {b.status === "draft"
+                        ? fmtDate(b.createdAt)
+                        : fmtDate(b.sentAt)}
+                      <span className="block text-[10px] text-gray-400 truncate">
+                        {[b.createdByName, AUDIENCE_LABEL[b.audience] ?? b.audience]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <StatusPill batch={b} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
 
-        {/* ── Batches ────────────────────────────────────────────────── */}
-        {batches.isLoading ? (
-          <div className="bg-white rounded-lg border shadow-sm p-16 flex justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="bg-white rounded-lg border shadow-sm flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="bg-gray-50 rounded-full p-4 mb-4">
-              <Inbox className="h-12 w-12 text-gray-300" strokeWidth={1.5} />
-            </div>
-            <p className="text-gray-500 font-medium">
-              {search || status !== "all"
-                ? "No batches match this filter"
-                : "No message batches yet"}
-            </p>
-            <p className="text-sm text-gray-400 mt-1 max-w-sm">
-              {search || status !== "all"
-                ? "Try a different search, or clear the filter."
-                : "Create a batch, write the message once, then choose who receives it."}
-            </p>
-            {!search && status === "all" && (
-              <Button
-                onClick={() => setNewOpen(true)}
-                variant="outline"
-                className="mt-4 gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New batch
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg border shadow-sm overflow-hidden divide-y">
-            {rows.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => navigate(`/${lineId}/human-resources/messages/${b.id}`)}
-                className="group w-full text-left px-4 sm:px-5 py-4 hover:bg-gray-50 transition-colors duration-150 flex items-start gap-4"
-              >
-                <div
-                  className={`p-2 rounded-lg border flex-shrink-0 ${
-                    b.channel === "email"
-                      ? "bg-indigo-50 border-indigo-100 text-indigo-600"
-                      : "bg-blue-50 border-blue-100 text-blue-600"
-                  }`}
-                >
-                  {b.channel === "email" ? (
-                    <Mail className="h-5 w-5" />
-                  ) : (
-                    <MessageSquare className="h-5 w-5" />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
-                      {b.name || b.subject || "Untitled batch"}
-                    </p>
-                    <StatusPill batch={b} />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-1">
-                    {b.body?.trim() || "No message written yet."}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1.5">
-                    {b.status === "draft"
-                      ? `Created ${fmtDate(b.createdAt)}`
-                      : b.status === "sending"
-                        ? `Last sent ${fmtDate(b.sentAt)}`
-                        : `Sent ${fmtDate(b.sentAt)}`}
-                    {b.createdByName ? ` · ${b.createdByName}` : ""}
-                    {` · ${AUDIENCE_LABEL[b.audience] ?? b.audience}`}
-                  </p>
-                  {b.status !== "draft" && b.total > 0 && (
-                    <div className="mt-2 max-w-xs">
-                      <DeliveryBar batch={b} />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 flex-shrink-0 self-center">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-sm font-semibold text-gray-900 tabular-nums flex items-center gap-1.5 justify-end">
-                      <Users className="h-3.5 w-3.5 text-gray-400" />
-                      {b.total}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {b.total === 1 ? "recipient" : "recipients"}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
 
         {(batches.data?.pages ?? 0) > 1 && (
-          <div className="flex justify-center items-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-gray-500 tabular-nums">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-500 tabular-nums">
               Page {page + 1} of {batches.data?.pages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page + 1 >= (batches.data?.pages ?? 1)}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
+            </p>
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px]"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px]"
+                disabled={page + 1 >= (batches.data?.pages ?? 1)}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -429,7 +496,7 @@ const MessageQueue = () => {
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="e.g. October payroll reminder"
-              className="h-10 mt-1.5"
+              className="h-7 mt-1 text-[11px]"
             />
             <p className="text-xs text-gray-500 mt-1">
               Only for finding it later. Optional.
@@ -483,7 +550,7 @@ const MessageQueue = () => {
                 setForm((f) => ({ ...f, templateId: v === "none" ? "" : v }))
               }
             >
-              <SelectTrigger className="h-10 mt-1.5">
+              <SelectTrigger className="h-7 mt-1 text-[11px]">
                 <SelectValue placeholder="Blank message" />
               </SelectTrigger>
               <SelectContent>

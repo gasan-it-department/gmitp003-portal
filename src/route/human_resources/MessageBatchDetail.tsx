@@ -272,8 +272,9 @@ const MessageBatchDetail = () => {
 
   if (detail.isLoading || !batch || !draft) {
     return (
-      <div className="w-full h-full bg-gray-50 flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      <div className="w-full h-full flex items-center justify-center gap-1.5 bg-gradient-to-br from-gray-50 to-gray-100 text-gray-400">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-[10px]">Loading...</span>
       </div>
     );
   }
@@ -313,127 +314,126 @@ const MessageBatchDetail = () => {
     });
 
   return (
-    <div className="w-full h-full bg-gray-50">
-      {/* ── Header ───────────────────────────────────────────────────── */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            type="button"
-            onClick={() => navigate(`/${lineId}/human-resources/messages`)}
-            className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1.5 mb-2 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            All batches
-          </button>
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
-              <div
-                className={`p-2 rounded-lg border flex-shrink-0 ${
-                  batch.channel === "email"
-                    ? "bg-indigo-50 border-indigo-100 text-indigo-600"
-                    : "bg-blue-50 border-blue-100 text-blue-600"
-                }`}
-              >
-                {batch.channel === "email" ? (
-                  <Mail className="h-6 w-6" />
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 flex-shrink-0"
+              onClick={() => navigate(`/${lineId}/human-resources/messages`)}
+              title="All batches"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-gray-600" />
+            </Button>
+            <div
+              className={`p-1.5 rounded-md flex-shrink-0 ${
+                batch.channel === "email" ? "bg-indigo-600" : "bg-blue-600"
+              }`}
+            >
+              {batch.channel === "email" ? (
+                <Mail className="h-3.5 w-3.5 text-white" />
+              ) : (
+                <MessageSquare className="h-3.5 w-3.5 text-white" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1 className="text-xs font-semibold text-gray-900 truncate">
+                  {batch.name || "Untitled batch"}
+                </h1>
+                {isDraft ? (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-700 flex-shrink-0">
+                    Draft
+                  </span>
+                ) : isDone ? (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 flex-shrink-0">
+                    Sent {fmtDate(batch.sentAt)}
+                  </span>
                 ) : (
-                  <MessageSquare className="h-6 w-6" />
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 tabular-nums flex-shrink-0">
+                    Sending · {doneCount} of {totalCount}
+                  </span>
                 )}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-2xl font-bold text-gray-900 truncate">
-                    {batch.name || "Untitled batch"}
-                  </h1>
-                  {isDraft ? (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      Draft
-                    </span>
-                  ) : isDone ? (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-                      Sent {fmtDate(batch.sentAt)}
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 tabular-nums">
-                      Sending · {doneCount} of {totalCount}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  {batch.channel === "email"
-                    ? "Sent by email (Gmail addresses only)"
-                    : "Sent as a text message"}
-                  {` · ${totalCount} ${totalCount === 1 ? "recipient" : "recipients"}`}
-                  {pendingCount > 0 &&
-                    ` · ${pendingCount} still waiting, ${wavesLeft} ${
-                      wavesLeft === 1 ? "send" : "sends"
-                    } of ${PER_SEND} to go`}
-                </p>
-              </div>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5 truncate">
+                {batch.channel === "email"
+                  ? "Email (Gmail addresses only)"
+                  : "Text message"}
+                {` · ${totalCount} ${totalCount === 1 ? "recipient" : "recipients"}`}
+                {pendingCount > 0 &&
+                  ` · ${pendingCount} waiting, ${wavesLeft} ${
+                    wavesLeft === 1 ? "send" : "sends"
+                  } of ${PER_SEND} to go`}
+              </p>
             </div>
+          </div>
 
-            <div className="flex items-center gap-2">
-              {isDraft && (
-                <Button
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Delete draft</span>
-                </Button>
-              )}
-              {failedCount > 0 && (
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  disabled={retry.isPending}
-                  onClick={() => retry.mutate(undefined)}
-                >
-                  {retry.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCw className="h-4 w-4" />
-                  )}
-                  Retry {failedCount} failed
-                </Button>
-              )}
-              {(pendingCount > 0 || waveIds.length > 0) && (
-                <Button
-                  className="gap-2 bg-blue-600 hover:bg-blue-700 shadow-sm"
-                  disabled={!draft.body.trim() || send.isPending}
-                  onClick={() => setConfirmSend(true)}
-                >
-                  {send.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                  {waveIds.length
-                    ? resendCount === waveIds.length
-                      ? `Send again to ${waveIds.length}`
-                      : `Send to ${waveIds.length} selected`
-                    : `Send next ${thisWave}`}
-                </Button>
-              )}
-            </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {isDraft && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-[10px] gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="h-3 w-3" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            )}
+            {failedCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] gap-1.5"
+                disabled={retry.isPending}
+                onClick={() => retry.mutate(undefined)}
+              >
+                {retry.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RotateCw className="h-3 w-3" />
+                )}
+                Retry {failedCount}
+              </Button>
+            )}
+            {(pendingCount > 0 || waveIds.length > 0) && (
+              <Button
+                size="sm"
+                className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+                disabled={!draft.body.trim() || send.isPending}
+                onClick={() => setConfirmSend(true)}
+              >
+                {send.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Send className="h-3 w-3" />
+                )}
+                {waveIds.length
+                  ? resendCount === waveIds.length
+                    ? `Send again to ${waveIds.length}`
+                    : `Send to ${waveIds.length} selected`
+                  : `Send next ${thisWave}`}
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      <div className="flex-1 min-h-0 overflow-auto p-3 space-y-3">
         {/* ── Progress ───────────────────────────────────────────────── */}
         {!isDraft && (
-          <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-5 space-y-3.5">
+          <div className="bg-white rounded-lg border p-3 space-y-2.5">
             <div className="flex flex-wrap items-end justify-between gap-2">
-              <p className="text-sm font-semibold text-gray-900">
+              <p className="text-xs font-semibold text-gray-800">
                 {isDone
                   ? "Everyone on this batch has been contacted"
                   : `${doneCount} of ${totalCount} contacted`}
               </p>
               {!isDone && (
-                <p className="text-xs text-gray-500 tabular-nums">
+                <p className="text-[10px] text-gray-500 tabular-nums">
                   {pendingCount} waiting · {wavesLeft}{" "}
                   {wavesLeft === 1 ? "more send" : "more sends"} of {PER_SEND}
                 </p>
@@ -457,31 +457,31 @@ const MessageBatchDetail = () => {
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <p className="text-2xl font-bold text-emerald-600 tabular-nums leading-none">
+                <p className="text-base font-bold text-emerald-600 tabular-nums leading-none">
                   {counts?.sent ?? 0}
                 </p>
-                <p className="text-xs text-gray-500 mt-1.5">Delivered</p>
+                <p className="text-[10px] text-gray-500 mt-1.5">Delivered</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-600 tabular-nums leading-none">
+                <p className="text-base font-bold text-red-600 tabular-nums leading-none">
                   {failedCount}
                 </p>
-                <p className="text-xs text-gray-500 mt-1.5">Failed</p>
+                <p className="text-[10px] text-gray-500 mt-1.5">Failed</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                <p className="text-base font-bold text-gray-900 tabular-nums leading-none">
                   {pendingCount}
                 </p>
-                <p className="text-xs text-gray-500 mt-1.5">Not sent yet</p>
+                <p className="text-[10px] text-gray-500 mt-1.5">Not sent yet</p>
               </div>
             </div>
           </div>
         )}
 
         {/* ── The message ────────────────────────────────────────────── */}
-        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-          <div className="border-b bg-gray-50/50 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-gray-900">
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="border-b bg-gray-50 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xs font-semibold text-gray-800">
               {isDraft ? "Message" : "Message that was sent"}
             </h2>
             {isDraft && (
@@ -489,7 +489,7 @@ const MessageBatchDetail = () => {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5"
+                  className="h-7 text-[10px] gap-1.5"
                   onClick={() => {
                     if (!recipients.length) {
                       toast.error("Add a recipient first to preview against them");
@@ -498,13 +498,13 @@ const MessageBatchDetail = () => {
                     setPreviewOpen(true);
                   }}
                 >
-                  <Eye className="h-3.5 w-3.5" />
+                  <Eye className="h-3 w-3" />
                   Preview
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5"
+                  className="h-7 text-[10px] gap-1.5"
                   onClick={() => {
                     if (!draft.body.trim()) {
                       toast.error("The message is empty");
@@ -514,19 +514,19 @@ const MessageBatchDetail = () => {
                     setSaveTplOpen(true);
                   }}
                 >
-                  <Save className="h-3.5 w-3.5" />
+                  <Save className="h-3 w-3" />
                   Save as template
                 </Button>
               </div>
             )}
           </div>
 
-          <div className="p-5 space-y-4">
+          <div className="p-3 space-y-2.5">
             {isDraft ? (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
+                    <label className="text-[11px] font-medium text-gray-700">
                       Batch name
                     </label>
                     <Input
@@ -536,18 +536,18 @@ const MessageBatchDetail = () => {
                       }
                       onBlur={() => save.mutate({ name: draft.name })}
                       placeholder="e.g. October payroll reminder"
-                      className="h-10 mt-1.5"
+                      className="h-7 mt-1 text-[11px]"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
+                    <label className="text-[11px] font-medium text-gray-700">
                       Who this is for
                     </label>
                     <Select
                       value={batch.audience}
                       onValueChange={(v) => save.mutate({ audience: v as Audience })}
                     >
-                      <SelectTrigger className="h-10 mt-1.5">
+                      <SelectTrigger className="h-7 mt-1 text-[11px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -561,7 +561,7 @@ const MessageBatchDetail = () => {
 
                 {batch.channel === "email" && (
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
+                    <label className="text-[11px] font-medium text-gray-700">
                       Subject
                     </label>
                     <Input
@@ -571,13 +571,13 @@ const MessageBatchDetail = () => {
                       }
                       onBlur={() => save.mutate({ subject: draft.subject })}
                       placeholder="What the email is about"
-                      className="h-10 mt-1.5"
+                      className="h-7 mt-1 text-[11px]"
                     />
                   </div>
                 )}
 
                 <div>
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="text-[11px] font-medium text-gray-700">
                     Message
                   </label>
                   <Textarea
@@ -590,7 +590,7 @@ const MessageBatchDetail = () => {
                     className="mt-1.5 text-sm"
                   />
                   <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
-                    <p className="text-xs text-gray-500 tabular-nums">
+                    <p className="text-[10px] text-gray-500 tabular-nums">
                       {draft.body.length} characters
                       {batch.channel === "sms" && (
                         <>
@@ -603,7 +603,7 @@ const MessageBatchDetail = () => {
                       )}
                     </p>
                     {save.isPending && (
-                      <span className="text-xs text-gray-400 flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-400 flex items-center gap-1.5">
                         <Loader2 className="h-3 w-3 animate-spin" />
                         Saving
                       </span>
@@ -613,10 +613,10 @@ const MessageBatchDetail = () => {
 
                 {/* Placeholder palette */}
                 <div className="rounded-lg border bg-gray-50/60 p-3">
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-[11px] font-medium text-gray-700">
                     Insert a placeholder
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2.5">
+                  <p className="text-[10px] text-gray-500 mt-0.5 mb-2.5">
                     Each is replaced with that person's own information when the
                     message is sent.
                   </p>
@@ -645,10 +645,10 @@ const MessageBatchDetail = () => {
                     </span>
                   </p>
                 )}
-                <pre className="whitespace-pre-wrap text-sm bg-gray-50 border rounded-lg p-4 font-sans text-gray-800">
+                <pre className="whitespace-pre-wrap text-[11px] bg-gray-50 border rounded-md p-2.5 font-sans text-gray-800">
                   {batch.body}
                 </pre>
-                <p className="text-xs text-gray-400">
+                <p className="text-[10px] text-gray-400">
                   Placeholders were filled in per person — open a recipient
                   below to see exactly what they received.
                 </p>
@@ -658,10 +658,10 @@ const MessageBatchDetail = () => {
         </div>
 
         {/* ── Recipients ─────────────────────────────────────────────── */}
-        <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-          <div className="border-b bg-gray-50/50 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="bg-white rounded-lg border overflow-hidden">
+          <div className="border-b bg-gray-50 px-3 py-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-gray-900">
+              <h2 className="text-xs font-semibold text-gray-800">
                 Recipients
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-white border text-xs text-gray-600 tabular-nums">
@@ -677,11 +677,11 @@ const MessageBatchDetail = () => {
               <Button
                 size="sm"
                 variant="outline"
-                className="gap-1.5"
+                className="h-7 text-[10px] gap-1.5"
                 onClick={() => setAddOpen(true)}
                 disabled={totalCount >= PER_BATCH}
               >
-                <UserPlus className="h-3.5 w-3.5" />
+                <UserPlus className="h-3 w-3" />
                 Add recipients
               </Button>
             )}
@@ -697,7 +697,7 @@ const MessageBatchDetail = () => {
                   setRPage(0);
                 }}
                 placeholder="Search this list by name…"
-                className="pl-9 h-9"
+                className="pl-7 h-7 text-[11px]"
               />
             </div>
             <Select
@@ -707,7 +707,7 @@ const MessageBatchDetail = () => {
                 setRPage(0);
               }}
             >
-              <SelectTrigger className="h-9 w-full sm:w-40">
+              <SelectTrigger className="h-7 text-[10px] w-full sm:w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -805,16 +805,16 @@ const MessageBatchDetail = () => {
           )}
 
           {recipients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
-              <div className="bg-gray-50 rounded-full p-4 mb-4">
-                <Users className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
+            <div className="flex flex-col items-center justify-center py-10 px-3 text-center">
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1.5">
+                <Users className="h-5 w-5 text-gray-300" />
               </div>
-              <p className="text-gray-500 font-medium">
+              <p className="text-xs font-medium text-gray-700">
                 {rSearch || rStatus !== "all"
                   ? "Nobody matches this filter"
                   : "No recipients yet"}
               </p>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-[10px] text-gray-400 mt-1">
                 {rSearch || rStatus !== "all"
                   ? "Try a different search."
                   : `Add everyone who needs this message — it goes out ${PER_SEND} at a time.`}
@@ -825,7 +825,7 @@ const MessageBatchDetail = () => {
                   className="mt-4 gap-2"
                   onClick={() => setAddOpen(true)}
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <UserPlus className="h-3 w-3" />
                   Add recipients
                 </Button>
               )}
@@ -835,7 +835,7 @@ const MessageBatchDetail = () => {
               {recipients.map((r) => (
                 <div
                   key={r.id}
-                  className={`px-5 py-3.5 flex items-start gap-3 transition-colors ${
+                  className={`px-3 py-2 flex items-start gap-3 transition-colors ${
                     wave[r.id] ? "bg-blue-50/60" : "hover:bg-gray-50/60"
                   }`}
                 >
@@ -863,7 +863,7 @@ const MessageBatchDetail = () => {
                     <p className="text-sm font-medium text-gray-900">
                       {r.name}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-[10px] text-gray-500 mt-0.5">
                       {r.toAddress || (
                         <span className="text-amber-600">
                           no contact detail on file
@@ -898,7 +898,7 @@ const MessageBatchDetail = () => {
                       disabled={retry.isPending}
                       onClick={() => retry.mutate([r.id])}
                     >
-                      <RotateCw className="h-3.5 w-3.5" />
+                      <RotateCw className="h-3 w-3" />
                       Retry
                     </Button>
                   )}
@@ -911,7 +911,7 @@ const MessageBatchDetail = () => {
                       onClick={() => removeOne.mutate(r.id)}
                       title="Remove from this batch"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3" />
                     </Button>
                   )}
                 </div>
@@ -929,7 +929,7 @@ const MessageBatchDetail = () => {
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-500 tabular-nums">
+              <span className="text-[10px] text-gray-500 tabular-nums">
                 Page {rPage + 1} of {detail.data?.pages} ·{" "}
                 {detail.data?.matching} shown
               </span>
@@ -981,7 +981,7 @@ const MessageBatchDetail = () => {
                 <span className="font-medium">{draft.subject || "—"}</span>
               </p>
             )}
-            <pre className="whitespace-pre-wrap text-sm bg-gray-50 border rounded-lg p-4 font-sans text-gray-800">
+            <pre className="whitespace-pre-wrap text-[11px] bg-gray-50 border rounded-md p-2.5 font-sans text-gray-800">
               {preview.data?.rendered ?? ""}
             </pre>
             {!!preview.data?.unresolved?.length && (
@@ -1015,16 +1015,16 @@ const MessageBatchDetail = () => {
         }}
       >
         <div>
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-[11px] font-medium text-gray-700">
             Template name
           </label>
           <Input
             value={tplName}
             onChange={(e) => setTplName(e.target.value)}
             placeholder="e.g. Payroll reminder"
-            className="h-10 mt-1.5"
+            className="h-7 mt-1 text-[11px]"
           />
-          <p className="text-xs text-gray-500 mt-1.5">
+          <p className="text-[10px] text-gray-500 mt-1.5">
             Available next time you create a batch.
           </p>
         </div>
@@ -1047,7 +1047,7 @@ const MessageBatchDetail = () => {
         yesTitle={`Send to ${thisWave}`}
         onFunction={() => send.mutate(waveIds.length ? waveIds : undefined)}
       >
-        <div className="text-sm text-gray-600 space-y-2.5">
+        <div className="text-[11px] text-gray-600 space-y-2.5">
           <p>
             <strong className="text-gray-900 tabular-nums">{thisWave}</strong>{" "}
             {thisWave === 1 ? "person" : "people"} will receive this by{" "}
@@ -1080,7 +1080,7 @@ const MessageBatchDetail = () => {
               segments in this send.
             </p>
           )}
-          <p className="text-xs text-gray-500">
+          <p className="text-[10px] text-gray-500">
             This cannot be undone.
             {isDraft
               ? " Once the first message goes out the wording is locked."
@@ -1100,7 +1100,7 @@ const MessageBatchDetail = () => {
         yesTitle="Delete draft"
         onFunction={() => remove.mutate()}
       >
-        <p className="text-sm text-gray-600">
+        <p className="text-[11px] text-gray-600">
           "{batch.name || "Untitled batch"}" and its {counts?.total ?? 0}{" "}
           selected {counts?.total === 1 ? "recipient" : "recipients"} will be
           removed. Nothing has been sent, so nobody is affected.
@@ -1204,7 +1204,7 @@ const AddRecipients = ({
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2">
           <Select value={aud} onValueChange={(v) => setAud(v as Audience)}>
-            <SelectTrigger className="h-10 w-full sm:w-48">
+            <SelectTrigger className="h-7 text-[11px] w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1219,7 +1219,7 @@ const AddRecipients = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name, position or office…"
-              className="pl-9 h-10"
+              className="pl-7 h-7 text-[11px]"
             />
           </div>
         </div>
@@ -1284,12 +1284,12 @@ const AddRecipients = ({
                         </span>
                       )}
                     </span>
-                    <span className="block text-xs text-gray-500 truncate">
+                    <span className="block text-[10px] text-gray-500 truncate">
                       {e.position ?? "—"}
                       {e.office ? ` · ${e.office}` : ""}
                     </span>
                     {e.sendable ? (
-                      <span className="block text-xs text-gray-400 truncate">
+                      <span className="block text-[10px] text-gray-400 truncate">
                         {e.to}
                       </span>
                     ) : (

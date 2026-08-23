@@ -24,6 +24,19 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -226,9 +239,9 @@ const EntryPicker = ({
             }
           }}
           placeholder="Add an entry, e.g. Break Out"
-          className="h-9"
+          className="h-7 text-[11px]"
         />
-        <Button type="button" variant="outline" className="h-9" onClick={add}>
+        <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={add}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -448,52 +461,77 @@ const Attendance = () => {
   const list = events.data?.events ?? [];
 
   return (
-    <div className="p-4 sm:p-6 space-y-4">
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <QrCode className="h-5 w-5 text-blue-600" />
-            Attendance
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Create a sheet, choose what it captures, then scan employee ID QR
-            codes with the mobile app.
-          </p>
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 bg-blue-600 rounded-md flex-shrink-0">
+              <QrCode className="h-3.5 w-3.5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xs font-semibold text-gray-900 truncate">
+                Attendance
+              </h1>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">
+                Create a sheet, choose what it captures, then scan employee IDs
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={startCreate}
+            size="sm"
+            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-3 w-3" />
+            New Sheet
+          </Button>
         </div>
-        <Button onClick={startCreate} size="sm" className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          New attendance sheet
-        </Button>
       </div>
 
-      <Tabs defaultValue="sheets">
-        <TabsList>
-          <TabsTrigger value="sheets" className="gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5" />
-            Sheets
-          </TabsTrigger>
-          <TabsTrigger value="access" className="gap-1.5">
-            <ScanLine className="h-3.5 w-3.5" />
-            Scanner Access
-          </TabsTrigger>
-        </TabsList>
+      <Tabs
+        defaultValue="sheets"
+        className="flex-1 min-h-0 flex flex-col gap-0"
+      >
+        <div className="bg-white border-b px-3 py-1.5 flex-shrink-0">
+          <TabsList className="h-7 p-0.5">
+            <TabsTrigger
+              value="sheets"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <CalendarDays className="h-3 w-3" />
+              Sheets
+            </TabsTrigger>
+            <TabsTrigger
+              value="access"
+              className="h-6 px-2 text-[10px] gap-1.5 data-[state=active]:text-blue-700"
+            >
+              <ScanLine className="h-3 w-3" />
+              Scanner Access
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* ── Sheets ───────────────────────────────────────────────────── */}
-        <TabsContent value="sheets" className="space-y-3 mt-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
+        <TabsContent
+          value="sheets"
+          className="flex-1 min-h-0 m-0 flex flex-col focus-visible:outline-none"
+        >
+          <div className="bg-white border-b px-3 py-2 flex items-center gap-1.5 flex-wrap flex-shrink-0">
+            <InputGroup className="bg-white flex-1 max-w-xs">
+              <InputGroupAddon>
+                <Search className="h-3 w-3 text-gray-400" />
+              </InputGroupAddon>
+              <InputGroupInput
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(0);
                 }}
-                placeholder="Search by title or venue…"
-                className="pl-8 h-9"
+                placeholder="Search by title or venue..."
+                className="h-7 text-[11px]"
               />
-            </div>
+            </InputGroup>
             <Select
               value={status}
               onValueChange={(v) => {
@@ -501,149 +539,213 @@ const Attendance = () => {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="w-[140px] h-9">
+              <SelectTrigger className="w-[120px] h-7 text-[10px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sheets</SelectItem>
-                <SelectItem value="open">Open</SelectItem>
-                <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="all" className="text-[11px]">
+                  All sheets
+                </SelectItem>
+                <SelectItem value="open" className="text-[11px]">
+                  Open
+                </SelectItem>
+                <SelectItem value="closed" className="text-[11px]">
+                  Closed
+                </SelectItem>
               </SelectContent>
             </Select>
+            <span className="text-[10px] text-gray-500 ml-auto">
+              {events.data?.total ?? list.length} sheet
+              {(events.data?.total ?? list.length) !== 1 ? "s" : ""}
+            </span>
           </div>
 
-          {events.isLoading ? (
-            <div className="flex items-center justify-center py-16 text-gray-400">
-              <Loader2 className="h-5 w-5 animate-spin" />
-            </div>
-          ) : list.length === 0 ? (
-            <div className="rounded-lg border border-dashed py-14 text-center">
-              <QrCode className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-700">
-                No attendance sheets yet
-              </p>
-              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                Create one for a training, seminar, meeting or flag ceremony —
-                then scan attendees in the mobile app.
-              </p>
-              <Button
-                onClick={startCreate}
-                size="sm"
-                variant="outline"
-                className="mt-3 gap-1.5"
-              >
-                <Plus className="h-4 w-4" />
-                New attendance sheet
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {list.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="group rounded-lg border bg-white p-3 hover:border-blue-300 hover:shadow-sm transition"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <button
-                      type="button"
+          <div className="flex-1 min-h-0 overflow-auto p-3 space-y-3">
+
+          <div className="border rounded-lg bg-white overflow-hidden">
+            <Table>
+              <TableHeader className="bg-gray-50 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 w-10">
+                    No
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[180px]">
+                    Sheet
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[140px]">
+                    Date
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[120px]">
+                    Venue
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-20">
+                    Recorded
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 text-center w-20">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-[10px] font-semibold text-gray-700 text-right w-28">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span className="text-[10px]">Loading...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : list.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                          <QrCode className="h-5 w-5 text-gray-300" />
+                        </div>
+                        <p className="text-xs font-medium text-gray-700">
+                          No attendance sheets yet
+                        </p>
+                        <p className="text-[10px] text-gray-500 max-w-[260px]">
+                          Create one for a training, seminar, meeting or flag
+                          ceremony, then scan attendees in.
+                        </p>
+                        <Button
+                          onClick={startCreate}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] gap-1.5 mt-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                          New Sheet
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  list.map((ev, i) => (
+                    <TableRow
+                      key={ev.id}
+                      className="hover:bg-gray-50 cursor-pointer group"
                       onClick={() =>
                         navigate(
                           `/${lineId}/human-resources/attendance/${ev.id}`,
                         )
                       }
-                      className="min-w-0 flex-1 text-left"
                     >
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900 truncate">
-                          {ev.title}
+                      <TableCell className="text-[10px] text-gray-400 tabular-nums">
+                        {page * 20 + i + 1}
+                      </TableCell>
+                      <TableCell className="min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="text-[11px] font-medium text-gray-900 truncate">
+                            {ev.title}
+                          </p>
+                          <ChevronRight className="h-3 w-3 text-gray-300 group-hover:text-blue-500 flex-shrink-0" />
+                        </div>
+                        <p className="text-[10px] text-gray-400">
+                          {ev.fields.length} column
+                          {ev.fields.length === 1 ? "" : "s"}
+                          {(ev.entries?.length ?? 0) > 1
+                            ? ` · ${ev.entries.length} entries`
+                            : ""}
                         </p>
+                      </TableCell>
+                      <TableCell className="text-[10px] text-gray-600 whitespace-nowrap">
+                        {fmtDate(ev.startAt)}
+                      </TableCell>
+                      <TableCell className="text-[10px] text-gray-600">
+                        {ev.location ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-2.5 w-2.5 text-gray-400" />
+                            <span className="truncate">{ev.location}</span>
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">&mdash;</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700 tabular-nums">
+                          <Users className="h-2.5 w-2.5 text-gray-400" />
+                          {ev.attendees ?? 0}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
                         <Badge
                           variant="outline"
-                          className={
+                          className={`text-[10px] px-1.5 py-0 ${
                             ev.status === "open"
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-gray-100 text-gray-600 border-gray-200"
-                          }
+                          }`}
                         >
                           {ev.status === "open" ? "Open" : "Closed"}
                         </Badge>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          {fmtDate(ev.startAt)}
-                        </span>
-                        {ev.location ? (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {ev.location}
-                          </span>
-                        ) : null}
-                        <span className="inline-flex items-center gap-1 font-medium text-gray-700">
-                          <Users className="h-3 w-3" />
-                          {ev.attendees ?? 0} recorded
-                        </span>
-                        <span className="text-gray-400">
-                          {ev.fields.length} column
-                          {ev.fields.length === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 gap-1.5 text-emerald-700 hover:bg-emerald-50"
-                        disabled={download.isPending}
-                        onClick={() => download.mutate(ev)}
-                        title="Export to Excel"
+                      </TableCell>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8"
-                        disabled={toggleStatus.isPending}
-                        onClick={() => toggleStatus.mutate(ev)}
-                        title={
-                          ev.status === "open" ? "Close sheet" : "Reopen sheet"
-                        }
-                      >
-                        {ev.status === "open" ? (
-                          <Lock className="h-3.5 w-3.5" />
-                        ) : (
-                          <LockOpen className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 text-rose-600 hover:bg-rose-50"
-                        onClick={() => setConfirmDelete(ev)}
-                        title="Delete sheet"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-blue-400" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-emerald-700 hover:bg-emerald-50"
+                            disabled={download.isPending}
+                            onClick={() => download.mutate(ev)}
+                            title="Export to Excel"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            disabled={toggleStatus.isPending}
+                            onClick={() => toggleStatus.mutate(ev)}
+                            title={
+                              ev.status === "open"
+                                ? "Close sheet"
+                                : "Reopen sheet"
+                            }
+                          >
+                            {ev.status === "open" ? (
+                              <Lock className="h-3 w-3" />
+                            ) : (
+                              <LockOpen className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-rose-600 hover:bg-rose-50"
+                            onClick={() => setConfirmDelete(ev)}
+                            title="Delete sheet"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {(events.data?.pages ?? 0) > 1 ? (
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-xs text-gray-500">
-                Page {page + 1} of {events.data?.pages} · {events.data?.total}{" "}
-                sheet{events.data?.total === 1 ? "" : "s"}
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-gray-500">
+                Page {page + 1} of {events.data?.pages}
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-7 text-[10px]"
                   disabled={page === 0}
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                 >
@@ -652,6 +754,7 @@ const Attendance = () => {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-7 text-[10px]"
                   disabled={page + 1 >= (events.data?.pages ?? 1)}
                   onClick={() => setPage((p) => p + 1)}
                 >
@@ -660,10 +763,14 @@ const Attendance = () => {
               </div>
             </div>
           ) : null}
+          </div>
         </TabsContent>
 
-        {/* ── Scanner access ───────────────────────────────────────────── */}
-        <TabsContent value="access" className="mt-3">
+        {/* Scanner access */}
+        <TabsContent
+          value="access"
+          className="flex-1 min-h-0 m-0 overflow-auto p-3 focus-visible:outline-none"
+        >
           <ScannerAccess lineId={lineId as string} token={auth.token as string} />
         </TabsContent>
       </Tabs>
@@ -831,71 +938,124 @@ const ScannerAccess = ({
   const rows = grants.data?.users ?? [];
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-md border border-blue-100 bg-blue-50/60 p-3">
-        <p className="text-xs text-blue-900">
+    <div className="space-y-2">
+      <div className="rounded-md border border-blue-100 bg-blue-50/60 px-2.5 py-2">
+        <p className="text-[10px] text-blue-900 leading-snug">
           These users can record attendance from the mobile app. HR officers and
-          super-admins always have access — this list is for everyone else you
-          want to help at the door.
+          super-admins always have access &mdash; this list is for everyone else
+          you want to help at the door.
         </p>
       </div>
 
-      <div className="flex justify-between items-center">
-        <p className="text-sm font-medium text-gray-700">
-          Allowed scanners ({rows.length})
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-          onClick={() => setPicker(true)}
-        >
-          <UserPlus className="h-4 w-4" />
-          Add user
-        </Button>
-      </div>
+      <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <ScanLine className="h-3 w-3 text-blue-500" />
+            <h3 className="text-xs font-semibold text-gray-800">
+              Allowed scanners
+            </h3>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {rows.length}
+            </Badge>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] gap-1.5"
+            onClick={() => setPicker(true)}
+          >
+            <UserPlus className="h-3 w-3" />
+            Add User
+          </Button>
+        </div>
 
-      {grants.isLoading ? (
-        <div className="flex items-center justify-center py-10 text-gray-400">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-10 text-center">
-          <ScanLine className="h-7 w-7 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">No extra scanners yet</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Only HR officers can scan until you add someone here.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-lg border divide-y">
-          {rows.map((g) => (
-            <div
-              key={g.id}
-              className="flex items-center justify-between gap-3 p-2.5"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {g.name}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {g.office ?? "No office"}
-                  {g.grantedBy ? ` · granted by ${g.grantedBy}` : ""}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-rose-600 hover:bg-rose-50 h-8"
-                disabled={revoke.isPending}
-                onClick={() => revoke.mutate(g.id)}
-              >
-                Revoke
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
+        <Table>
+          <TableHeader className="bg-white">
+            <TableRow>
+              <TableHead className="text-[10px] font-semibold text-gray-700 w-10">
+                No
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[160px]">
+                Name
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[140px]">
+                Office
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 min-w-[140px]">
+                Granted by
+              </TableHead>
+              <TableHead className="text-[10px] font-semibold text-gray-700 text-right w-20">
+                Action
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {grants.isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span className="text-[10px]">Loading...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-10">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <ScanLine className="h-5 w-5 text-gray-300" />
+                    </div>
+                    <p className="text-xs font-medium text-gray-700">
+                      No extra scanners yet
+                    </p>
+                    <p className="text-[10px] text-gray-500 max-w-[260px]">
+                      Only HR officers can scan until you add someone here.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px] gap-1.5 mt-1"
+                      onClick={() => setPicker(true)}
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      Add User
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((g, i) => (
+                <TableRow key={g.id} className="hover:bg-gray-50">
+                  <TableCell className="text-[10px] text-gray-400 tabular-nums">
+                    {i + 1}
+                  </TableCell>
+                  <TableCell className="text-[11px] font-medium text-gray-900 truncate">
+                    {g.name}
+                  </TableCell>
+                  <TableCell className="text-[10px] text-gray-600 truncate">
+                    {g.office ?? "No office"}
+                  </TableCell>
+                  <TableCell className="text-[10px] text-gray-500 truncate">
+                    {g.grantedBy ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] px-2 text-rose-600 hover:bg-rose-50"
+                      disabled={revoke.isPending}
+                      onClick={() => revoke.mutate(g.id)}
+                    >
+                      Revoke
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Modal
         title="Allow a user to scan attendance"
