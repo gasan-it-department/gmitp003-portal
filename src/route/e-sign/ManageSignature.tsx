@@ -16,6 +16,7 @@ import {
   activateUserSignature,
   deleteUserSignature,
   setSignatureQr,
+  setSignaturePlacement,
   type UserSignatureItem,
 } from "@/db/statements/document";
 
@@ -30,6 +31,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
+import SignatureSizeEditor from "@/layout/e-sign/SignatureSizeEditor";
+import { measureInkFromFile, type InkBox } from "@/utils/signatureInk";
 
 import {
   Signature as SignatureIcon,
@@ -45,6 +48,7 @@ import {
   Image as ImageIcon,
   X,
   QrCode,
+  Ruler,
 } from "lucide-react";
 
 interface ListProps {
@@ -212,15 +216,39 @@ const ManageSignature = () => {
     onError: (err) => toast.error(surfaceErr(err, "Failed to remove")),
   });
 
+  /** Which signature has its size panel open. */
+  const [sizing, setSizing] = useState<UserSignatureItem | null>(null);
+
+  const placementMut = useMutation({
+    mutationFn: (v: {
+      id: string;
+      inkHeightPt: number | null;
+      baselinePct: number;
+      ink: InkBox | null;
+    }) => setSignaturePlacement(auth.token as string, v),
+    onSuccess: async () => {
+      await refreshList();
+      toast.success("Stamp size saved");
+      setSizing(null);
+    },
+    onError: (err) => toast.error(surfaceErr(err, "Could not save the size")),
+  });
+
   const uploadMut = useMutation({
-    mutationFn: (vars: { file: File; title: string; active: boolean }) =>
-      uploadUserSignature(
+    mutationFn: async (vars: { file: File; title: string; active: boolean }) => {
+      // Measure where the ink sits before it leaves the browser: the server
+      // has no image decoder, and without this the stamp has to treat the
+      // file's empty margins as part of the signature.
+      const ink = await measureInkFromFile(vars.file).catch(() => null);
+      return uploadUserSignature(
         auth.token as string,
         auth.userId as string,
         vars.file,
         vars.title,
         vars.active,
-      ),
+        ink,
+      );
+    },
     onSuccess: async () => {
       await refreshList();
       toast.success("Signature uploaded");
@@ -352,6 +380,7 @@ const ManageSignature = () => {
                   onToggleQr={(next) =>
                     setSigQrMu.mutate({ id: sig.id, qrEnabled: next })
                   }
+                  onSize={() => setSizing(sig)}
                   qrPending={setSigQrMu.isPending}
                   pendingActivate={activateMut.isPending}
                 />
@@ -452,6 +481,16 @@ const ManageSignature = () => {
         )}
       </Modal>
 
+      {sizing && (
+        <SignatureSizeEditor
+          sig={sizing}
+          open={!!sizing}
+          onClose={() => setSizing(null)}
+          saving={placementMut.isPending}
+          onSave={(v) => placementMut.mutate({ id: sizing.id, ...v })}
+        />
+      )}
+
       {/* Upload modal */}
       <UploadModal
         isOpen={openModal?.kind === "upload"}
@@ -471,6 +510,7 @@ const SignatureCard = ({
   onActivate,
   onDelete,
   onToggleQr,
+  onSize,
   qrPending,
   pendingActivate,
 }: {
@@ -479,6 +519,7 @@ const SignatureCard = ({
   onActivate: () => void;
   onDelete: () => void;
   onToggleQr: (next: boolean) => void;
+  onSize: () => void;
   qrPending: boolean;
   pendingActivate: boolean;
 }) => {
@@ -560,6 +601,26 @@ const SignatureCard = ({
               qrOn ? "left-[12px]" : "left-0.5"
             }`}
           />
+        </span>
+      </button>
+      {/* How this one stamps. The box drawn on a page is only a target
+          area, so the size lives with the signature, not with the box. */}
+      <button
+        type="button"
+        onClick={onSize}
+        className="w-full px-2.5 py-1.5 border-t flex items-center gap-1.5 text-[10px] text-gray-600 hover:bg-gray-50 transition"
+        title="Set how big this signature prints and where its writing line sits"
+      >
+        <Ruler className="h-3 w-3" />
+        <span className="flex-1 text-left">Stamp size</span>
+        <span
+          className={`px-1.5 py-0 rounded-full text-[10px] ${
+            sig.inkHeightPt
+              ? "bg-blue-50 text-blue-700"
+              : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          {sig.inkHeightPt ? `${Math.round(sig.inkHeightPt)}pt` : "Fit to box"}
         </span>
       </button>
       <div className="px-2 py-1.5 border-t flex items-center gap-1">

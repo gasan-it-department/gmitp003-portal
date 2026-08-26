@@ -478,6 +478,13 @@ export interface UserSignatureItem {
   /** When true, downloaded signed PDFs stamp a verification QR beside
    *  any box that used THIS signature. Per-signature, opt-in. */
   qrEnabled: boolean;
+  /** Printed height of the INK in PDF points. Null = fit to whatever box
+   *  was drawn on the page, which is how it always used to work. */
+  inkHeightPt: number | null;
+  /** 0-100 down the ink's own height: where the writing line sits. */
+  baselinePct: number;
+  /** The ink's bounds inside the file, 0-1, y from the TOP. */
+  ink: { x0: number; y0: number; x1: number; y1: number } | null;
   /** base64 data URL ready for `<img src>` */
   preview: string | null;
   size: number;
@@ -512,11 +519,14 @@ export const uploadUserSignature = async (
   file: File,
   title: string,
   active: boolean,
+  /** Where the ink sits in the file, measured in the browser. */
+  ink?: { x0: number; y0: number; x1: number; y1: number } | null,
 ) => {
   const form = new FormData();
   form.append("userId", userId);
   form.append("title", title);
   form.append("active", String(active));
+  if (ink) form.append("ink", JSON.stringify(ink));
   form.append("file", file);
 
   const response = await axios.post(
@@ -1227,6 +1237,32 @@ export const setSignatureQr = async (
     headers: jsonHeaders(token),
   });
   return res.data as { message: string; id: string; qrEnabled: boolean };
+};
+
+/**
+ * How big this signature prints and where its writing line sits.
+ *
+ * Sending a null height puts it back to being fitted into whatever box was
+ * drawn on the page — the behaviour every signature had before this existed.
+ */
+export const setSignaturePlacement = async (
+  token: string,
+  body: {
+    id: string;
+    inkHeightPt: number | null;
+    baselinePct: number;
+    ink?: { x0: number; y0: number; x1: number; y1: number } | null;
+  },
+) => {
+  const res = await axios.patch("/document/user/signatures/placement", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (res.status !== 200) throw new Error("Could not save the signature size");
+  return res.data as { message: string };
 };
 
 // ── Document Receiving (barcode-stickered physical documents) ────────────
