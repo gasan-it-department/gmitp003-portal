@@ -7,6 +7,7 @@ import { Loader2, RotateCcw } from "lucide-react";
 
 import type { UserSignatureItem } from "@/db/statements/document";
 import { measureInk, placeSignature, type InkBox } from "@/utils/signatureInk";
+import SignatureBoundaryPicker from "./SignatureBoundaryPicker";
 
 /**
  * How big a signature prints, and where its writing line is.
@@ -190,6 +191,15 @@ const SignatureSizeEditor = ({
             className="hidden"
           />
         )}
+
+        {/* ── Boundary ─────────────────────────────────────────────── */}
+        {sig.preview ? (
+          <SignatureBoundaryPicker
+            src={sig.preview}
+            value={ink}
+            onChange={setInk}
+          />
+        ) : null}
 
         {/* ── Size ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-[1fr_auto] gap-2 items-end">

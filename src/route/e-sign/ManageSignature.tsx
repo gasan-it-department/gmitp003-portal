@@ -32,6 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import Modal from "@/components/custom/Modal";
 import ConfirmDelete from "@/layout/ConfirmDelete";
 import SignatureSizeEditor from "@/layout/e-sign/SignatureSizeEditor";
+import SignatureBoundaryPicker from "@/layout/e-sign/SignatureBoundaryPicker";
 import { measureInkFromFile, type InkBox } from "@/utils/signatureInk";
 
 import {
@@ -235,11 +236,16 @@ const ManageSignature = () => {
   });
 
   const uploadMut = useMutation({
-    mutationFn: async (vars: { file: File; title: string; active: boolean }) => {
-      // Measure where the ink sits before it leaves the browser: the server
-      // has no image decoder, and without this the stamp has to treat the
-      // file's empty margins as part of the signature.
-      const ink = await measureInkFromFile(vars.file).catch(() => null);
+    mutationFn: async (vars: {
+      file: File;
+      title: string;
+      active: boolean;
+      ink: InkBox | null;
+    }) => {
+      // The boundary the uploader drew around the writing. It falls back to
+      // an automatic guess only if the picker never got to load the image.
+      const ink =
+        vars.ink ?? (await measureInkFromFile(vars.file).catch(() => null));
       return uploadUserSignature(
         auth.token as string,
         auth.userId as string,
@@ -677,6 +683,7 @@ const UploadModal = ({
     file: File;
     title: string;
     active: boolean;
+    ink: InkBox | null;
   }) => Promise<unknown>;
   isPending: boolean;
   hasNoneYet: boolean;
@@ -687,6 +694,8 @@ const UploadModal = ({
   const [title, setTitle] = useState("");
   const [active, setActive] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  /** Which part of the file is the actual writing. */
+  const [ink, setInk] = useState<InkBox | null>(null);
 
   const reset = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -695,6 +704,7 @@ const UploadModal = ({
     setTitle("");
     setActive(false);
     setDragOver(false);
+    setInk(null);
   };
 
   const accept = (f: File | null | undefined) => {
@@ -713,6 +723,7 @@ const UploadModal = ({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setFile(f);
     setPreviewUrl(URL.createObjectURL(f));
+    setInk(null);
     if (!title) setTitle(f.name.replace(/\.[^.]+$/, "").slice(0, 40));
   };
 
@@ -721,7 +732,7 @@ const UploadModal = ({
       toast.error("Select a signature file first.");
       return;
     }
-    await onUpload({ file, title: title.trim(), active });
+    await onUpload({ file, title: title.trim(), active, ink });
     reset();
   };
 
@@ -823,6 +834,17 @@ const UploadModal = ({
             </>
           )}
         </div>
+
+        {/* Which part of the file is the actual writing. Outside the drop
+            zone on purpose: dragging a boundary inside it would count as a
+            click and reopen the file dialog. */}
+        {file && previewUrl ? (
+          <SignatureBoundaryPicker
+            src={previewUrl}
+            value={ink}
+            onChange={setInk}
+          />
+        ) : null}
 
         {/* Title */}
         <div>

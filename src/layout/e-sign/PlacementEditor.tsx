@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -682,42 +682,92 @@ const PageCanvas = ({
     h: number;
   }>(null);
 
+  /**
+   * A draw in progress, if any.
+   *
+   * This used to be committed from the overlay's own onPointerUp, with the
+   * pointer captured on whatever `e.target` happened to be. Release outside
+   * the overlay — or on a box that had just rendered under the cursor — and
+   * that pointerup never arrived, so the draft SURVIVED the drag. Moving or
+   * resizing a box then re-entered the overlay's pointermove/pointerup (both
+   * of those drags listen on `window`), the stale draft grew to wherever the
+   * box was dragged, and letting go created a second box on top of the one
+   * being moved. That is the duplicate.
+   *
+   * The draw now owns the pointer the same way move and resize do: window
+   * listeners keyed to the pointer that started it, torn down on release
+   * whatever it is released over. A ref alongside the state so the listeners
+   * read the live value rather than the one captured at mousedown.
+   */
+  const draftRef = useRef<null | { x: number; y: number; w: number; h: number }>(
+    null,
+  );
+  const drawingId = useRef<number | null>(null);
+
+  /** Abandon whatever is being drawn, committing nothing. */
+  const cancelDraw = useCallback(() => {
+    draftRef.current = null;
+    drawingId.current = null;
+    setDraft(null);
+  }, []);
+
+  // Switching tools abandons a draw. A rectangle begun in draw mode has no
+  // meaning once the user has moved on to selecting, and keeping it is how
+  // it used to leak into the next drag.
+  useEffect(() => {
+    cancelDraw();
+  }, [tool, cancelDraw]);
+
   const startDraw = (e: React.PointerEvent) => {
     if (tool !== "draw") return;
+    if (drawingId.current !== null) return; // one draw at a time
     if ((e.target as HTMLElement).closest("[data-box='1']")) return;
     const wrap = wrapRef.current;
     if (!wrap) return;
     const rect = wrap.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 10000;
     const y = ((e.clientY - rect.top) / rect.height) * 10000;
-    setDraft({ x, y, w: 0, h: 0 });
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const moveDraw = (e: React.PointerEvent) => {
-    if (!draft) return;
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const rect = wrap.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 10000;
-    const y = ((e.clientY - rect.top) / rect.height) * 10000;
-    setDraft((d) => (d ? { ...d, w: x - d.x, h: y - d.y } : d));
-  };
-  const endDraw = (e: React.PointerEvent) => {
-    if (!draft) return;
-    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-    const w = Math.abs(draft.w);
-    const h = Math.abs(draft.h);
-    if (w >= MIN_BP && h >= MIN_BP) {
-      const xAxis = Math.max(0, draft.w < 0 ? draft.x + draft.w : draft.x);
-      const yAxis = Math.max(0, draft.h < 0 ? draft.y + draft.h : draft.y);
+    const seed = { x, y, w: 0, h: 0 };
+    draftRef.current = seed;
+    drawingId.current = e.pointerId;
+    setDraft(seed);
+
+    const move = (ev: PointerEvent) => {
+      if (ev.pointerId !== drawingId.current) return;
+      const d = draftRef.current;
+      if (!d) return;
+      const r = wrap.getBoundingClientRect();
+      const nx = ((ev.clientX - r.left) / r.width) * 10000;
+      const ny = ((ev.clientY - r.top) / r.height) * 10000;
+      const next = { ...d, w: nx - d.x, h: ny - d.y };
+      draftRef.current = next;
+      setDraft(next);
+    };
+    const up = (ev: PointerEvent) => {
+      if (ev.pointerId !== drawingId.current) return;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const d = draftRef.current;
+      // Clear BEFORE creating: onCreate re-renders this overlay, and a draft
+      // still sitting there during that render is the whole bug.
+      cancelDraw();
+      if (!d || ev.type === "pointercancel") return;
+      const w = Math.abs(d.w);
+      const h = Math.abs(d.h);
+      if (w < MIN_BP || h < MIN_BP) return;
+      const xAxis = Math.max(0, d.w < 0 ? d.x + d.w : d.x);
+      const yAxis = Math.max(0, d.h < 0 ? d.y + d.h : d.y);
       onCreate({
         xAxis: Math.round(xAxis),
         yAxis: Math.round(yAxis),
         width: Math.round(Math.min(w, 10000 - xAxis)),
         height: Math.round(Math.min(h, 10000 - yAxis)),
       });
-    }
-    setDraft(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
   };
 
   return (
@@ -739,9 +789,6 @@ const PageCanvas = ({
           touchAction: "none",
         }}
         onPointerDown={startDraw}
-        onPointerMove={moveDraw}
-        onPointerUp={endDraw}
-        onPointerCancel={endDraw}
       >
         {placements.map((p) => (
           <BoxView
@@ -752,6 +799,7 @@ const PageCanvas = ({
             onUpdate={onUpdate}
             onRemove={onRemove}
             onReassign={(slot) => onUpdate({ ...p, slotIndex: slot })}
+            onInteract={cancelDraw}
           />
         ))}
         {draft ? (
@@ -783,6 +831,7 @@ const BoxView = ({
   onUpdate,
   onRemove,
   onReassign,
+  onInteract,
 }: {
   placement: Placement;
   color: { bg: string; border: string; text: string };
@@ -790,12 +839,15 @@ const BoxView = ({
   onUpdate: (p: Placement) => void;
   onRemove: (key: string) => void;
   onReassign: (slot: number) => void;
+  /** Called before a move or resize, so a half-drawn box is abandoned. */
+  onInteract?: () => void;
 }) => {
   const boxRef = useRef<HTMLDivElement>(null);
 
   const startMove = (e: React.PointerEvent) => {
     if (tool === "draw") return;
     e.stopPropagation();
+    onInteract?.();
     const target = e.currentTarget as HTMLElement;
     const wrap = target.parentElement as HTMLElement;
     const wrapRect = wrap.getBoundingClientRect();
@@ -822,6 +874,7 @@ const BoxView = ({
 
   const startResize = (e: React.PointerEvent) => {
     e.stopPropagation();
+    onInteract?.();
     const handle = e.currentTarget as HTMLElement;
     const wrap = (boxRef.current as HTMLElement).parentElement as HTMLElement;
     const wrapRect = wrap.getBoundingClientRect();
