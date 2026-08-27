@@ -994,7 +994,19 @@ export interface DisseminationView {
   };
   signaturesByUser: Record<
     string,
-    { id: string; title: string | null; mime: string; dataUrl: string }
+    {
+      id: string;
+      title: string | null;
+      mime: string;
+      dataUrl: string;
+      /** The owner's boundary and size, so the on-screen stamp matches the
+       *  PDF rather than squeezing the file into the box. */
+      placement: {
+        inkHeightPt: number | null;
+        baselinePct: number;
+        ink: { x0: number; y0: number; x1: number; y1: number } | null;
+      } | null;
+    }
   >;
 }
 
@@ -1082,6 +1094,14 @@ export interface SelfSignDetail {
   };
   arrangement: { id: string; status: number; signedAt: string | null } | null;
   signatureDataUrl: string | null;
+  /** How the owner set this signature up. The on-screen stamp has to use the
+   *  same numbers the PDF does, or the preview promises one thing and the
+   *  download delivers another. */
+  signaturePlacement: {
+    inkHeightPt: number | null;
+    baselinePct: number;
+    ink: { x0: number; y0: number; x1: number; y1: number } | null;
+  } | null;
 }
 
 export const uploadSelfSignDoc = async (

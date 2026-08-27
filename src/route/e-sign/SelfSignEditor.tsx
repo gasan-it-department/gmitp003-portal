@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SignatureStamp, {
+  type SignaturePlacement,
+} from "@/layout/e-sign/SignatureStamp";
 import { useNavigate, useParams } from "react-router";
 import {
   useMutation,
@@ -479,6 +482,7 @@ const SelfSignEditor = () => {
                   frozen={isFrozen}
                   boxes={boxesByPage.get(pn) ?? []}
                   signatureDataUrl={data.signatureDataUrl}
+                  signaturePlacement={data.signaturePlacement ?? null}
                   signedAt={data.arrangement?.signedAt ?? null}
                   onCreate={(rect) =>
                     upsertBox({ key: uid(), page: pn, ...rect })
@@ -593,6 +597,7 @@ const PageCanvas = ({
   frozen,
   boxes,
   signatureDataUrl,
+  signaturePlacement,
   signedAt,
   onCreate,
   onUpdate,
@@ -603,6 +608,7 @@ const PageCanvas = ({
   frozen: boolean;
   boxes: Box[];
   signatureDataUrl: string | null;
+  signaturePlacement: SignaturePlacement | null;
   signedAt: string | null;
   onCreate: (rect: {
     xAxis: number;
@@ -728,6 +734,7 @@ const PageCanvas = ({
             tool={tool}
             frozen={frozen}
             signatureDataUrl={signatureDataUrl}
+            signaturePlacement={signaturePlacement}
             signedAt={signedAt}
             onUpdate={onUpdate}
             onRemove={onRemove}
@@ -763,6 +770,7 @@ const BoxView = ({
   tool,
   frozen,
   signatureDataUrl,
+  signaturePlacement,
   signedAt,
   onUpdate,
   onRemove,
@@ -772,6 +780,7 @@ const BoxView = ({
   tool: "select" | "draw";
   frozen: boolean;
   signatureDataUrl: string | null;
+  signaturePlacement: SignaturePlacement | null;
   signedAt: string | null;
   onUpdate: (b: Box) => void;
   onRemove: (key: string) => void;
@@ -889,10 +898,10 @@ const BoxView = ({
       ) : (
         <>
           {signatureDataUrl ? (
-            <img
+            // Placed the way the PDF places it, not squeezed into the box.
+            <SignatureStamp
               src={signatureDataUrl}
-              alt="signature"
-              className="w-full h-full object-contain"
+              placement={signaturePlacement}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[10px] text-emerald-700 font-semibold italic px-1 text-center">

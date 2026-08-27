@@ -42,6 +42,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import SignatureStamp from "@/layout/e-sign/SignatureStamp";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker as string;
 
 const COLORS = [
@@ -583,10 +584,11 @@ const PagePreview = ({
           const c = colorFor(slot);
           const isSigned = arr?.status === 1;
           const isMineSlot = arr?.userId === myUserId;
-          const sigImg =
+          const sigRow =
             isSigned && arr?.userId
-              ? view.signaturesByUser[arr.userId]?.dataUrl
+              ? view.signaturesByUser[arr.userId]
               : null;
+          const sigImg = sigRow?.dataUrl ?? null;
 
           return (
             <div
@@ -628,10 +630,11 @@ const PagePreview = ({
               {isSigned ? (
                 <>
                   {sigImg ? (
-                    <img
+                    // Same placement the PDF uses, so what is on screen is
+                    // what comes out of the download.
+                    <SignatureStamp
                       src={sigImg}
-                      alt="signature"
-                      className="w-full h-full object-contain"
+                      placement={sigRow?.placement ?? null}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-[10px] text-emerald-700 font-semibold italic px-1 text-center">
