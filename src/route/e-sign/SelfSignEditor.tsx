@@ -483,7 +483,6 @@ const SelfSignEditor = () => {
                   boxes={boxesByPage.get(pn) ?? []}
                   signatureDataUrl={data.signatureDataUrl}
                   signaturePlacement={data.signaturePlacement ?? null}
-                  signedAt={data.arrangement?.signedAt ?? null}
                   onCreate={(rect) =>
                     upsertBox({ key: uid(), page: pn, ...rect })
                   }
@@ -598,7 +597,6 @@ const PageCanvas = ({
   boxes,
   signatureDataUrl,
   signaturePlacement,
-  signedAt,
   onCreate,
   onUpdate,
   onRemove,
@@ -609,7 +607,6 @@ const PageCanvas = ({
   boxes: Box[];
   signatureDataUrl: string | null;
   signaturePlacement: SignaturePlacement | null;
-  signedAt: string | null;
   onCreate: (rect: {
     xAxis: number;
     yAxis: number;
@@ -735,7 +732,6 @@ const PageCanvas = ({
             frozen={frozen}
             signatureDataUrl={signatureDataUrl}
             signaturePlacement={signaturePlacement}
-            signedAt={signedAt}
             onUpdate={onUpdate}
             onRemove={onRemove}
             onInteract={cancelDraw}
@@ -771,7 +767,6 @@ const BoxView = ({
   frozen,
   signatureDataUrl,
   signaturePlacement,
-  signedAt,
   onUpdate,
   onRemove,
   onInteract,
@@ -781,7 +776,6 @@ const BoxView = ({
   frozen: boolean;
   signatureDataUrl: string | null;
   signaturePlacement: SignaturePlacement | null;
-  signedAt: string | null;
   onUpdate: (b: Box) => void;
   onRemove: (key: string) => void;
   /** Called before a move or resize, so a half-drawn box is abandoned. */
@@ -908,17 +902,8 @@ const BoxView = ({
               Signed
             </div>
           )}
-          {signedAt ? (
-            <div className="absolute bottom-0 right-0 px-1 py-0.5 text-[9px] bg-white/85 text-emerald-700 font-semibold leading-none rounded-tl">
-              {new Date(signedAt).toLocaleString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </div>
-          ) : null}
+          {/* No date pill. It is not stamped on the PDF either, and it sat
+              exactly where the signature's tail hangs. */}
         </>
       )}
     </div>
