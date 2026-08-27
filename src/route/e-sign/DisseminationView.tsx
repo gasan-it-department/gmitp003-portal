@@ -646,8 +646,17 @@ const PagePreview = ({
                         : "—"}
                     </div>
                   )}
-                  {/* No date pill. It is not stamped on the PDF either, and
-                      it sat exactly where the signature's tail hangs. */}
+                  {arr?.signedAt ? (
+                    <div className="absolute bottom-0 right-0 px-1 py-0.5 text-[9px] bg-white/85 text-emerald-700 font-semibold leading-none rounded-tl">
+                      {new Date(arr.signedAt).toLocaleString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  ) : null}
                 </>
               ) : null}
             </div>
