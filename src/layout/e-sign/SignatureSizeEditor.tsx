@@ -6,7 +6,12 @@ import Modal from "@/components/custom/Modal";
 import { Loader2, RotateCcw } from "lucide-react";
 
 import type { UserSignatureItem } from "@/db/statements/document";
-import { measureInk, placeSignature, type InkBox } from "@/utils/signatureInk";
+import {
+  measureInk,
+  placeSignature,
+  FULL_INK,
+  type InkBox,
+} from "@/utils/signatureInk";
 import SignatureBoundaryPicker from "./SignatureBoundaryPicker";
 
 /**
@@ -54,6 +59,11 @@ const SignatureSizeEditor = ({
   const [height, setHeight] = useState<number>(
     sig.inkHeightPt ?? DEFAULT_HEIGHT_PT,
   );
+  /** Off means "fit the boundary to whatever box is drawn on the page",
+   *  which is the sane default — the boundary already says how big the
+   *  writing is relative to itself. A fixed height is for someone who
+   *  wants the same millimetres on every document. */
+  const [useFixed, setUseFixed] = useState<boolean>(sig.inkHeightPt != null);
   const [baseline, setBaseline] = useState<number>(sig.baselinePct ?? 100);
   const [ink, setInk] = useState<InkBox | null>(sig.ink ?? null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
@@ -63,6 +73,7 @@ const SignatureSizeEditor = ({
   useEffect(() => {
     if (!open) return;
     setHeight(sig.inkHeightPt ?? DEFAULT_HEIGHT_PT);
+    setUseFixed(sig.inkHeightPt != null);
     setBaseline(sig.baselinePct ?? 100);
     setInk(sig.ink ?? null);
   }, [open, sig.id, sig.inkHeightPt, sig.baselinePct, sig.ink]);
@@ -85,11 +96,11 @@ const SignatureSizeEditor = ({
   const rect = useMemo(
     () =>
       placeSignature(BOX, natural?.w ?? 3, natural?.h ?? 1, {
-        inkHeightPt: height,
+        inkHeightPt: useFixed ? height : null,
         baselinePct: baseline,
         ink,
       }),
-    [height, baseline, ink, natural],
+    [useFixed, height, baseline, ink, natural],
   );
 
   return (
@@ -202,7 +213,28 @@ const SignatureSizeEditor = ({
         ) : null}
 
         {/* ── Size ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={useFixed}
+            onChange={(e) => setUseFixed(e.target.checked)}
+            className="accent-blue-600"
+          />
+          <span className="text-[10px] font-semibold text-gray-700">
+            Use a fixed height
+          </span>
+          <span className="text-[10px] text-gray-500">
+            {useFixed
+              ? "the same size on every document"
+              : "off — the boundary fills the box drawn on the page"}
+          </span>
+        </label>
+
+        <div
+          className={`grid grid-cols-[1fr_auto] gap-2 items-end ${
+            useFixed ? "" : "opacity-40 pointer-events-none"
+          }`}
+        >
           <div>
             <label className="text-[10px] font-semibold text-gray-700">
               Signature height
@@ -283,7 +315,11 @@ const SignatureSizeEditor = ({
             className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
             disabled={saving}
             onClick={() =>
-              onSave({ inkHeightPt: height, baselinePct: baseline, ink })
+              onSave({
+                inkHeightPt: useFixed ? height : null,
+                baselinePct: baseline,
+                ink,
+              })
             }
           >
             {saving ? (
@@ -297,9 +333,9 @@ const SignatureSizeEditor = ({
             className="h-7 text-[10px] gap-1.5"
             disabled={saving}
             onClick={() =>
-              onSave({ inkHeightPt: null, baselinePct: 100, ink })
+              onSave({ inkHeightPt: null, baselinePct: 100, ink: FULL_INK })
             }
-            title="Go back to squeezing the signature into whatever box was drawn on the page"
+            title="Forget the boundary and the size: squeeze the whole file into whatever box was drawn on the page, the way it worked before"
           >
             <RotateCcw className="h-3 w-3" />
             Fit to box instead

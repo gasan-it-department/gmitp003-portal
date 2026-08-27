@@ -128,8 +128,12 @@ export const placeSignature = (
 ) => {
   const ratio = imgW > 0 && imgH > 0 ? imgW / imgH : 1;
   const height = Number(settings.inkHeightPt ?? 0);
+  const ink = settings.ink ?? FULL_INK;
+  const inkW = ink.x1 - ink.x0;
+  const inkH = ink.y1 - ink.y0;
+  const bounded = inkW < 0.995 || inkH < 0.995;
 
-  if (!(height > 0)) {
+  if (!(height > 0) && !bounded) {
     let width = box.width;
     let h = box.width / ratio;
     if (h > box.height) {
@@ -145,10 +149,17 @@ export const placeSignature = (
     };
   }
 
-  const ink = settings.ink ?? FULL_INK;
-  const inkW = ink.x1 - ink.x0;
-  const inkH = ink.y1 - ink.y0;
-  const drawH = height / inkH;
+  // An explicit height wins; otherwise the BOUNDARY is fitted to the box,
+  // never the file. See the server's signaturePlacement.ts for why.
+  let inkPt: number;
+  if (height > 0) {
+    inkPt = height;
+  } else {
+    const boundedRatio = ratio * (inkW / inkH);
+    inkPt = box.width / boundedRatio;
+    if (inkPt > box.height) inkPt = box.height;
+  }
+  const drawH = inkPt / inkH;
   const drawW = drawH * ratio;
   const baseline = Math.min(100, Math.max(0, Number(settings.baselinePct ?? 100))) / 100;
   const lineFromTop = ink.y0 + baseline * inkH;
