@@ -1370,6 +1370,9 @@ export interface RoomCandidate {
   profilePicture: string | null;
   /** Already in the room — shown but not selectable. */
   added: boolean;
+  /** The OTHER room this person already belongs to, if any. A person
+   *  belongs to one room, so this is what makes them unpickable. */
+  inRoom?: { id: string; code: string } | null;
 }
 
 export const roomConfig = async (token: string, roomId: string) => {
@@ -1412,7 +1415,12 @@ export const addRoomMembers = async (
   const res = await axios.post("/document/room/config/members", body, {
     headers: jsonHeaders(token),
   });
-  return res.data as { added: number; notified: number };
+  return res.data as {
+    added: number;
+    notified: number;
+    /** Anyone the server refused because they already belong to a room. */
+    skipped?: Array<{ userId: string; room: string }>;
+  };
 };
 
 export const updateRoomMember = async (

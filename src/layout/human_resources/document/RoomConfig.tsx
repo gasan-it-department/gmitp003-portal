@@ -132,6 +132,16 @@ const RoomConfig = ({ roomId }: { roomId: string }) => {
       toast.success(
         `${r.added} added — ${r.notified} notified by app and email.`,
       );
+      // The server has the last word on the one-room rule, so say plainly
+      // when it turned someone down rather than reporting a silent success.
+      const skipped = r.skipped ?? [];
+      if (skipped.length) {
+        toast.warning(
+          skipped.length === 1
+            ? `1 person was skipped — already in ${skipped[0].room}.`
+            : `${skipped.length} people were skipped — each already belongs to a room.`,
+        );
+      }
       setAddOpen(false);
       setPicked({});
       setQuery("");
@@ -419,11 +429,16 @@ const RoomConfig = ({ roomId }: { roomId: string }) => {
             ) : (
               (candidates.data?.candidates ?? []).map((c) => {
                 const on = !!picked[c.id];
+                // A person belongs to one room. Someone already in another
+                // one is shown but not pickable, with the room named — more
+                // use than quietly leaving them out of the list.
+                const elsewhere = c.inRoom ?? null;
+                const blocked = c.added || !!elsewhere;
                 return (
                   <button
                     key={c.id}
                     type="button"
-                    disabled={c.added}
+                    disabled={blocked}
                     onClick={() =>
                       setPicked((p) => {
                         if (p[c.id]) {
@@ -434,7 +449,7 @@ const RoomConfig = ({ roomId }: { roomId: string }) => {
                       })
                     }
                     className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
-                      c.added
+                      blocked
                         ? "bg-gray-50 cursor-not-allowed"
                         : on
                           ? "bg-blue-50/70"
@@ -444,7 +459,7 @@ const RoomConfig = ({ roomId }: { roomId: string }) => {
                     <input
                       type="checkbox"
                       readOnly
-                      disabled={c.added}
+                      disabled={blocked}
                       checked={on || c.added}
                       className="h-4 w-4 accent-blue-600 flex-shrink-0"
                     />
@@ -453,11 +468,15 @@ const RoomConfig = ({ roomId }: { roomId: string }) => {
                         <span className="text-sm font-medium text-gray-900 truncate">
                           {c.name}
                         </span>
-                        {c.added && (
+                        {c.added ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-200 text-gray-600">
                             Already in the room
                           </span>
-                        )}
+                        ) : elsewhere ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-800">
+                            In {elsewhere.code}
+                          </span>
+                        ) : null}
                       </span>
                       <span className="block text-xs text-gray-500 truncate">
                         {c.position ?? "—"}
