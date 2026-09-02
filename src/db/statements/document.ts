@@ -590,6 +590,10 @@ export interface TargetRoomCandidate {
   address?: string | null;
   status: number;
   _count?: { authorizedUser: number };
+  /** Active members holding a real user account. */
+  memberCount?: number;
+  /** False = nobody could open a document sent here, so it cannot be picked. */
+  receivable?: boolean;
 }
 
 export interface SignatoryCandidate {
@@ -742,7 +746,11 @@ export const targetRoomCandidates = async (
     headers: jsonHeaders(token),
     params: { lineId, excludeRoomId, query, limit: "100" },
   });
-  return res.data as { list: TargetRoomCandidate[] };
+  return res.data as {
+    list: TargetRoomCandidate[];
+    // Lets the picker explain a short list instead of just being short.
+    summary?: { total: number; receivable: number; needMembers: number };
+  };
 };
 
 export const signatoryCandidates = async (

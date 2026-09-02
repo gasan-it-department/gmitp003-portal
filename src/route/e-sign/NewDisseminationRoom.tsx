@@ -353,6 +353,7 @@ const NewDisseminationRoom = () => {
             setQuery={setTQuery}
             candidates={filteredTargets}
             total={tCands.data?.list?.length ?? 0}
+            needMembers={tCands.data?.summary?.needMembers ?? 0}
             loading={tCands.isLoading}
             selected={targets}
             toggle={toggleTarget}
@@ -479,6 +480,7 @@ const TargetsStep = ({
   setQuery,
   candidates,
   total,
+  needMembers,
   loading,
   selected,
   toggle,
@@ -489,6 +491,8 @@ const TargetsStep = ({
   setQuery: (v: string) => void;
   candidates: TargetRoomCandidate[];
   total: number;
+  /** How many offices exist but have nobody in them yet. */
+  needMembers: number;
   loading: boolean;
   selected: TargetRoomCandidate[];
   toggle: (c: TargetRoomCandidate) => void;
@@ -524,6 +528,16 @@ const TargetsStep = ({
           </div>
           <div className="text-[10px] text-gray-500">
             Showing {candidates.length} of {total} room{total === 1 ? "" : "s"}
+            {needMembers > 0 ? (
+              <>
+                {" · "}
+                <span className="text-amber-700">
+                  {needMembers} {needMembers === 1 ? "office has" : "offices have"}{" "}
+                  nobody in {needMembers === 1 ? "it" : "them"} yet and cannot
+                  receive anything — add a member in Document Rooms.
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
         <div className="flex-1 overflow-auto p-3">
@@ -540,20 +554,35 @@ const TargetsStep = ({
             <div className="border rounded-lg bg-white overflow-hidden divide-y">
               {candidates.map((c) => {
                 const on = selectedIds.has(c.id);
+                // An office with nobody in it is shown, not hidden — it is
+                // still their office and its absence read as a lost record.
+                // It just cannot be picked: a document sent there lands
+                // where no one can open it.
+                const empty = c.receivable === false;
                 return (
                   <button
                     key={c.id}
                     type="button"
+                    disabled={empty}
+                    title={
+                      empty
+                        ? "Nobody has been added to this office yet, so it cannot receive anything. Add a member in Document Rooms."
+                        : undefined
+                    }
                     onClick={() => toggle(c)}
-                    className={`w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-gray-50 ${
-                      on ? "bg-blue-50/40" : ""
-                    }`}
+                    className={`w-full text-left px-3 py-2 flex items-center gap-2 ${
+                      empty
+                        ? "opacity-60 cursor-not-allowed"
+                        : "hover:bg-gray-50"
+                    } ${on ? "bg-blue-50/40" : ""}`}
                   >
                     <div
                       className={`h-4 w-4 rounded border flex items-center justify-center ${
-                        on
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "border-gray-300"
+                        empty
+                          ? "border-gray-200 bg-gray-100"
+                          : on
+                            ? "bg-blue-600 border-blue-600 text-white"
+                            : "border-gray-300"
                       }`}
                     >
                       {on ? <CheckCircle2 className="h-3 w-3" /> : null}
@@ -569,13 +598,20 @@ const TargetsStep = ({
                             Copy furnished
                           </span>
                         ) : null}
+                        {empty ? (
+                          <span className="text-[9px] font-semibold text-gray-600 bg-gray-100 border border-gray-200 rounded px-1 py-px">
+                            No members yet
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-[10px] text-gray-500 truncate">
                         {c.address || "—"}
-                        {c._count?.authorizedUser != null ? (
+                        {empty ? (
+                          <span className="ml-1 text-gray-500">· no members</span>
+                        ) : c.memberCount != null ? (
                           <span className="ml-1 text-gray-400">
-                            · {c._count.authorizedUser} member
-                            {c._count.authorizedUser === 1 ? "" : "s"}
+                            · {c.memberCount} member
+                            {c.memberCount === 1 ? "" : "s"}
                           </span>
                         ) : null}
                       </div>
