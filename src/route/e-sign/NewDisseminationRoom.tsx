@@ -102,6 +102,14 @@ const NewDisseminationRoom = () => {
 
   // ── selections (initialised from server) ──────────────────────────
   const [targets, setTargets] = useState<TargetRoomCandidate[]>([]);
+  /**
+   * Which of the chosen rooms are COPY FURNISHED rather than addressed.
+   *
+   * Held as a set of ids over the one `targets` list, not a second list, so
+   * a room is addressed or copy furnished but never somehow both — the same
+   * rule the server enforces.
+   */
+  const [ccIds, setCcIds] = useState<string[]>([]);
   const [signatories, setSignatories] = useState<SignatoryCandidate[]>([]);
   const [tQuery, setTQuery] = useState("");
   const [sQuery, setSQuery] = useState("");
@@ -120,6 +128,12 @@ const NewDisseminationRoom = () => {
           address: t.roomReceiver?.address,
           status: 1,
         })),
+      );
+      setCcIds(
+        data.targetRooms
+          .filter((t: any) => t.copyFurnished)
+          .map((t: any) => t.roomReceiver?.id)
+          .filter(Boolean),
       );
     }
     // We can't hydrate signatories without a join, but the controller stores
@@ -192,7 +206,8 @@ const NewDisseminationRoom = () => {
     mutationFn: () =>
       setDisseminationTargets(auth.token as string, {
         queueRoomId: roomId as string,
-        targetRoomIds: targets.map((t) => t.id),
+        targetRoomIds: addressed.map((t) => t.id),
+        copyFurnishedRoomIds: furnished.map((t) => t.id),
         userId: auth.userId as string,
         lineId: lineId as string,
       }),
@@ -233,13 +248,30 @@ const NewDisseminationRoom = () => {
   });
 
   // ── helpers ───────────────────────────────────────────────────────
+  const isCc = useMemo(() => new Set(ccIds), [ccIds]);
+  const addressed = useMemo(
+    () => targets.filter((t) => !isCc.has(t.id)),
+    [targets, isCc],
+  );
+  const furnished = useMemo(
+    () => targets.filter((t) => isCc.has(t.id)),
+    [targets, isCc],
+  );
+
   const toggleTarget = (c: TargetRoomCandidate) => {
     setTargets((prev) =>
       prev.some((t) => t.id === c.id)
         ? prev.filter((t) => t.id !== c.id)
         : [...prev, c],
     );
+    // Dropping a room drops its copy-furnished mark with it, so re-picking
+    // it later starts from the ordinary case.
+    setCcIds((prev) => prev.filter((id) => id !== c.id));
   };
+  const setDelivery = (id: string, cc: boolean) =>
+    setCcIds((prev) =>
+      cc ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id),
+    );
   const addSignatory = (c: SignatoryCandidate) => {
     setSignatories((prev) =>
       prev.some((s) => s.id === c.id) ? prev : [...prev, c],
@@ -324,6 +356,8 @@ const NewDisseminationRoom = () => {
             loading={tCands.isLoading}
             selected={targets}
             toggle={toggleTarget}
+            isCc={isCc}
+            setDelivery={setDelivery}
           />
         ) : step === 1 ? (
           <SignatoriesStep
@@ -348,7 +382,8 @@ const NewDisseminationRoom = () => {
           />
         ) : (
           <ReviewStep
-            targets={targets}
+            targets={addressed}
+            furnished={furnished}
             signatories={signatories}
             docCount={docCount}
             onSetupDocs={() => nav("file")}
@@ -378,7 +413,7 @@ const NewDisseminationRoom = () => {
             size="sm"
             className="h-7 text-xs"
             onClick={() => saveTargets.mutate()}
-            disabled={targets.length === 0 || saveTargets.isPending}
+            disabled={addressed.length === 0 || saveTargets.isPending}
           >
             {saveTargets.isPending ? (
               <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
@@ -447,6 +482,8 @@ const TargetsStep = ({
   loading,
   selected,
   toggle,
+  isCc,
+  setDelivery,
 }: {
   query: string;
   setQuery: (v: string) => void;
@@ -455,6 +492,8 @@ const TargetsStep = ({
   loading: boolean;
   selected: TargetRoomCandidate[];
   toggle: (c: TargetRoomCandidate) => void;
+  isCc: Set<string>;
+  setDelivery: (id: string, cc: boolean) => void;
 }) => {
   const selectedIds = useMemo(
     () => new Set(selected.map((s) => s.id)),
@@ -525,6 +564,11 @@ const TargetsStep = ({
                         <span className="text-[9px] text-gray-400 font-mono">
                           · {c.id.slice(0, 6)}
                         </span>
+                        {on && isCc.has(c.id) ? (
+                          <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-px">
+                            Copy furnished
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-[10px] text-gray-500 truncate">
                         {c.address || "—"}
@@ -548,43 +592,89 @@ const TargetsStep = ({
         <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5 text-gray-600" />
-            <span className="text-xs font-semibold">Selected targets</span>
+            <span className="text-xs font-semibold">Recipients</span>
           </div>
           <Badge variant="outline" className="text-[10px] h-5 px-1.5">
             {selected.length}
           </Badge>
         </div>
-        <div className="flex-1 overflow-auto p-3">
+        <div className="flex-1 overflow-auto p-3 space-y-3">
           {selected.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-xs text-gray-500">
               Pick one or more rooms from the left.
             </div>
           ) : (
-            <div className="border rounded-lg bg-white overflow-hidden divide-y">
-              {selected.map((s) => (
-                <div
-                  key={s.id}
-                  className="px-3 py-2 flex items-center gap-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium truncate">
-                      {s.code}
+            <>
+              <div className="border rounded-lg bg-white overflow-hidden divide-y">
+                {selected.map((s) => {
+                  const cc = isCc.has(s.id);
+                  return (
+                    // Wraps rather than squeezes: the room code is the one
+                    // thing that must stay readable, and on a narrow panel
+                    // the two-button control would otherwise truncate it to
+                    // an ellipsis.
+                    <div
+                      key={s.id}
+                      className="px-3 py-2 flex items-center gap-2 flex-wrap"
+                    >
+                      <div className="min-w-[8rem] flex-1">
+                        <div className="text-xs font-medium truncate">
+                          {s.code}
+                        </div>
+                        <div className="text-[10px] text-gray-500 truncate">
+                          {s.address || "—"}
+                        </div>
+                      </div>
+                      {/* Addressed to, or copy furnished. One or the other. */}
+                      <div className="flex items-center rounded-md border overflow-hidden shrink-0 ml-auto">
+                        <button
+                          type="button"
+                          onClick={() => setDelivery(s.id, false)}
+                          title="Receives it as soon as it is dispatched"
+                          className={`h-6 px-2 text-[10px] font-medium ${
+                            cc
+                              ? "bg-white text-gray-500 hover:bg-gray-50"
+                              : "bg-blue-600 text-white"
+                          }`}
+                        >
+                          Addressed
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDelivery(s.id, true)}
+                          title="Receives it only once every signature is in"
+                          className={`h-6 px-2 text-[10px] font-medium border-l ${
+                            cc
+                              ? "bg-amber-500 text-white"
+                              : "bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          Copy furnished
+                        </button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => toggle(s)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                    <div className="text-[10px] text-gray-500 truncate">
-                      {s.address || "—"}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => toggle(s)}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] leading-relaxed text-gray-500">
+                <span className="font-semibold text-gray-700">Addressed</span>{" "}
+                rooms get the document the moment it is dispatched, signatures
+                still pending.{" "}
+                <span className="font-semibold text-amber-700">
+                  Copy furnished
+                </span>{" "}
+                rooms see nothing until every signature is in, then it is sent
+                to them automatically.
+              </p>
+            </>
           )}
         </div>
       </div>
@@ -808,11 +898,13 @@ const SignatoriesStep = ({
 // ─── Review step ─────────────────────────────────────────────────────
 const ReviewStep = ({
   targets,
+  furnished,
   signatories,
   docCount,
   onSetupDocs,
 }: {
   targets: TargetRoomCandidate[];
+  furnished: TargetRoomCandidate[];
   signatories: SignatoryCandidate[];
   docCount: number;
   onSetupDocs: () => void;
@@ -829,7 +921,7 @@ const ReviewStep = ({
           <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 text-gray-600" />
-              <span className="text-xs font-semibold">Targets</span>
+              <span className="text-xs font-semibold">Addressed to</span>
             </div>
             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
               {targets.length}
@@ -852,6 +944,40 @@ const ReviewStep = ({
             )}
           </div>
         </div>
+
+        {/* Copy furnished — held back until it is fully signed */}
+        {furnished.length > 0 ? (
+          <div className="border border-amber-200 rounded-lg bg-white overflow-hidden">
+            <div className="px-3 py-2 border-b border-amber-200 bg-amber-50 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5 text-amber-700" />
+                <span className="text-xs font-semibold text-amber-900">
+                  Copy furnished
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="text-[10px] h-5 px-1.5 border-amber-300 text-amber-800"
+              >
+                {furnished.length}
+              </Badge>
+            </div>
+            <div className="divide-y">
+              {furnished.map((t) => (
+                <div key={t.id} className="px-3 py-2">
+                  <div className="text-xs font-medium">{t.code}</div>
+                  <div className="text-[10px] text-gray-500 truncate">
+                    {t.address || "—"}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-3 py-2 border-t bg-amber-50/50 text-[10px] text-amber-800">
+              Sent automatically once every signature is in. Until then these
+              offices see nothing.
+            </div>
+          </div>
+        ) : null}
 
         {/* Signatories */}
         <div className="border rounded-lg bg-white overflow-hidden">

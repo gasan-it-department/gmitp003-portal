@@ -267,6 +267,16 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
                       >
                         {s.label}
                       </Badge>
+                      {/* Says why a fully-signed document appeared here with
+                          nothing to do: the office was copy furnished. */}
+                      {r.copyFurnished ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-1.5 border-amber-300 bg-amber-50 text-amber-800"
+                        >
+                          Copy furnished
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-3 flex-wrap">
                       <span className="flex items-center gap-1">

@@ -674,7 +674,10 @@ export const setDisseminationTargets = async (
   token: string,
   body: {
     queueRoomId: string;
+    /** Addressed to — these receive it the moment it is dispatched. */
     targetRoomIds: string[];
+    /** Copy furnished — these receive it only once it is fully signed. */
+    copyFurnishedRoomIds?: string[];
     userId: string;
     lineId: string;
   },
@@ -981,6 +984,9 @@ export interface DisseminationView {
       id: string;
       status: number;
       receivedAt: string | null;
+      /** Copy furnished: held until fully signed, then released. */
+      copyFurnished?: boolean;
+      releasedAt?: string | null;
       roomReceiver: { id: string; code: string } | null;
     }>;
     documents: SigningDocument[];
