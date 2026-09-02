@@ -78,7 +78,7 @@ const Index = () => {
                 Municipal Document Management
               </h1>
               <p className="text-[10px] text-gray-500 leading-none mt-0.5">
-                Archive, sign & disseminate
+                Archive, sign &amp; route
               </p>
             </div>
           </div>
