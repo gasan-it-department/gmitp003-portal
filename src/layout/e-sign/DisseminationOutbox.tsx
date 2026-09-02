@@ -30,7 +30,7 @@ const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
 //
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import RoutingStatusBadge from "@/layout/e-sign/RoutingStatusBadge";
 import Modal from "@/components/custom/Modal";
 import {
   Form,
@@ -70,16 +70,6 @@ interface Props {
   token: string;
   lineId: string;
 }
-
-const STATUS: Record<number, { label: string; cls: string }> = {
-  0: { label: "Draft", cls: "bg-gray-100 text-gray-700 border-gray-200" },
-  1: { label: "Active", cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  2: {
-    label: "Completed",
-    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  3: { label: "Cancelled", cls: "bg-rose-50 text-rose-700 border-rose-200" },
-};
 
 const LIMIT = "20";
 
@@ -259,7 +249,6 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
         ) : (
           <div className="border rounded-lg bg-white overflow-hidden divide-y">
             {rows.map((r) => {
-              const s = STATUS[r.status] ?? STATUS[0];
               const docs = r._count?.documents ?? 0;
               const sigs = r._count?.signatotyArrangement ?? 0;
               const tgts = r._count?.targetRooms ?? 0;
@@ -278,17 +267,12 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                       <span className="text-xs font-medium text-gray-900 truncate">
                         {r.title || "(no subject)"}
                       </span>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] h-5 px-1.5 ${s.cls}`}
-                      >
-                        {s.label}
-                      </Badge>
+                      <RoutingStatusBadge status={r.status} />
                     </div>
                     <div className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-3">
                       <span className="flex items-center gap-1">
                         <Send className="h-3 w-3" />
-                        {tgts} target{tgts === 1 ? "" : "s"}
+                        {tgts} recipient{tgts === 1 ? "" : "s"}
                       </span>
                       <span className="flex items-center gap-1">
                         <FileText className="h-3 w-3" />
@@ -423,7 +407,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
             </span>{" "}
             will:
             <ul className="list-disc pl-4 mt-1 space-y-0.5">
-              <li>Mark the queue and all target rows as cancelled.</li>
+              <li>Mark the routing and every recipient as cancelled.</li>
               <li>
                 Send a real-time notification to every signatory and member
                 of each targeted room.

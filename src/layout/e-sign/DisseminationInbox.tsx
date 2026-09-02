@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/provider/ProtectedRoute";
 //
 import { Badge } from "@/components/ui/badge";
+import RoutingStatusBadge from "@/layout/e-sign/RoutingStatusBadge";
 import { Button } from "@/components/ui/button";
 import {
   Inbox,
@@ -24,16 +25,6 @@ interface Props {
   roomId: string;
   token: string;
 }
-
-const QSTATUS: Record<number, { label: string; cls: string }> = {
-  0: { label: "Draft", cls: "bg-gray-100 text-gray-700 border-gray-200" },
-  1: { label: "Active", cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  2: {
-    label: "Completed",
-    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  3: { label: "Cancelled", cls: "bg-rose-50 text-rose-700 border-rose-200" },
-};
 
 const LIMIT = "20";
 
@@ -245,7 +236,6 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
           <div className="border rounded-lg bg-white overflow-hidden divide-y">
             {rows.map((r) => {
               const q = r.queueRoom ?? {};
-              const s = QSTATUS[q.status] ?? QSTATUS[1];
               const docs = q._count?.documents ?? 0;
               const sender = q.user
                 ? `${q.user.firstName ?? ""} ${q.user.lastName ?? ""}`.trim()
@@ -261,18 +251,13 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
                       <span className="text-xs font-medium text-gray-900 truncate">
                         {q.title || "(no subject)"}
                       </span>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] h-5 px-1.5 ${s.cls}`}
-                      >
-                        {s.label}
-                      </Badge>
+                      <RoutingStatusBadge status={q.status ?? 1} />
                       {/* Says why a fully-signed document appeared here with
                           nothing to do: the office was copy furnished. */}
                       {r.copyFurnished ? (
                         <Badge
                           variant="outline"
-                          className="text-[10px] h-5 px-1.5 border-amber-300 bg-amber-50 text-amber-800"
+                          className="text-[10px] h-5 px-2 font-semibold border-amber-600 bg-amber-100 text-amber-900"
                         >
                           Copy furnished
                         </Badge>

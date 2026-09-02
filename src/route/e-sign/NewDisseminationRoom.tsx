@@ -335,7 +335,7 @@ const NewDisseminationRoom = () => {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <StepBadge n={1} active={step === 0} done={step > 0} label="Targets" />
+          <StepBadge n={1} active={step === 0} done={step > 0} label="Recipients" />
           <span className="text-gray-300">›</span>
           <StepBadge n={2} active={step === 1} done={step > 1} label="Signatories" />
           <span className="text-gray-300">›</span>
@@ -594,7 +594,7 @@ const TargetsStep = ({
                           · {c.id.slice(0, 6)}
                         </span>
                         {on && isCc.has(c.id) ? (
-                          <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-px">
+                          <span className="text-[9px] font-semibold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1 py-px">
                             Copy furnished
                           </span>
                         ) : null}

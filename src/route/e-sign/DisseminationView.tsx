@@ -23,6 +23,7 @@ import { useGeo } from "@/provider/GeoProvider";
 //
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import RoutingStatusBadge from "@/layout/e-sign/RoutingStatusBadge";
 import Modal from "@/components/custom/Modal";
 import {
   ArrowLeft,
@@ -219,22 +220,10 @@ const DisseminationViewPage = () => {
             <span>{new Date(queue.timestamp).toLocaleString()}</span>
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={`ml-auto text-[10px] h-6 px-2 ${
-            queue.status === 2
-              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-              : queue.status === 1
-                ? "bg-blue-50 text-blue-700 border-blue-200"
-                : "bg-gray-100 text-gray-700 border-gray-200"
-          }`}
-        >
-          {queue.status === 2
-            ? "Completed"
-            : queue.status === 1
-              ? "Awaiting signatures"
-              : "Draft"}
-        </Badge>
+        {/* Same badge as the list, so a routing looks the same wherever
+            you meet it. The hand-rolled version this replaces had no case
+            for status 3, so a CANCELLED routing showed as "Draft". */}
+        <RoutingStatusBadge status={queue.status} className="ml-auto h-6" />
         {queue.status === 2 || (queue.status === 1 && arrangements.some((a) => a.status === 1)) ? (
           <>
             {queue.documents.map((d) => (
