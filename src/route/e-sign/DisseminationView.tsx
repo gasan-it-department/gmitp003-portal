@@ -110,11 +110,11 @@ const DisseminationViewPage = () => {
         // Almost always means none of the slots are bound to this user.
         // Point them at the Claim button instead of leaving them stuck.
         alert(
-          "Nothing was signed — no slot is assigned to your account on this dissemination.\n\n" +
+          "Nothing was signed — no slot is assigned to your account on this routing.\n\n" +
             "If you see slots marked 'Unassigned' on the right rail, click 'Claim' on the one you want to sign, then click 'Sign all my fields' again.",
         );
       } else if (res.completed) {
-        alert(`Signed ${res.signed} slot(s). All signatures collected — dissemination completed.`);
+        alert(`Signed ${res.signed} slot(s). All signatures collected — routing completed.`);
       }
     },
     onError: (e) => alert(surfaceErr(e)),
@@ -280,7 +280,7 @@ const DisseminationViewPage = () => {
             onClick={() => setConfirmOpen(true)}
             title={
               queue.status !== 1
-                ? "This dissemination is not awaiting signatures."
+                ? "This routing is not awaiting signatures."
                 : signable.length === 0
                   ? "Every pending slot is already assigned to someone else."
                   : ""
@@ -303,7 +303,7 @@ const DisseminationViewPage = () => {
         <section className="overflow-auto min-h-0 h-full bg-gray-100 p-4">
           {queue.documents.length === 0 ? (
             <div className="h-full flex items-center justify-center text-xs text-gray-500">
-              No documents attached to this dissemination.
+              No documents attached to this routing.
             </div>
           ) : (
             <div className="space-y-6">
@@ -435,7 +435,7 @@ const DisseminationViewPage = () => {
                 {earlierUnsigned
                   .map((a) => `#${a.index + 1} ${fullName(a.user)}`)
                   .join(", ")}
-                ). You can proceed anyway — the dissemination just won't be
+                ). You can proceed anyway — the routing just won't be
                 marked completed until everyone has signed.
               </div>
             </div>
@@ -444,7 +444,7 @@ const DisseminationViewPage = () => {
             <AlertTriangle className="h-3.5 w-3.5 text-gray-500 mt-0.5 shrink-0" />
             <div>
               Your active e-signature will be stamped on every pending field
-              assigned to you on this dissemination. This action can't be undone.
+              assigned to you on this routing. This action can't be undone.
             </div>
           </div>
           <div className="text-[11px]">

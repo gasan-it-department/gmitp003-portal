@@ -249,11 +249,11 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
           <div className="h-40 flex flex-col items-center justify-center text-center">
             <Inbox className="h-6 w-6 text-gray-300 mb-2" />
             <div className="text-xs font-medium text-gray-700">
-              No disseminations yet
+              Nothing routed yet
             </div>
             <div className="text-[10px] text-gray-500">
               Click <span className="font-semibold">Initiate</span> to start a
-              new dissemination.
+              new routing.
             </div>
           </div>
         ) : (
@@ -348,7 +348,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
 
       {/* Initiate modal */}
       <Modal
-        title="New Dissemination"
+        title="Route a Document"
         onOpen={onOpen === 1}
         setOnOpen={() => setOnOpen(0)}
         onFunction={form.handleSubmit((d) => createMu.mutate(d))}
@@ -366,7 +366,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                 <FormLabel className="text-xs">Subject</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Enter dissemination subject"
+                    placeholder="Enter document subject"
                     className="h-8 text-xs"
                     {...field}
                   />
@@ -380,7 +380,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
 
       {/* Remove confirm */}
       <Modal
-        title="Remove draft dissemination?"
+        title="Remove this draft?"
         onOpen={!!removeId}
         setOnOpen={() => setRemoveId(null)}
         onFunction={() => removeId && removeMu.mutate(removeId)}
@@ -397,7 +397,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
       {/* Cancel confirm — for dispatched (active) queues. Notifies every
           signatory and member of the targeted rooms. */}
       <Modal
-        title="Cancel this dissemination?"
+        title="Cancel this routing?"
         onOpen={!!cancelTarget}
         setOnOpen={() => {
           setCancelTarget(null);
@@ -412,7 +412,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
         }
         footer={true}
         loading={cancelMu.isPending}
-        yesTitle="Cancel dissemination"
+        yesTitle="Cancel routing"
         className=""
       >
         <div className="space-y-2 text-xs text-gray-700">

@@ -72,10 +72,10 @@ const Dissemination = () => {
           </div>
           <div className="leading-tight">
             <div className="text-xs font-semibold text-gray-900">
-              Document Dissemination
+              Document Routing
             </div>
             <div className="text-[10px] text-gray-500">
-              Route documents and request e-signatures across rooms
+              Route documents to other offices for signature and delivery
             </div>
           </div>
         </div>

@@ -124,7 +124,7 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
             <div className="h-40 flex flex-col items-center justify-center text-center">
               <Inbox className="h-6 w-6 text-gray-300 mb-2" />
               <div className="text-xs font-medium text-gray-700">
-                No incoming disseminations
+                Nothing routed to you
               </div>
               <div className="text-[10px] text-gray-500">
                 Documents routed to this room will appear here.

@@ -71,8 +71,8 @@ const TILES: Tile[] = [
     path: "archive/new",
   },
   {
-    name: "Dissemination",
-    description: "Route documents to other rooms and request e-signatures.",
+    name: "Document Routing",
+    description: "Route documents to other offices for signature and delivery.",
     Icon: Send,
     path: "dissemination",
     badge: (o) =>
@@ -148,7 +148,7 @@ const ESignPannel = () => {
       fg: "text-blue-600",
     },
     {
-      label: "Active disseminations",
+      label: "Documents in routing",
       value: overview.dissemination.active,
       Icon: Send,
       bg: "bg-violet-50",

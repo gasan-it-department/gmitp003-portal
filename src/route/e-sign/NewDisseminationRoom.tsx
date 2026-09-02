@@ -294,7 +294,7 @@ const NewDisseminationRoom = () => {
   if (isFetching && !data) {
     return (
       <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading dissemination...
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading routing...
       </div>
     );
   }
