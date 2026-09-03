@@ -9,7 +9,7 @@ import { jsPDF } from "jspdf";
  *   UNIT / OFFICE           (bold)
  *   [EAN-13 barcode + number]
  *
- * A4 portrait fits 5 columns × 9 rows = 45 labels/sheet. Barcodes are rendered
+ * A4 portrait fits 5 columns × 10 rows = 50 labels/sheet. Barcodes are rendered
  * as vector SVG (JsBarcode) so they print at the printer's native resolution.
  * Each label is a solid, round-cornered box with a 1mm gutter around it,
  * so the sheet reads as separated stickers rather than one ruled grid.
@@ -22,19 +22,23 @@ export interface BarcodeSheetOptions {
   municipality: string;
   province: string;
   unit: string;
-  /** Number of A4 sheets to fill (each = 45 labels). Default 1. */
+  /** Number of A4 sheets to fill (each = 50 labels). Default 1. */
   sheets?: number;
 }
 
 const COLS = 5;
-const ROWS = 9;
+// 10 rows, not 9. The shorter bars left about 6mm of nothing under every
+// label; the content needs ~25.4mm and 9 rows gave it 31.2. At 10 the box
+// is 28mm, the slack is ~2.6mm split top and bottom by the centring, and
+// the sheet yields 50 stickers instead of 45. 11 rows would overflow.
+const ROWS = 10;
 /** White gutter between labels, in mm. Also the cutting allowance. */
 const GAP = 1;
 /** Corner radius of each label, in mm. */
 const RADIUS = 1.5;
 /** Sheet edge margin, in mm. Trimmed to buy back what the gutters cost. */
 const MARGIN = 4;
-export const LABELS_PER_SHEET = COLS * ROWS; // 45
+export const LABELS_PER_SHEET = COLS * ROWS; // 50
 
 const esc = (s: string) =>
   (s ?? "").replace(
@@ -180,6 +184,14 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
     font-size: 8pt; font-weight: 800; letter-spacing: 0.2pt;
     text-transform: uppercase; color: #000;
     line-height: 1.05; margin: 0.6mm 0 0.9mm;
+    /* Two lines at most, the same cap the PDF applies. A long office name
+       — "Municipal Planning and Development Coordinating Office" runs to
+       five — would otherwise push the barcode out of the box, where
+       overflow:hidden quietly amputates it. */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
   .bc { width: 33.5mm; }
   /* Height follows the symbol's own aspect ratio. Pinning it to a fixed
@@ -243,7 +255,7 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
   // between them, so what comes out is a field of separate boxes rather
   // than one ruled grid.
   const CW = (210 - 2 * MARGIN - GAP * (COLS - 1)) / COLS; // ~39.6mm
-  const CH = (297 - 2 * MARGIN - GAP * (ROWS - 1)) / ROWS; // ~31.2mm
+  const CH = (297 - 2 * MARGIN - GAP * (ROWS - 1)) / ROWS; // ~28.0mm
   // 33.5mm rather than the old 35mm, to protect the quiet zone: EAN-13 wants
   // 11 clear modules to the left of the symbol and 7 to the right, which here
   // is 3.9mm and 2.5mm. At 33.5mm the label leaves 3.05mm each side — better
