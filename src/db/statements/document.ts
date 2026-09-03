@@ -663,7 +663,26 @@ export const disseminationInbox = async (
     list: any[];
     lastCursor: string | null;
     hasMore: boolean;
+    /** Whether the person reading may mark documents received for this
+     *  office. A property of the reader and the room, not of a document. */
+    canAcknowledge?: boolean;
   };
+};
+
+/**
+ * Confirm — in this office's own name — that the document is in hand.
+ *
+ * Separate from delivery, which the system stamps by itself. Pass
+ * `received: false` to withdraw a receipt marked on the wrong row.
+ */
+export const acknowledgeReceipt = async (
+  token: string,
+  body: { targetRoomId: string; received?: boolean; note?: string | null },
+) => {
+  const res = await axios.patch("/document/dissemination/receipt", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data;
 };
 
 export const disseminationDetail = async (token: string, id: string) => {

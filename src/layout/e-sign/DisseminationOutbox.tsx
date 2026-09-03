@@ -57,6 +57,7 @@ import {
   Loader2,
   Inbox,
   Ban,
+  Check,
 } from "lucide-react";
 
 const NewSchema = zod.object({
@@ -252,6 +253,11 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
               const docs = r._count?.documents ?? 0;
               const sigs = r._count?.signatotyArrangement ?? 0;
               const tgts = r._count?.targetRooms ?? 0;
+              // How many of those offices have actually said they have it.
+              // Delivery is the system's word; this is theirs.
+              const got = (r.targetRooms ?? []).filter(
+                (t: any) => t.acknowledgedAt,
+              ).length;
               return (
                 <div
                   key={r.id}
@@ -273,6 +279,15 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                       <span className="flex items-center gap-1">
                         <Send className="h-3 w-3" />
                         {tgts} recipient{tgts === 1 ? "" : "s"}
+                      </span>
+                      <span
+                        className={`flex items-center gap-1 ${
+                          got > 0 ? "text-emerald-700 font-medium" : ""
+                        }`}
+                        title="Offices that confirmed they have the document"
+                      >
+                        <Check className="h-3 w-3" />
+                        {got} received
                       </span>
                       <span className="flex items-center gap-1">
                         <FileText className="h-3 w-3" />

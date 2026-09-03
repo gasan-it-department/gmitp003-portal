@@ -1628,7 +1628,7 @@ export interface SignatureQueueRoom extends Timestamp {
 
 export interface RoomAuthorizedUserProps {
   id: string;
-  type: number; // 0- receiver, 1- signatory, 2 - operator
+  type: number; // 0 = owner, 1 = signatory, 2 = receiver (ROOM_MEMBER_TYPES)
   user?: User | null;
   userId?: string | null;
   status: number; // 0- inactive, 1- active

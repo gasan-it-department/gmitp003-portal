@@ -1,9 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useInView } from "react-intersection-observer";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 //
 import {
+  acknowledgeReceipt,
   disseminationInbox,
   resetRoomMembership,
 } from "@/db/statements/document";
@@ -19,6 +24,8 @@ import {
   ArrowRight,
   Building2,
   RotateCcw,
+  Check,
+  Undo2,
 } from "lucide-react";
 
 interface Props {
@@ -89,6 +96,29 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
     () => (data?.pages ?? []).flatMap((p) => p.list as any[]),
     [data],
   );
+  /** Only a receiver or the room owner may confirm receipt. The server
+   *  decides; this just hides a button nobody could use. */
+  const canAcknowledge = !!(data?.pages?.[0] as any)?.canAcknowledge;
+
+  /** Which row is mid-request, so only that row shows a spinner. */
+  const [marking, setMarking] = useState<string | null>(null);
+  const receipt = useMutation({
+    mutationFn: (v: { targetRoomId: string; received: boolean }) =>
+      acknowledgeReceipt(token, v),
+    onSettled: () => {
+      setMarking(null);
+      qc.invalidateQueries({ queryKey: ["dissemination", "inbox", roomId] });
+      // The sender's list shows a received count, so refresh that too.
+      qc.invalidateQueries({ queryKey: ["dissemination", "outbox"] });
+    },
+    onError: (e: any) =>
+      alert(
+        e?.response?.data?.message ??
+          e?.message ??
+          "Could not update the receipt.",
+      ),
+  });
+
   const debug = (data?.pages?.[0] as any)?.debug as
     | {
         toRoomId: string;
@@ -262,6 +292,14 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
                           Copy furnished
                         </Badge>
                       ) : null}
+                      {r.acknowledgedAt ? (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-2 font-semibold bg-emerald-700 text-white border-emerald-700"
+                        >
+                          Received
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-3 flex-wrap">
                       <span className="flex items-center gap-1">
@@ -280,8 +318,59 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
                           ? new Date(q.timestamp).toLocaleString()
                           : ""}
                       </span>
+                      {r.acknowledgedAt ? (
+                        <span className="text-emerald-700 font-medium">
+                          Received by{" "}
+                          {`${r.acknowledgedBy?.firstName ?? ""} ${
+                            r.acknowledgedBy?.lastName ?? ""
+                          }`.trim() || "this office"}
+                          {" · "}
+                          {new Date(r.acknowledgedAt).toLocaleString()}
+                          {r.acknowledgedNote ? ` · ${r.acknowledgedNote}` : ""}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
+                  {canAcknowledge ? (
+                    <Button
+                      size="sm"
+                      variant={r.acknowledgedAt ? "ghost" : "default"}
+                      disabled={marking === r.id}
+                      title={
+                        r.acknowledgedAt
+                          ? "Withdraw this receipt"
+                          : "Confirm this office has the document"
+                      }
+                      className={`h-7 text-[11px] px-2.5 shrink-0 ${
+                        r.acknowledgedAt
+                          ? "text-gray-500 hover:text-gray-800"
+                          : "bg-emerald-700 hover:bg-emerald-800 text-white"
+                      }`}
+                      onClick={(e) => {
+                        // The whole row navigates; confirming must not.
+                        e.stopPropagation();
+                        setMarking(r.id);
+                        receipt.mutate({
+                          targetRoomId: r.id,
+                          received: !r.acknowledgedAt,
+                        });
+                      }}
+                    >
+                      {marking === r.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : r.acknowledgedAt ? (
+                        <>
+                          <Undo2 className="h-3 w-3 mr-1" />
+                          Undo
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Mark received
+                        </>
+                      )}
+                    </Button>
+                  ) : null}
                   <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
                 </div>
               );
