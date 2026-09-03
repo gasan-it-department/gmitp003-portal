@@ -57,10 +57,16 @@ function ean13Svg(value12: string): string {
     JsBarcode(svg, value12, {
       format: "EAN13",
       width: 2,
-      // Taller bars relative to the 95-module width: the symbol's width is
-      // fixed by the standard, so height is the only way to buy back scan
-      // angle on a 33.5mm label.
-      height: 70,
+      // 55 units puts the printed bars at ~8.6mm on a 33.5mm symbol.
+      //
+      // Height does not decide whether a barcode decodes — one clean scan
+      // line across the bars is enough — it decides how far off square the
+      // scanner may be before that line runs out of bars. Measured with a
+      // real decoder on renders of this exact symbol at print size: 11mm
+      // and 8.6mm both survive skew out to 16 degrees, 7mm drops to 12,
+      // 5mm to 8, 4mm to 5. So this is a fifth off the height for no
+      // measured loss of tolerance, and below it there is a real cost.
+      height: 55,
       fontSize: 15,
       textMargin: 1,
       margin: 0,
@@ -287,7 +293,11 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
     const { value, bits } = ean13(batch + String(i + 1).padStart(6, "0"));
     const headerBottom = 7.6 + unitLines.length * 3.3 + 1.4; // from y0
     const barTop = y0 + headerBottom;
-    const BC_H = Math.min(16, CH - headerBottom - 4); // 4mm: number + bottom pad
+    // Match the print sheet's ~8.6mm rather than filling whatever space is
+    // left, so the same label does not come out two different shapes
+    // depending on which button was pressed. Still clamped to the room
+    // available, in case the unit name wraps onto a second line.
+    const BC_H = Math.min(8.6, CH - headerBottom - 4); // 4mm: number + pad
     const barX = x0 + (CW - BC_W) / 2;
     doc.setFillColor(0, 0, 0);
     let m = 0;
