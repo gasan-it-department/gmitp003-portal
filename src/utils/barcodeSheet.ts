@@ -118,6 +118,64 @@ function ean13Svg(value12: string): string {
 }
 
 /**
+ * How much vertical room the office name gets, in mm.
+ *
+ * What is left of the 28mm label once the municipality line, the barcode
+ * block, the padding and the margins have taken their share. Measured on a
+ * rendered sheet rather than assumed: padding 2.0, municipality 4.26,
+ * name margins 1.5, barcode block 11.73.
+ */
+const UNIT_BUDGET_MM = 28.0 - 2.0 - 4.26 - 1.5 - 11.73; // ≈ 8.5
+/** Sizes to try, largest first. The floor matches the municipality line. */
+const UNIT_SIZES_PT = [8, 7.5, 7, 6.5, 6, 5.5];
+
+/**
+ * Pick the largest type size at which the office name still fits its box.
+ *
+ * A long name — "Municipal Planning and Development Coordinating Office" —
+ * used to be cut off with an ellipsis, which loses the very thing the
+ * sticker is for. Instead it wraps onto as many lines as it needs and the
+ * type steps down until those lines fit the space available.
+ *
+ * Measured, not estimated: the text is laid out in a hidden element with
+ * the same face, weight, tracking and width as the real one, because how
+ * a name wraps depends on where its spaces fall and no formula knows that.
+ * One measurement serves a whole sheet, since every label on it carries
+ * the same office.
+ */
+const fitUnitText = (
+  text: string,
+  widthMm: number,
+): { fontPt: number; lines: number } => {
+  const MM_PER_PX = 25.4 / 96;
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    `position:absolute;left:-9999px;top:0;visibility:hidden;` +
+    `width:${widthMm}mm;font-family:Arial,Helvetica,sans-serif;` +
+    `font-weight:800;letter-spacing:0.2pt;text-transform:uppercase;` +
+    `line-height:1.05;white-space:normal;overflow-wrap:break-word;`;
+  probe.textContent = text ?? "";
+  document.body.appendChild(probe);
+  try {
+    for (const pt of UNIT_SIZES_PT) {
+      probe.style.fontSize = `${pt}pt`;
+      const mm = probe.getBoundingClientRect().height * MM_PER_PX;
+      if (mm <= UNIT_BUDGET_MM) {
+        const lineMm = pt * (25.4 / 72) * 1.05;
+        return { fontPt: pt, lines: Math.max(1, Math.round(mm / lineMm)) };
+      }
+    }
+    // Nothing in the ladder fits. Take the floor and let the clamp trim it;
+    // a name that long is past what a 40mm sticker can carry.
+    const pt = UNIT_SIZES_PT[UNIT_SIZES_PT.length - 1];
+    const lineMm = pt * (25.4 / 72) * 1.05;
+    return { fontPt: pt, lines: Math.max(1, Math.floor(UNIT_BUDGET_MM / lineMm)) };
+  } finally {
+    probe.remove();
+  }
+};
+
+/**
  * Open a print-ready window with `sheets` full A4 pages of barcode labels and
  * trigger the browser print dialog. Returns the number of labels generated
  * (0 if the popup was blocked). All barcodes in one call share a random 6-digit
@@ -126,6 +184,10 @@ function ean13Svg(value12: string): string {
 export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   const sheets = Math.max(1, Math.min(20, Math.floor(opts.sheets ?? 1)));
   const total = sheets * LABELS_PER_SHEET;
+
+  // Every label on the sheet carries the same office, so size its name once.
+  const CW_MM = (210 - 2 * MARGIN - GAP * (COLS - 1)) / COLS;
+  const unitFit = fitUnitText(opts.unit ?? "", CW_MM - 3); // 1.5mm padding a side
 
   const batch = String(100000 + Math.floor(Math.random() * 900000));
   const cells: string[] = [];
@@ -181,16 +243,16 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   }
   .unit {
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 8pt; font-weight: 800; letter-spacing: 0.2pt;
+    font-size: ${unitFit.fontPt}pt; font-weight: 800; letter-spacing: 0.2pt;
     text-transform: uppercase; color: #000;
     line-height: 1.05; margin: 0.6mm 0 0.9mm;
-    /* Two lines at most, the same cap the PDF applies. A long office name
-       — "Municipal Planning and Development Coordinating Office" runs to
-       five — would otherwise push the barcode out of the box, where
-       overflow:hidden quietly amputates it. */
+    /* The size above was chosen so the name fits; this only catches a name
+       so long that even the smallest step overflowed, which would
+       otherwise push the barcode out of the box where overflow:hidden
+       amputates it. */
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: ${unitFit.lines};
     overflow: hidden;
   }
   .bc { width: 33.5mm; }
@@ -267,6 +329,29 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
   const muniText = `${opts.municipality} ${opts.province}`.toUpperCase();
   const batch = String(100000 + Math.floor(Math.random() * 900000));
 
+  // Same rule as the print sheet: a long office name wraps onto as many
+  // lines as it needs and the type steps down until they fit, rather than
+  // being silently cut after two. Measured with jsPDF's own wrapper so the
+  // line count is the one it will actually draw. Once per document, since
+  // every label carries the same office.
+  const unitText = (opts.unit || "").toUpperCase();
+  let unitPt = UNIT_SIZES_PT[0];
+  let unitLines: string[] = [unitText];
+  for (const pt of UNIT_SIZES_PT) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(pt);
+    const wrapped: string[] = doc.splitTextToSize(unitText, CW - 4);
+    // jsPDF has no line-height; 1.05 keeps it level with the print sheet.
+    if (wrapped.length * pt * (25.4 / 72) * 1.05 <= UNIT_BUDGET_MM) {
+      unitPt = pt;
+      unitLines = wrapped;
+      break;
+    }
+    unitPt = pt;
+    unitLines = wrapped;
+  }
+  const unitStep = unitPt * (25.4 / 72) * 1.05; // mm between baselines
+
   for (let i = 0; i < total; i++) {
     const posInSheet = i % LABELS_PER_SHEET;
     if (i > 0 && posInSheet === 0) doc.addPage();
@@ -292,18 +377,15 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
 
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    const unitLines = doc
-      .splitTextToSize((opts.unit || "").toUpperCase(), CW - 4)
-      .slice(0, 2);
+    doc.setFontSize(unitPt);
     unitLines.forEach((ln: string, n: number) =>
-      doc.text(ln, cx, y0 + 7.6 + n * 3.3, { align: "center" }),
+      doc.text(ln, cx, y0 + 7.6 + n * unitStep, { align: "center" }),
     );
 
     // barcode bars (merge runs of "1" into single rects). Bar height fills the
     // space left under the header — taller when the unit is one line.
     const { value, bits } = ean13(batch + String(i + 1).padStart(6, "0"));
-    const headerBottom = 7.6 + unitLines.length * 3.3 + 1.4; // from y0
+    const headerBottom = 7.6 + unitLines.length * unitStep + 1.4; // from y0
     const barTop = y0 + headerBottom;
     // Match the print sheet's ~8.6mm rather than filling whatever space is
     // left, so the same label does not come out two different shapes
