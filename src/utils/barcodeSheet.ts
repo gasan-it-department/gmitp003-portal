@@ -11,7 +11,10 @@ import { jsPDF } from "jspdf";
  *
  * A4 portrait fits 5 columns × 9 rows = 45 labels/sheet. Barcodes are rendered
  * as vector SVG (JsBarcode) so they print at the printer's native resolution.
- * Each cell has a dashed border to trace when cutting.
+ * Each label is a solid-outlined box with a 2mm gutter around it, so the
+ * sheet reads as separated stickers rather than one ruled grid. The gap
+ * is also the cutting allowance: a blade following a shared dashed line
+ * has to be exact, whereas 2mm of white either side forgives a wobble.
  */
 
 export interface BarcodeSheetOptions {
@@ -24,6 +27,10 @@ export interface BarcodeSheetOptions {
 
 const COLS = 5;
 const ROWS = 9;
+/** White gutter between labels, in mm. Also the cutting allowance. */
+const GAP = 2;
+/** Sheet edge margin, in mm. Trimmed to buy back what the gutters cost. */
+const MARGIN = 4;
 export const LABELS_PER_SHEET = COLS * ROWS; // 45
 
 const esc = (s: string) =>
@@ -47,7 +54,10 @@ function ean13Svg(value12: string): string {
     JsBarcode(svg, value12, {
       format: "EAN13",
       width: 2,
-      height: 46,
+      // Taller bars relative to the 95-module width: the symbol's width is
+      // fixed by the standard, so height is the only way to buy back scan
+      // angle on a 33.5mm label.
+      height: 70,
       fontSize: 15,
       textMargin: 1,
       margin: 0,
@@ -57,11 +67,39 @@ function ean13Svg(value12: string): string {
   } catch {
     return "";
   }
-  const w = svg.getAttribute("width");
-  const h = svg.getAttribute("height");
-  if (w && h) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  // JsBarcode writes width/height WITH a "px" suffix, and those attributes
+  // were being copied straight into the viewBox. A viewBox whose numbers
+  // carry units is invalid: the browser discards it, the SVG is left with no
+  // coordinate system, and the drawing is CLIPPED to the CSS box instead of
+  // scaled into it. Every printed barcode was truncated to roughly 59% of
+  // the symbol — unscannable — with the number cut through the middle.
+  //
+  // Its height attribute is short as well: it stops at the text baseline and
+  // ignores the descenders. So measure the real extents rather than trust
+  // either number, which means putting the node in the document for the
+  // length of one getBBox call.
+  let w = parseFloat(svg.getAttribute("width") ?? "0");
+  let h = parseFloat(svg.getAttribute("height") ?? "0");
   svg.removeAttribute("width");
   svg.removeAttribute("height");
+  svg.setAttribute(
+    "style",
+    "position:absolute;left:-9999px;top:0;visibility:hidden",
+  );
+  document.body.appendChild(svg);
+  try {
+    const b = svg.getBBox();
+    if (b.width > 0 && b.height > 0) {
+      w = Math.ceil(b.x + b.width);
+      h = Math.ceil(b.y + b.height);
+    }
+  } catch {
+    // Keep the parsed attributes; they are at least unit-free now.
+  }
+  svg.remove();
+  svg.removeAttribute("style");
+
+  if (w > 0 && h > 0) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   return new XMLSerializer().serializeToString(svg);
 }
@@ -106,16 +144,17 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   html, body { width: 210mm; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sheet {
     width: 210mm; height: 297mm;
-    padding: 5mm;
+    padding: ${MARGIN}mm;
     display: grid;
     grid-template-columns: repeat(${COLS}, 1fr);
     grid-template-rows: repeat(${ROWS}, 1fr);
+    gap: ${GAP}mm;
     page-break-after: always;
   }
   .sheet:last-child { page-break-after: auto; }
   .st {
     width: 100%; height: 100%;
-    border: 0.3mm dashed #777;
+    border: 0.25mm solid #444;
     padding: 1mm 1.5mm;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -132,8 +171,11 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
     text-transform: uppercase; color: #000;
     line-height: 1.05; margin: 0.6mm 0 0.9mm;
   }
-  .bc { width: 35mm; }
-  .bc svg { width: 100%; height: 15mm; display: block; }
+  .bc { width: 33.5mm; }
+  /* Height follows the symbol's own aspect ratio. Pinning it to a fixed
+     millimetre value letterboxes a correct viewBox and cropped a broken
+     one — either way the printed bars stop matching the drawing. */
+  .bc svg { width: 100%; height: auto; display: block; }
   @media screen {
     body { background: #64748b; padding: 8mm 0; }
     .sheet { margin: 0 auto 8mm; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
@@ -187,12 +229,19 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
   const total = sheets * LABELS_PER_SHEET;
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  // Minimal margins on every side — labels grow to fill the whole A4.
-  const MARGIN_X = 5;
-  const MARGIN_Y = 5;
-  const CW = (210 - 2 * MARGIN_X) / COLS; // 40mm wide
-  const CH = (297 - 2 * MARGIN_Y) / ROWS; // ~31.9mm tall
-  const BC_W = 35; // enlarged barcode width mm (95 modules)
+  // Labels fill the A4 apart from a small edge margin and a GAP gutter
+  // between them, so what comes out is a field of separate boxes rather
+  // than one ruled grid. The gutters cost about 1.5mm of label height,
+  // which comes off the bar height at the bottom of this function.
+  const CW = (210 - 2 * MARGIN - GAP * (COLS - 1)) / COLS; // ~38.8mm
+  const CH = (297 - 2 * MARGIN - GAP * (ROWS - 1)) / ROWS; // ~30.3mm
+  // 33.5mm rather than the old 35mm, because the gutters narrowed the label
+  // and the bars must not eat their own quiet zone. EAN-13 wants 11 clear
+  // modules to the left of the symbol and 7 to the right; at this width that
+  // is 3.9mm and 2.5mm, and the label leaves 2.65mm each side — no worse than
+  // the sheet already printed, where 35mm bars left only 2.5mm. The module
+  // drops to 0.353mm, still well above the 0.264mm floor.
+  const BC_W = 33.5; // barcode width mm (95 modules)
   const MOD = BC_W / 95;
 
   const muniText = `${opts.municipality} ${opts.province}`.toUpperCase();
@@ -203,16 +252,15 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
     if (i > 0 && posInSheet === 0) doc.addPage();
     const col = posInSheet % COLS;
     const row = Math.floor(posInSheet / COLS);
-    const x0 = MARGIN_X + col * CW;
-    const y0 = MARGIN_Y + row * CH;
+    const x0 = MARGIN + col * (CW + GAP);
+    const y0 = MARGIN + row * (CH + GAP);
     const cx = x0 + CW / 2;
 
-    // dashed cut border
-    doc.setDrawColor(120, 120, 120);
-    doc.setLineWidth(0.15);
-    doc.setLineDashPattern([0.8, 0.8], 0);
+    // Solid cut border. Each box stands on its own with white around it,
+    // so there is no shared edge for a dashed line to trace.
+    doc.setDrawColor(68, 68, 68);
+    doc.setLineWidth(0.25);
     doc.rect(x0, y0, CW, CH, "S");
-    doc.setLineDashPattern([], 0);
 
     // header text
     doc.setTextColor(20, 20, 20);
