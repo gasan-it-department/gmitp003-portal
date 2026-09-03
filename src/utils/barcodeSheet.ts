@@ -11,10 +11,11 @@ import { jsPDF } from "jspdf";
  *
  * A4 portrait fits 5 columns × 9 rows = 45 labels/sheet. Barcodes are rendered
  * as vector SVG (JsBarcode) so they print at the printer's native resolution.
- * Each label is a solid-outlined box with a 2mm gutter around it, so the
- * sheet reads as separated stickers rather than one ruled grid. The gap
- * is also the cutting allowance: a blade following a shared dashed line
- * has to be exact, whereas 2mm of white either side forgives a wobble.
+ * Each label is a solid, round-cornered box with a 1mm gutter around it,
+ * so the sheet reads as separated stickers rather than one ruled grid.
+ * The gap is also the cutting allowance — a blade following a shared
+ * line has to be exact, whereas a little white either side forgives a
+ * wobble.
  */
 
 export interface BarcodeSheetOptions {
@@ -28,7 +29,9 @@ export interface BarcodeSheetOptions {
 const COLS = 5;
 const ROWS = 9;
 /** White gutter between labels, in mm. Also the cutting allowance. */
-const GAP = 2;
+const GAP = 1;
+/** Corner radius of each label, in mm. */
+const RADIUS = 1.5;
 /** Sheet edge margin, in mm. Trimmed to buy back what the gutters cost. */
 const MARGIN = 4;
 export const LABELS_PER_SHEET = COLS * ROWS; // 45
@@ -155,6 +158,7 @@ export function printBarcodeSheet(opts: BarcodeSheetOptions): number {
   .st {
     width: 100%; height: 100%;
     border: 0.25mm solid #444;
+    border-radius: ${RADIUS}mm;
     padding: 1mm 1.5mm;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -231,16 +235,14 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   // Labels fill the A4 apart from a small edge margin and a GAP gutter
   // between them, so what comes out is a field of separate boxes rather
-  // than one ruled grid. The gutters cost about 1.5mm of label height,
-  // which comes off the bar height at the bottom of this function.
-  const CW = (210 - 2 * MARGIN - GAP * (COLS - 1)) / COLS; // ~38.8mm
-  const CH = (297 - 2 * MARGIN - GAP * (ROWS - 1)) / ROWS; // ~30.3mm
-  // 33.5mm rather than the old 35mm, because the gutters narrowed the label
-  // and the bars must not eat their own quiet zone. EAN-13 wants 11 clear
-  // modules to the left of the symbol and 7 to the right; at this width that
-  // is 3.9mm and 2.5mm, and the label leaves 2.65mm each side — no worse than
-  // the sheet already printed, where 35mm bars left only 2.5mm. The module
-  // drops to 0.353mm, still well above the 0.264mm floor.
+  // than one ruled grid.
+  const CW = (210 - 2 * MARGIN - GAP * (COLS - 1)) / COLS; // ~39.6mm
+  const CH = (297 - 2 * MARGIN - GAP * (ROWS - 1)) / ROWS; // ~31.2mm
+  // 33.5mm rather than the old 35mm, to protect the quiet zone: EAN-13 wants
+  // 11 clear modules to the left of the symbol and 7 to the right, which here
+  // is 3.9mm and 2.5mm. At 33.5mm the label leaves 3.05mm each side — better
+  // than the 2.5mm this sheet printed before any of these changes — and the
+  // module stays at 0.353mm, well above the 0.264mm floor.
   const BC_W = 33.5; // barcode width mm (95 modules)
   const MOD = BC_W / 95;
 
@@ -260,7 +262,7 @@ export function downloadBarcodePdf(opts: BarcodeSheetOptions): number {
     // so there is no shared edge for a dashed line to trace.
     doc.setDrawColor(68, 68, 68);
     doc.setLineWidth(0.25);
-    doc.rect(x0, y0, CW, CH, "S");
+    doc.roundedRect(x0, y0, CW, CH, RADIUS, RADIUS, "S");
 
     // header text
     doc.setTextColor(20, 20, 20);
