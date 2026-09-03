@@ -939,14 +939,16 @@ export interface DocumentOverview {
   signatures: { mine: number; pendingForMe: number };
 }
 
-export const documentOverview = async (
-  token: string,
-  lineId: string,
-  userId?: string,
-) => {
+/**
+ * The dashboard tiles. All of them are the caller's own numbers, taken
+ * from the token — the userId this used to send was ignored as of the
+ * scoping fix, and passing one never did anything but mislead the reader
+ * of this file.
+ */
+export const documentOverview = async (token: string, lineId: string) => {
   const res = await axios.get("/document/overview", {
     headers: jsonHeaders(token),
-    params: { lineId, userId },
+    params: { lineId },
   });
   return res.data as DocumentOverview;
 };

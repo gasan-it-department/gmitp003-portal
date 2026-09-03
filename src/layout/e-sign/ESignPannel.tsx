@@ -118,11 +118,7 @@ const ESignPannel = () => {
   const { data, isLoading } = useQuery({
     queryKey: ["document-overview", lineId, auth.userId],
     queryFn: () =>
-      documentOverview(
-        auth.token as string,
-        lineId as string,
-        auth.userId as string,
-      ),
+      documentOverview(auth.token as string, lineId as string),
     enabled: !!auth.token && !!lineId,
     refetchOnMount: "always",
     refetchOnWindowFocus: false,
