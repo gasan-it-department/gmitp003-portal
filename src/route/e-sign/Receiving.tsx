@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
 //
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
+import useLine from "@/hooks/useLine";
 import {
   documentReceiveList,
   documentReceiveCreate,
@@ -69,6 +70,7 @@ interface UnitOption {
 const Receiving = () => {
   const auth = useAuth();
   const { room } = useRoom();
+  const { line } = useLine();
   const lineId = room?.lineId as string | undefined;
   const qc = useQueryClient();
 
@@ -111,8 +113,20 @@ const Receiving = () => {
   // ── barcode-label generator ─────────────────────────────────────────────
   const [bcOpen, setBcOpen] = useState(false);
   const [bcUnitId, setBcUnitId] = useState("");
-  const [bcMunicipality, setBcMunicipality] = useState("Gasan");
-  const [bcProvince, setBcProvince] = useState("Marinduque");
+  // The municipality and province are facts about the line, not opinions.
+  // They used to be free text defaulted to "Gasan" / "Marinduque", so a typo
+  // — or another LGU running this — printed a whole sheet of wrong stickers,
+  // and stickers are the one thing you cannot correct after the fact.
+  const lineMunicipality = line?.municipal?.name ?? "";
+  const lineProvince = line?.province?.name ?? "";
+  const [bcMunicipality, setBcMunicipality] = useState("");
+  const [bcProvince, setBcProvince] = useState("");
+
+  // Select them as soon as the line is known, and re-select if it changes.
+  useEffect(() => {
+    if (lineMunicipality) setBcMunicipality(lineMunicipality);
+    if (lineProvince) setBcProvince(lineProvince);
+  }, [lineMunicipality, lineProvince]);
   const [bcSheets, setBcSheets] = useState("1");
 
   const { data: unitsData } = useQuery({
@@ -132,7 +146,10 @@ const Receiving = () => {
       return null;
     }
     if (!bcMunicipality.trim() || !bcProvince.trim()) {
-      toast.error("Municipality and province are required.");
+      toast.error(
+        "Your line has no municipality or province on record yet — " +
+          "set it in the line profile before printing labels.",
+      );
       return null;
     }
     return {
@@ -581,23 +598,47 @@ const Receiving = () => {
               <label className="text-xs font-medium text-gray-700">
                 Municipality
               </label>
-              <Input
+              <Select
                 value={bcMunicipality}
-                onChange={(e) => setBcMunicipality(e.target.value)}
-                className="mt-1"
-              />
+                onValueChange={setBcMunicipality}
+                disabled={!lineMunicipality}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Loading from your line…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lineMunicipality ? (
+                    <SelectItem value={lineMunicipality}>
+                      {lineMunicipality}
+                    </SelectItem>
+                  ) : null}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700">
                 Province
               </label>
-              <Input
+              <Select
                 value={bcProvince}
-                onChange={(e) => setBcProvince(e.target.value)}
-                className="mt-1"
-              />
+                onValueChange={setBcProvince}
+                disabled={!lineProvince}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Loading from your line…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lineProvince ? (
+                    <SelectItem value={lineProvince}>{lineProvince}</SelectItem>
+                  ) : null}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          <p className="-mt-1 text-[11px] text-gray-500">
+            Both come from your line&rsquo;s registered location and cannot be
+            typed over.
+          </p>
 
           <div>
             <label className="text-xs font-medium text-gray-700">
