@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
 import useLine from "@/hooks/useLine";
+import RoutingStatusBadge from "@/layout/e-sign/RoutingStatusBadge";
 import {
   documentReceiveList,
   documentReceiveCreate,
@@ -92,6 +93,7 @@ const Receiving = () => {
       );
       // Straight into the routing wizard, which is where the offices are
       // picked — the draft on its own does nothing until it is configured.
+      qc.invalidateQueries({ queryKey: ["document-receive"] });
       nav(`../dissemination/set-up/${r.queueRoomId}`);
     },
     onError: (e: any) =>
@@ -456,33 +458,62 @@ const Receiving = () => {
                     // — this just says so before the click rather than
                     // after it.
                     const scanned = (r.pages?.length ?? 0) > 0;
+                    const routed = !!r.routedQueueRoomId;
                     return (
-                      <Button
-                        size="sm"
-                        variant={scanned ? "default" : "ghost"}
-                        disabled={!scanned || !room?.id || sending === r.id}
-                        title={
-                          scanned
-                            ? "Send this document to other offices"
-                            : "Scan this document with the mobile app first"
-                        }
-                        className={`h-7 text-[11px] px-2.5 ${
-                          scanned ? "" : "text-gray-400 cursor-not-allowed"
-                        }`}
-                        onClick={() => {
-                          setSending(r.id);
-                          disseminate.mutate(r.id);
-                        }}
-                      >
-                        {sending === r.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <Send className="h-3 w-3 mr-1" />
-                            {scanned ? "Route" : "Not scanned"}
-                          </>
-                        )}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {routed ? (
+                          <button
+                            type="button"
+                            title={
+                              `Already sent onward` +
+                              (r.routedByName ? ` by ${r.routedByName}` : "") +
+                              (r.routedAt ? ` on ${fmt(r.routedAt)}` : "") +
+                              `. Open the routing.`
+                            }
+                            onClick={() =>
+                              nav(`../dissemination/view/${r.routedQueueRoomId}`)
+                            }
+                            className="shrink-0"
+                          >
+                            <RoutingStatusBadge status={r.routedStatus ?? 0} />
+                          </button>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant={
+                            !scanned ? "ghost" : routed ? "outline" : "default"
+                          }
+                          disabled={!scanned || !room?.id || sending === r.id}
+                          title={
+                            !scanned
+                              ? "Scan this document with the mobile app first"
+                              : routed
+                                ? "This has already been sent onward — " +
+                                  "sending again makes a second routing"
+                                : "Send this document to other offices"
+                          }
+                          className={`h-7 text-[11px] px-2.5 ${
+                            scanned ? "" : "text-gray-400 cursor-not-allowed"
+                          }`}
+                          onClick={() => {
+                            setSending(r.id);
+                            disseminate.mutate(r.id);
+                          }}
+                        >
+                          {sending === r.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <Send className="h-3 w-3 mr-1" />
+                              {!scanned
+                                ? "Not scanned"
+                                : routed
+                                  ? "Route again"
+                                  : "Route"}
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     );
                   })()}
                 </TableCell>

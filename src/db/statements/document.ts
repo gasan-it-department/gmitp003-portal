@@ -1356,6 +1356,13 @@ export interface DocumentReceiveRecord {
   receivedByName: string | null;
   direction: "in" | "out";
   pages?: { id: string; page: number }[];
+  /** The routing this was sent onward to, if it still exists. */
+  routedQueueRoomId?: string | null;
+  routedAt?: string | null;
+  routedByName?: string | null;
+  /** The routing's own state: 0 draft, 1 active, 2 completed, 3 cancelled. */
+  routedStatus?: number | null;
+  routedTitle?: string | null;
   createdAt: string;
   updatedAt: string;
 }
