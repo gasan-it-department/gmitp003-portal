@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
 //
@@ -9,6 +10,7 @@ import useLine from "@/hooks/useLine";
 import {
   documentReceiveList,
   documentReceiveCreate,
+  documentReceiveDisseminate,
   type DocumentReceiveRecord,
 } from "@/db/statements/document";
 import { getLinetUnits } from "@/db/statement";
@@ -47,6 +49,8 @@ import {
   Download,
   ArrowDownLeft,
   ArrowUpRight,
+  Send,
+  Loader2,
 } from "lucide-react";
 import axiosClient from "@/db/axios";
 import {
@@ -71,6 +75,33 @@ const Receiving = () => {
   const auth = useAuth();
   const { room } = useRoom();
   const { line } = useLine();
+  const nav = useNavigate();
+
+  /** Which record is mid-send, so only that row shows a spinner. */
+  const [sending, setSending] = useState<string | null>(null);
+  const disseminate = useMutation({
+    mutationFn: (recordId: string) =>
+      documentReceiveDisseminate(auth.token as string, {
+        recordId,
+        roomId: room?.id as string,
+      }),
+    onSuccess: (r) => {
+      toast.success(
+        `Routing draft created from ${r.pages} scanned page` +
+          `${r.pages === 1 ? "" : "s"}. Choose who receives it.`,
+      );
+      // Straight into the routing wizard, which is where the offices are
+      // picked — the draft on its own does nothing until it is configured.
+      nav(`../dissemination/set-up/${r.queueRoomId}`);
+    },
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.message ??
+          e?.message ??
+          "Could not send this document onward.",
+      ),
+    onSettled: () => setSending(null),
+  });
   const lineId = room?.lineId as string | undefined;
   const qc = useQueryClient();
 
@@ -353,6 +384,9 @@ const Receiving = () => {
               <TableHead className="text-xs uppercase tracking-wider">
                 Date received
               </TableHead>
+              <TableHead className="text-xs uppercase tracking-wider text-right">
+                Send onward
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -413,6 +447,44 @@ const Receiving = () => {
                 </TableCell>
                 <TableCell className="text-xs text-gray-500">
                   {fmt(r.createdAt)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {(() => {
+                    // Nothing to send until it has been scanned: routing
+                    // delivers a file, and the scan is the only file a
+                    // received document has. The server refuses either way
+                    // — this just says so before the click rather than
+                    // after it.
+                    const scanned = (r.pages?.length ?? 0) > 0;
+                    return (
+                      <Button
+                        size="sm"
+                        variant={scanned ? "default" : "ghost"}
+                        disabled={!scanned || !room?.id || sending === r.id}
+                        title={
+                          scanned
+                            ? "Send this document to other offices"
+                            : "Scan this document with the mobile app first"
+                        }
+                        className={`h-7 text-[11px] px-2.5 ${
+                          scanned ? "" : "text-gray-400 cursor-not-allowed"
+                        }`}
+                        onClick={() => {
+                          setSending(r.id);
+                          disseminate.mutate(r.id);
+                        }}
+                      >
+                        {sending === r.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <>
+                            <Send className="h-3 w-3 mr-1" />
+                            {scanned ? "Route" : "Not scanned"}
+                          </>
+                        )}
+                      </Button>
+                    );
+                  })()}
                 </TableCell>
               </TableRow>
             ))}

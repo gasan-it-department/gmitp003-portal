@@ -1322,6 +1322,28 @@ export const setSignaturePlacement = async (
 
 // ── Document Receiving (barcode-stickered physical documents) ────────────
 
+/**
+ * Hand a received document to Document Routing.
+ *
+ * Refused unless the record has scanned pages: the routing needs a file,
+ * and the scan is the only file a received document has. Returns the id of
+ * the draft it created so the caller can walk into the wizard.
+ */
+export const documentReceiveDisseminate = async (
+  token: string,
+  body: { recordId: string; roomId: string },
+) => {
+  const res = await axios.post("/document/receive/disseminate", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as {
+    message: string;
+    queueRoomId: string;
+    documentId: string;
+    pages: number;
+  };
+};
+
 export interface DocumentReceiveRecord {
   id: string;
   lineId: string;
