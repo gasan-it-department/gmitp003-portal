@@ -1508,3 +1508,105 @@ export const removeRoomMember = async (
   });
   return res.data as { message: string };
 };
+
+// ── Activity panel ─────────────────────────────────────────────────────
+// The side panel on the Document module's home screen. One request for
+// the whole "what needs me / where did our stuff get to" view, scoped
+// server-side to the caller's own office.
+
+export interface ActivityNeedsSign {
+  arrangementId: string;
+  queueId: string | null;
+  title: string;
+  from: string;
+  sentAt: string;
+  position: number;
+  totalSignatories: number;
+  signed: number;
+}
+
+export interface ActivityArrived {
+  targetId: string;
+  queueId: string | null;
+  title: string;
+  from: string;
+  arrivedAt: string;
+  copyFurnished: boolean;
+  viewedAt: string | null;
+  acknowledgedAt: string | null;
+}
+
+export interface ActivityInFlight {
+  queueId: string;
+  title: string;
+  sentAt: string;
+  signed: number;
+  totalSignatories: number;
+  opened: number;
+  received: number;
+  totalRecipients: number;
+  waitingOn: string[];
+}
+
+export interface DocumentActivity {
+  room: { id: string };
+  canAcknowledge: boolean;
+  needsYou: {
+    toSign: ActivityNeedsSign[];
+    toSignTotal: number;
+    toOpen: ActivityArrived[];
+    toOpenTotal: number;
+    toReceive: ActivityArrived[];
+    toReceiveTotal: number;
+  };
+  inbox: { total: number };
+  outbox: {
+    inFlight: ActivityInFlight[];
+    draft: number;
+    active: number;
+    completed: number;
+    cancelled: number;
+  };
+  today: {
+    signedByYou: number;
+    opened: number;
+    receipts: number;
+    started: number;
+    avgResponseMs: number | null;
+  };
+}
+
+export const documentActivity = async (token: string, roomId: string) => {
+  const res = await axios.get("/document/activity", {
+    headers: jsonHeaders(token),
+    params: { roomId },
+  });
+  return res.data as DocumentActivity;
+};
+
+export interface ActivityLogRow {
+  id: string;
+  title: string;
+  desc: string;
+  action: number;
+  timestamp: string;
+  documentId: string | null;
+  who: string | null;
+}
+
+export const documentActivityLog = async (
+  token: string,
+  roomId: string,
+  lastCursor: string | null,
+  limit = "20",
+) => {
+  const res = await axios.get("/document/activity/log", {
+    headers: jsonHeaders(token),
+    params: { roomId, limit, ...(lastCursor ? { lastCursor } : {}) },
+  });
+  return res.data as {
+    list: ActivityLogRow[];
+    lastCursor: string | null;
+    hasMore: boolean;
+  };
+};
