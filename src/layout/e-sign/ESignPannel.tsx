@@ -20,6 +20,7 @@ import {
   FileText,
   Building2,
   Smartphone,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -82,6 +83,13 @@ const TILES: Tile[] = [
           ? `${o.dissemination.draft} draft`
           : null,
     accent: "blue",
+  },
+  {
+    name: "Signatories & Receivers",
+    description:
+      "Who in your office may sign documents, and who may receive them. Owners only.",
+    Icon: Users,
+    path: "members",
   },
   {
     name: "Signature Management",

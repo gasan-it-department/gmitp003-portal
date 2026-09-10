@@ -8,7 +8,7 @@ import { formatDate } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
-import RoomConfig from "./RoomConfig";
+import RoomConfig from "@/layout/e-sign/RoomConfig";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import ManageRoom from "./ManageRoom";

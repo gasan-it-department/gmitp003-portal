@@ -22,8 +22,19 @@ import { Loader2, Wrench } from "lucide-react";
 import SignatoryRegistry from "@/layout/e-sign/SignatoryRegistry";
 import { roomRegistration } from "@/utils/helper";
 
-const DocumentRoomContext = createContext<{ room: ReceivingRoom | null }>({
+const DocumentRoomContext = createContext<{
+  room: ReceivingRoom | null;
+  /**
+   * The caller's own membership of that room — their role, in particular.
+   *
+   * The provider already fetches it; it just was not passed on. Screens
+   * that offer an owner-only control need it, and asking again would be a
+   * second request for something already in hand.
+   */
+  me: RoomAuthorizedUserProps | null;
+}>({
   room: null,
+  me: null,
 });
 
 const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
@@ -189,7 +200,9 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <DocumentRoomContext.Provider value={{ room: data.room }}>
+    <DocumentRoomContext.Provider
+      value={{ room: data.room, me: data.authorizedUser ?? null }}
+    >
       {children}
     </DocumentRoomContext.Provider>
   );

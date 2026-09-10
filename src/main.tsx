@@ -90,6 +90,7 @@ import EsignHome from "./route/e-sign/Main.tsx";
 import Document from "./route/human_resources/Document.tsx";
 import EsignIndex from "./route/e-sign/Index.tsx";
 import EsignHomePannel from "./route/e-sign/HomePannel.tsx";
+import OfficeMembers from "./route/e-sign/OfficeMembers.tsx";
 import DocumentReceiving from "./route/e-sign/Receiving.tsx";
 import DocumentsMobileAccess from "./route/e-sign/MobileAccess.tsx";
 import Dissemination from "./route/e-sign/Dissemination.tsx";
@@ -487,6 +488,7 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="archive" element={<Archive />} />
                 <Route path="archive/:archiveId" element={<ArchiveDetail />} />
                 <Route path="manage-signature" element={<ManageSignature />} />
+                <Route path="members" element={<OfficeMembers />} />
                 <Route path="self-sign" element={<SelfSign />} />
                 <Route path="self-sign/:docId" element={<SelfSignEditor />} />
                 <Route path="archive/new" element={<AcrhiveNewDocs />} />
