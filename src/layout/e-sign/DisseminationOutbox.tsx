@@ -81,7 +81,13 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
   const [removeId, setRemoveId] = useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = useState<{ id: string; title: string } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{
+    id: string;
+    title: string;
+    /** Whether signatures were actually collected — the dialog reads
+     *  quite differently for a memo nobody signed. */
+    signed: boolean;
+  } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
   const { ref } = useInView({
@@ -315,7 +321,7 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                  ) : r.status === 1 ? (
+                  ) : r.status === 1 || (r.status === 2 && sigs === 0) ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -325,9 +331,14 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                         setCancelTarget({
                           id: r.id,
                           title: r.title ?? "(no subject)",
+                          signed: sigs > 0,
                         });
                       }}
-                      title="Cancel and notify signatories"
+                      title={
+                        sigs === 0
+                          ? "Recall and notify the recipients"
+                          : "Cancel and notify signatories"
+                      }
                     >
                       <Ban className="h-3.5 w-3.5" />
                     </Button>
@@ -382,7 +393,9 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
         title="Remove this draft?"
         onOpen={!!removeId}
         setOnOpen={() => setRemoveId(null)}
-        onFunction={() => removeId && removeMu.mutate(removeId)}
+        onFunction={() => {
+          if (removeId) removeMu.mutate(removeId);
+        }}
         footer={true}
         loading={removeMu.isPending}
         yesTitle="Remove"
@@ -402,13 +415,13 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
           setCancelTarget(null);
           setCancelReason("");
         }}
-        onFunction={() =>
-          cancelTarget &&
+        onFunction={() => {
+          if (!cancelTarget) return;
           cancelMu.mutate({
             queueRoomId: cancelTarget.id,
             reason: cancelReason.trim() || undefined,
-          })
-        }
+          });
+        }}
         footer={true}
         loading={cancelMu.isPending}
         yesTitle="Cancel routing"
@@ -423,14 +436,30 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
             will:
             <ul className="list-disc pl-4 mt-1 space-y-0.5">
               <li>Mark the routing and every recipient as cancelled.</li>
-              <li>
-                Send a real-time notification to every signatory and member
-                of each targeted room.
-              </li>
-              <li>
-                Stop accepting new signatures — existing signatures stay
-                on record for audit.
-              </li>
+              {cancelTarget?.signed === false ? (
+                <>
+                  <li>
+                    Notify every office that already received it, including
+                    any copy furnished.
+                  </li>
+                  <li>
+                    Leave it visible in their inbox as cancelled. It was
+                    delivered the moment you dispatched it, so this is a
+                    recall notice, not an undo.
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    Send a real-time notification to every signatory and
+                    member of each targeted room.
+                  </li>
+                  <li>
+                    Stop accepting new signatures — existing signatures stay
+                    on record for audit.
+                  </li>
+                </>
+              )}
             </ul>
           </div>
           <div>
