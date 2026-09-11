@@ -104,6 +104,17 @@ const PlacementEditor = ({
   const docs: PlacementDocument[] = data?.documents ?? [];
   const sigs: PlacementSignatory[] = data?.signatories ?? [];
 
+  /**
+   * This routing is being sent without e-sign.
+   *
+   * Only true once the query has answered — `sigs` is [] while loading
+   * too, and flashing "nothing to sign" at somebody who picked four
+   * signatories would be alarming. Existing boxes keep the picker: they
+   * came from somewhere and the owner has to be able to see and remove
+   * them.
+   */
+  const noSigning = !isLoading && !!data && sigs.length === 0;
+
   // Active document
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   useEffect(() => {
@@ -557,7 +568,7 @@ const PlacementEditor = ({
             <span className="text-[10px] font-semibold uppercase text-gray-600 tracking-wide">
               Signatory slots
             </span>
-            {sigs.length > 0 ? (
+            {noSigning && placements.length === 0 ? null : sigs.length > 0 ? (
               <Badge variant="outline" className="text-[10px] h-5 px-1.5">
                 {sigs.length} from queue
               </Badge>
@@ -593,8 +604,21 @@ const PlacementEditor = ({
               </div>
             )}
           </div>
+          {noSigning && placements.length === 0 ? (
+            <div className="p-3 text-[10px] text-gray-500 leading-relaxed">
+              <div className="text-gray-700 font-semibold mb-1">
+                No signatories on this routing
+              </div>
+              There is nothing to place. Attach the documents and dispatch —
+              the recipients get them as they are. To collect signatures
+              instead, go back a step and choose who signs.
+            </div>
+          ) : null}
           <div className="p-2 space-y-1.5">
-            {Array.from({ length: slotCount }, (_, i) => i + 1).map((s) => {
+            {(noSigning && placements.length === 0
+              ? []
+              : Array.from({ length: slotCount }, (_, i) => i + 1)
+            ).map((s) => {
               const c = colorFor(s);
               const on = s === activeSlot;
               const count = placements.filter(

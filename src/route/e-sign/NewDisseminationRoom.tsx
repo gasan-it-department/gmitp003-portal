@@ -55,11 +55,14 @@ const StepBadge = ({
   active,
   done,
   label,
+  hint,
 }: {
   n: number;
   active: boolean;
   done: boolean;
   label: string;
+  /** Small qualifier under the label, e.g. "optional". */
+  hint?: string;
 }) => (
   <div className="flex items-center gap-1.5">
     <div
@@ -73,10 +76,17 @@ const StepBadge = ({
     >
       {done ? <CheckCircle2 className="h-3 w-3" /> : n}
     </div>
-    <span
-      className={`text-xs ${active ? "font-semibold text-gray-900" : "text-gray-500"}`}
-    >
-      {label}
+    <span className="leading-none">
+      <span
+        className={`text-xs ${active ? "font-semibold text-gray-900" : "text-gray-500"}`}
+      >
+        {label}
+      </span>
+      {hint ? (
+        <span className="block text-[9px] text-gray-400 leading-none mt-0.5">
+          {hint}
+        </span>
+      ) : null}
     </span>
   </div>
 );
@@ -337,7 +347,13 @@ const NewDisseminationRoom = () => {
         <div className="ml-auto flex items-center gap-3">
           <StepBadge n={1} active={step === 0} done={step > 0} label="Recipients" />
           <span className="text-gray-300">›</span>
-          <StepBadge n={2} active={step === 1} done={step > 1} label="Signatories" />
+          <StepBadge
+            n={2}
+            active={step === 1}
+            done={step > 1}
+            label="Signatories"
+            hint="optional"
+          />
           <span className="text-gray-300">›</span>
           <StepBadge n={3} active={step === 2} done={step > 2} label="Documents" />
           <span className="text-gray-300">›</span>
@@ -427,14 +443,28 @@ const NewDisseminationRoom = () => {
             size="sm"
             className="h-7 text-xs"
             onClick={() => saveSignatories.mutate()}
+            /* Not every document needs signing. A memo, a transmittal, an
+               advisory — an office needs to HAVE those, not sign them, and
+               this step used to refuse to let you past without naming
+               somebody. The one case that is still refused is boxes with
+               nobody to fill them: if the documents already carry
+               signature slots, they need signatories. */
             disabled={
-              saveSignatories.isPending || signatories.length === 0
+              saveSignatories.isPending ||
+              (maxSlot > 0 && signatories.length < maxSlot)
+            }
+            title={
+              maxSlot > 0 && signatories.length < maxSlot
+                ? `Your documents use ${maxSlot} signature box${
+                    maxSlot === 1 ? "" : "es"
+                  }. Pick who signs them, or remove the boxes.`
+                : undefined
             }
           >
             {saveSignatories.isPending ? (
               <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
             ) : null}
-            Next
+            {signatories.length === 0 ? "Skip — no signatures" : "Next"}
             <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         ) : step === 2 ? (
@@ -870,9 +900,17 @@ const SignatoriesStep = ({
             </div>
           ) : null}
           {selected.length === 0 ? (
-            <div className="h-32 flex items-center justify-center text-xs text-gray-500 text-center px-6">
-              Add signatories from the left. Use the arrows to set the order
-              in which they sign.
+            <div className="h-32 flex flex-col items-center justify-center gap-1 text-center px-6">
+              <div className="text-xs text-gray-500">
+                Add signatories from the left. Use the arrows to set the
+                order in which they sign.
+              </div>
+              {requiredSlots === 0 ? (
+                <div className="text-[10px] text-gray-400">
+                  Or leave this empty — a memo or transmittal can be routed
+                  without any signature at all.
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="border rounded-lg bg-white overflow-hidden divide-y">
@@ -1009,8 +1047,9 @@ const ReviewStep = ({
               ))}
             </div>
             <div className="px-3 py-2 border-t bg-amber-50/50 text-[10px] text-amber-800">
-              Sent automatically once every signature is in. Until then these
-              offices see nothing.
+              {signatories.length === 0
+                ? "Nothing is being signed, so these offices receive it as soon as you dispatch — at the same time as the addressees."
+                : "Sent automatically once every signature is in. Until then these offices see nothing."}
             </div>
           </div>
         ) : null}
@@ -1028,8 +1067,15 @@ const ReviewStep = ({
           </div>
           <div className="divide-y">
             {signatories.length === 0 ? (
-              <div className="px-3 py-4 text-xs text-gray-500 text-center">
-                No signatories — documents will be routed without e-sign.
+              <div className="px-3 py-3 space-y-1">
+                <div className="text-xs text-gray-700">
+                  No signatories — this is routed without e-sign.
+                </div>
+                <div className="text-[10px] text-gray-500 leading-relaxed">
+                  Every recipient gets it the moment you dispatch, and the
+                  routing is complete straight away. They can still mark it
+                  received, so you keep the record of who has it.
+                </div>
               </div>
             ) : (
               signatories.map((s, i) => (
