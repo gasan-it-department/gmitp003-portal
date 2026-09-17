@@ -15,7 +15,6 @@ import {
   TableHeader,
   TableHead,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import Modal from "@/components/custom/Modal";
 import NewLineForm from "@/layout/admin/NewLineForm";

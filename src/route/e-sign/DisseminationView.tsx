@@ -179,8 +179,6 @@ const DisseminationViewPage = () => {
   const signable = arrangements.filter(
     (a) => a.status === 0 && (a.userId === auth.userId || !a.userId),
   );
-  const mySlots = arrangements.filter((a) => a.userId === auth.userId);
-  const myPending = mySlots.filter((a) => a.status === 0);
   // Earlier-index slots that haven't been signed yet — used to warn (but
   // not block) the user when they sign out of the intended order.
   const lowestSignableIdx = signable.length

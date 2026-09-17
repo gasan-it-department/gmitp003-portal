@@ -25,12 +25,24 @@ const PrescribeTransactionItem = ({ item, no, query }: Props) => {
       <TableCell>{no}</TableCell>
       <TableCell>
         {item.refNumber}
-        {(item as { external?: boolean }).external && (
-            <span className="ml-1 inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold text-amber-700"
-              title={(item as { external?: boolean }).externalSource ? `External prescription — ${(item as { external?: boolean }).externalSource}` : "External prescription (private doctor / another RHU)"}>
+        {(() => {
+          // One cast, naming both fields. The old one declared `external`
+          // only and then read `externalSource` off it twice.
+          const ext = item as { external?: boolean; externalSource?: string | null };
+          if (!ext.external) return null;
+          return (
+            <span
+              className="ml-1 inline-flex items-center rounded border border-amber-300 bg-amber-50 px-1 text-[9px] font-semibold text-amber-700"
+              title={
+                ext.externalSource
+                  ? `External prescription — ${ext.externalSource}`
+                  : "External prescription (private doctor / another RHU)"
+              }
+            >
               EXTERNAL
             </span>
-          )}
+          );
+        })()}
       </TableCell>
       <TableCell>{searchedChar(query, item.lastname)}</TableCell>
       <TableCell>{searchedChar(query, item.firstname)}</TableCell>

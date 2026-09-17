@@ -246,7 +246,7 @@ const DiagnoseHome = () => {
         `${data.firstname} ${data.lastname}`,
       );
       // Match: same first+last name (case-insensitive) AND same birthday if provided
-      const matches = result.list.filter((p) => {
+      const matches = result.list.filter((p: Patient) => {
         const nameMatch =
           p.firstname?.toLowerCase() === data.firstname.toLowerCase() &&
           p.lastname?.toLowerCase() === data.lastname.toLowerCase();

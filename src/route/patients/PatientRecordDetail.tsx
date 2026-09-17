@@ -32,7 +32,17 @@ interface MedicineTransactionItemFull {
   storage?: { id: string; name: string } | null;
 }
 
-interface MedicineTransactionFull extends MedicineTransaction {
+/**
+ * What this screen's endpoint actually returns.
+ *
+ * `prescription` is narrowed to the five fields the query selects, which is
+ * why the base type is Omit-ed rather than extended: the full Prescription
+ * carries presMed/userId/lineId/status/remark that never arrive here, and
+ * claiming otherwise would let a reader dereference something that is not
+ * on the wire.
+ */
+interface MedicineTransactionFull
+  extends Omit<MedicineTransaction, "prescription"> {
   MedicineTransactionItem?: MedicineTransactionItemFull[];
   prescription?: {
     id: string;

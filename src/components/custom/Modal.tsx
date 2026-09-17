@@ -17,7 +17,16 @@ interface Props {
   footer?: boolean | number;
   className: string;
   setOnOpen: () => void | Promise<void>;
-  onFunction?: () => void | Promise<void>;
+  /**
+   * The confirm action. Its return value is discarded, so the type says so.
+   *
+   * It used to be `() => void | Promise<void>`, which rejected the most
+   * natural way to write a guarded handler — `() => id && mutate(id)` returns
+   * the id, `() => x ?? null` returns null. Four call sites had the error and
+   * more were being written; widening the one type is the fix, because there
+   * is genuinely nothing here that reads what comes back.
+   */
+  onFunction?: () => unknown;
   showCloseButton?: boolean;
   yesTitle?: string;
   cancelTitle?: string;

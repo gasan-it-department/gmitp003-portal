@@ -472,7 +472,11 @@ const BulkDispense = ({ token, lineId }: Props) => {
         name: p.picked!.name,
         serialNumber: p.picked!.serialNumber,
         storageId: p.storage!.id,
-        storageLabel: p.storage!.name ?? p.storage!.refNumber,
+        // Both of these are nullable. A storage row with neither would
+        // have put null on the line and printed blank on the slip; say
+        // which storage it is, or say plainly that it has no label.
+        storageLabel:
+          p.storage!.name ?? p.storage!.refNumber ?? "Unlabelled storage",
         quantity: n,
       },
     ]);

@@ -53,6 +53,7 @@ const PHARMACY_COPY = {
   heading: "Who can use the mobile Pharmacy app",
   body:
     "Only the users listed below can scan, add stock, and sync medicine data from the mobile app. Everyone else is blocked — this protects your medicine records from unauthorized changes. Add or remove access anytime; you can add yourself too.",
+  emptyTitle: "No one has mobile access yet",
   emptyBody:
     "Until you add someone, no one can use the mobile pharmacy scanner or add stock from a phone.",
 };

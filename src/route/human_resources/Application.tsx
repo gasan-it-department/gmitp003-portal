@@ -124,9 +124,9 @@ const Application = () => {
   const { handleSubmit, control, setValue, watch } = form;
 
   const tags = useFieldArray({ control, name: "tags" });
-  const dateFrom = watch("dateFrom");
-  const dateTo = watch("dateTo");
-  const position = watch("positionId");
+  // Only the tag list is read here. The three scalar filters were watched
+  // and never used, which also meant this component re-rendered on every
+  // keystroke in three fields for nothing.
   const allTags = watch("tags");
 
   // Filters live in queryKey so cache stays consistent without manual refetches.

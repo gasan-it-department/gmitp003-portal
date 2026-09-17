@@ -731,10 +731,21 @@ export const ContactApplicationSchema = z.object({
   subject: z.string().min(4, "Subject must at least have 4 characters."),
 });
 
+/**
+  * Applicant list filters.
+  *
+  * Every field is required-but-possibly-empty rather than optional. The form
+  * initialises all of them to "" and an empty string already means "no
+  * filter", so `.optional()` bought nothing and cost a lot: the screen's own
+  * FilterValues interface declares them required, which made the resolver
+  * type disagree with the form type, and react-hook-form then reported every
+  * `control` it was handed as an unrelated Control<…>. Eight errors, one
+  * mismatch.
+  */
 export const RefineApplicationSchema = z.object({
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-  positionId: z.string().optional(),
+  dateFrom: z.string(),
+  dateTo: z.string(),
+  positionId: z.string(),
   tags: z.array(z.object({ cont: z.string(), tag: z.string() })),
 });
 
@@ -960,6 +971,11 @@ export const NewPatientDiagnoseSchema = z.object({
   middlename: z.string().optional(),
   birthday: z.string().optional(),
   phoneNumber: z.string().optional(),
+  // The form has always rendered a PhilHealth field and the handler has
+  // always forwarded it, but it was missing here — and zod strips what it
+  // does not declare, so the number a clerk typed was discarded between
+  // the input and the submit handler. Never reached the patient record.
+  philHealthNo: z.string().optional(),
   email: z
     .string()
     .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {

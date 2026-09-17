@@ -7,6 +7,11 @@ interface CreatePrescriptionData {
   lastname: string;
   birthday?: string;
   phoneNumber?: string;
+  philHealthNo?: string;
+  /** Prescribed elsewhere — a private doctor or another RHU. */
+  external?: boolean;
+  /** Free text naming that source; only meaningful when `external`. */
+  externalSource?: string;
   email?: string;
   barangayId?: string;
   municipalId?: string;

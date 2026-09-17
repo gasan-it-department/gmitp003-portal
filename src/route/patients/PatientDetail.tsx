@@ -33,9 +33,6 @@ import PublicBarangaySelect from "@/layout/PublicBarangaySelect";
 //icons
 import {
   User,
-  Phone,
-  Mail,
-  CalendarDays,
   MapPin,
   HeartPulse,
   Loader2,

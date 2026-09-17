@@ -26,7 +26,6 @@ import {
   Hash,
   Calendar,
   Users,
-  FileText,
   GraduationCap,
   Banknote,
   History,

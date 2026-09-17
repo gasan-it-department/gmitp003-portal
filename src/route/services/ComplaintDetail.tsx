@@ -32,7 +32,6 @@ import {
   UserX,
   Paperclip,
   Upload,
-  X,
   Eye,
   Download,
   Trash2,
