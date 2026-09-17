@@ -22,7 +22,7 @@ import {
   Network,
 } from "lucide-react";
 
-import type { ArchiveDocument } from "@/interface/data";
+import { archiveDisposalDates, type ArchiveDocument } from "@/interface/data";
 import { archiveDocType } from "@/utils/helper";
 
 const formatDateTime = (iso?: Date | string | null) => {
@@ -309,27 +309,60 @@ const ArchiveDetail = () => {
                   </div>
                 )}
 
-                {data.retentionDate && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-                      Retention Date
-                    </p>
-                    <p className="text-xs text-gray-700 mt-1">
-                      {formatDateTime(data.retentionDate)}
-                    </p>
-                  </div>
-                )}
+                {/*
+                  Both dates come from `archiveDisposalDates`. Safe Date used
+                  to read `data.safeDate`, which the API does not send — it is
+                  on the preservation row — so a date somebody typed into the
+                  upload form was stored and then never shown again.
+                */}
+                {(() => {
+                  const d = archiveDisposalDates(data);
+                  return (
+                    <>
+                      {d.retention ? (
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                            Retention Date
+                          </p>
+                          <p className="text-xs text-gray-700 mt-1">
+                            {formatDateTime(d.retention)}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            Eligible for disposal
+                          </p>
+                        </div>
+                      ) : null}
 
-                {data.safeDate && (
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-                      Safe Date
-                    </p>
-                    <p className="text-xs text-gray-700 mt-1">
-                      {formatDateTime(data.safeDate)}
-                    </p>
-                  </div>
-                )}
+                      {d.safe ? (
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                            Safe Date
+                          </p>
+                          <p className="text-xs text-gray-700 mt-1">
+                            {formatDateTime(d.safe)}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            Safe to dispose
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {d.permanent ? (
+                        <div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wide">
+                            Retention
+                          </p>
+                          <p className="text-xs text-gray-700 mt-1">
+                            Kept permanently
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            No disposal date was set
+                          </p>
+                        </div>
+                      ) : null}
+                    </>
+                  );
+                })()}
 
                 {data.receivingRoom && (
                   <div>

@@ -32,7 +32,7 @@ import {
   Archive as ArchiveIcon,
 } from "lucide-react";
 
-import type { ArchiveDocument } from "@/interface/data";
+import { archiveDisposalDates, type ArchiveDocument } from "@/interface/data";
 
 interface ListProps {
   list: ArchiveDocument[];
@@ -252,18 +252,36 @@ const Archive = () => {
                           {formatDate(item.timestamp)}
                         </TableCell>
                         <TableCell className="px-3 py-2">
-                          {item.retentionDate ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] px-1.5 py-0"
-                            >
-                              {formatDate(item.retentionDate)}
-                            </Badge>
-                          ) : (
-                            <span className="text-[10px] text-gray-400">
-                              Permanent
-                            </span>
-                          )}
+                          {(() => {
+                            // "Permanent" is only true when NEITHER date is
+                            // set. A document with just a safe date was being
+                            // labelled permanent here while the detail page
+                            // showed a disposal date — say what is actually
+                            // on the record.
+                            const d = archiveDisposalDates(item);
+                            if (d.permanent) {
+                              return (
+                                <span className="text-[10px] text-gray-400">
+                                  Permanent
+                                </span>
+                              );
+                            }
+                            return (
+                              <Badge
+                                variant="secondary"
+                                className="text-[10px] px-1.5 py-0"
+                                title={
+                                  d.retention
+                                    ? "Eligible for disposal on this date"
+                                    : "Safe to dispose on this date"
+                                }
+                              >
+                                {d.retention
+                                  ? formatDate(d.retention)
+                                  : `Safe ${formatDate(d.safe as string | Date)}`}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right">
                           <ChevronRight className="h-3 w-3 text-gray-300 group-hover:text-blue-500 ml-auto transition-colors" />

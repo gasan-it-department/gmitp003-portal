@@ -1645,6 +1645,24 @@ export interface DocumentAbstractProps {
   timestamp: string;
 }
 
+/**
+  * When an archived document may be disposed of.
+  *
+  * Its own row, written alongside the ArchiveDocument when either date is
+  * given. `safeDate` lives ONLY here — there is no column for it on the
+  * document itself, which is why reading `archive.safeDate` silently
+  * returns nothing.
+  */
+export interface ArchivePreservationProps {
+  id: string;
+  type?: number;
+  retentionDate?: string | Date | null;
+  detentionDate?: string | Date | null;
+  safeDate?: string | Date | null;
+  dateUpdated?: string | Date | null;
+  timestamp?: string | Date;
+}
+
 export interface ArchiveDocument {
   id: string;
   status: number;
@@ -1658,7 +1676,35 @@ export interface ArchiveDocument {
   abstract?: DocumentAbstractProps | null;
   documentAbstractId?: string | null;
   docType: number;
+  /**
+   * Disposal dates.
+   *
+   * `retentionDate` is written here AND on the preservation row from the
+   * same form field, so the two agree; read them through
+   * `archiveDisposalDates` rather than picking one at each call site.
+   * There is no `safeDate` here — that one is on `preservation` only.
+   */
+  retentionDate?: string | Date | null;
+  detentionDate?: string | Date | null;
+  preservation?: ArchivePreservationProps | null;
+  archivePreservationId?: string | null;
 }
+
+/**
+ * The two dates a reader actually wants, from wherever they were stored.
+ *
+ * Retention: eligible for disposal. Safe: disposal is risk-free. Neither
+ * set means the document is kept permanently — but only if BOTH are unset,
+ * which is the bit a single-field check gets wrong.
+ */
+export const archiveDisposalDates = (a: {
+  retentionDate?: string | Date | null;
+  preservation?: ArchivePreservationProps | null;
+}) => {
+  const retention = a.preservation?.retentionDate ?? a.retentionDate ?? null;
+  const safe = a.preservation?.safeDate ?? null;
+  return { retention, safe, permanent: !retention && !safe };
+};
 
 export interface MedicineQualityBreakdown {
   quality: string;
