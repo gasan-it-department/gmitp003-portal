@@ -172,59 +172,17 @@ const NewDisseminationRoom = () => {
   }, [data]);
 
   /**
-   * Signatories, rebuilt from the saved arrangements.
+   * Has the saved signatory list been rebuilt yet?
    *
-   * Needs the candidate list as well as the draft: the wizard works in
-   * RoomAuthorizedUser ids, while an arrangement records the User it
-   * belongs to. So this waits for both and matches on the user. Anyone no
-   * longer on the candidate list — they lost their room — is carried
-   * through from the arrangement itself rather than quietly dropped, because
-   * the owner needs to SEE a slot in trouble, not find it missing.
-   *
-   * Until this has run the Signatories step cannot save. An empty list is a
+   * Until it has, the Signatories step must not save: an empty list is a
    * real instruction ("nobody signs"), and sending one by accident is what
-   * used to delete the setup.
+   * used to delete the setup. The effect that fills these lives further
+   * down, below the candidate query it reads — putting it up here is what
+   * caused "Cannot access 'sCands' before initialization", because a hook's
+   * dependency array is evaluated at the point it appears in the body.
    */
   const sigsHydrated = useRef(false);
   const [sigsReady, setSigsReady] = useState(false);
-
-  useEffect(() => {
-    if (sigsHydrated.current || !data) return;
-    const arr = (data as any).signatotyArrangement;
-    if (!Array.isArray(arr)) return;
-    if (arr.length === 0) {
-      sigsHydrated.current = true;
-      setSigsReady(true);
-      return;
-    }
-    const cands = sCands.data?.list;
-    // Waiting is right while it is still loading, but not forever: if the
-    // candidate list errored, rebuild from the arrangements alone rather
-    // than leaving the step permanently unusable.
-    if (!cands && !sCands.isError) return;
-
-    const byUser = new Map<string, SignatoryCandidate>();
-    for (const c of cands ?? []) {
-      const uid = c.user?.id;
-      if (uid && !byUser.has(uid)) byUser.set(uid, c);
-    }
-
-    const rebuilt: SignatoryCandidate[] = [];
-    for (const a of [...arr].sort((x: any, y: any) => x.index - y.index)) {
-      if (!a.userId) continue; // a slot nobody was ever assigned to
-      rebuilt.push(
-        byUser.get(a.userId) ?? {
-          id: a.id,
-          type: 1,
-          user: a.user ?? { id: a.userId },
-          receivingRoom: null,
-        },
-      );
-    }
-    setSignatories(rebuilt);
-    sigsHydrated.current = true;
-    setSigsReady(true);
-  }, [data, sCands.data, sCands.isError]);
 
   /**
    * Open on the step this draft actually reached.
@@ -276,6 +234,57 @@ const NewDisseminationRoom = () => {
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
   });
+
+
+  /**
+   * Signatories, rebuilt from the saved arrangements.
+   *
+   * Needs the candidate list as well as the draft: the wizard works in
+   * RoomAuthorizedUser ids, while an arrangement records the User it
+   * belongs to. So this waits for both and matches on the user. Anyone no
+   * longer on the candidate list — they lost their room — is carried
+   * through from the arrangement itself rather than quietly dropped, because
+   * the owner needs to SEE a slot in trouble, not find it missing.
+   *
+   * Has to sit below `sCands`: the dependency array reads it during render.
+   */
+  useEffect(() => {
+    if (sigsHydrated.current || !data) return;
+    const arr = (data as any).signatotyArrangement;
+    if (!Array.isArray(arr)) return;
+    if (arr.length === 0) {
+      sigsHydrated.current = true;
+      setSigsReady(true);
+      return;
+    }
+    const cands = sCands.data?.list;
+    // Waiting is right while it is still loading, but not forever: if the
+    // candidate list errored, rebuild from the arrangements alone rather
+    // than leaving the step permanently unusable.
+    if (!cands && !sCands.isError) return;
+
+    const byUser = new Map<string, SignatoryCandidate>();
+    for (const c of cands ?? []) {
+      const uid = c.user?.id;
+      if (uid && !byUser.has(uid)) byUser.set(uid, c);
+    }
+
+    const rebuilt: SignatoryCandidate[] = [];
+    for (const a of [...arr].sort((x: any, y: any) => x.index - y.index)) {
+      if (!a.userId) continue; // a slot nobody was ever assigned to
+      rebuilt.push(
+        byUser.get(a.userId) ?? {
+          id: a.id,
+          type: 1,
+          user: a.user ?? { id: a.userId },
+          receivingRoom: null,
+        },
+      );
+    }
+    setSignatories(rebuilt);
+    sigsHydrated.current = true;
+    setSigsReady(true);
+  }, [data, sCands.data, sCands.isError]);
 
   const filteredTargets = useMemo(() => {
     const list = tCands.data?.list ?? [];
