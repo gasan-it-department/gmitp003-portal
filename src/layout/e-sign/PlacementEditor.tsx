@@ -31,6 +31,8 @@ import {
   Plus,
   Minus,
   PenLine,
+  Lock,
+  Check,
 } from "lucide-react";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -73,6 +75,24 @@ const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
 const uid = () => Math.random().toString(36).slice(2);
 const MIN_BP = 100;
 
+/**
+ * What the server would be sent for this set of boxes.
+ *
+ * Geometry only. The local `key` is a client-side handle that changes on
+ * every round trip, so including it would make every comparison fail. Two
+ * lists with the same fingerprint are the same save, and the second one is
+ * not worth making.
+ */
+const fingerprintOf = (list: Placement[]) =>
+  JSON.stringify(
+    list
+      .map(
+        (p) =>
+          `${p.page}:${p.slotIndex}:${p.xAxis}:${p.yAxis}:${p.width}:${p.height}`,
+      )
+      .sort(),
+  );
+
 interface Props {
   queueRoomId: string;
   token: string;
@@ -81,6 +101,9 @@ interface Props {
   /** Notifies the parent when the max slot used changes (so the
    *  signatories step can demand at least that many signatories). */
   onMaxSlotChange?: (n: number) => void;
+  /** Takes the user back to the step where signatories are chosen. Given
+   *  by the wizard; absent when the editor is opened on its own. */
+  onPickSignatories?: () => void;
 }
 
 const PlacementEditor = ({
@@ -89,6 +112,7 @@ const PlacementEditor = ({
   userId,
   lineId,
   onMaxSlotChange,
+  onPickSignatories,
 }: Props) => {
   const qc = useQueryClient();
 
@@ -115,6 +139,17 @@ const PlacementEditor = ({
    */
   const noSigning = !isLoading && !!data && sigs.length === 0;
 
+  /**
+   * May the user put a new box on the page?
+   *
+   * Only if somebody is going to sign it. A routing with no signatories is
+   * a memo being handed round — the recipients need to HAVE it, not sign
+   * it — and a signature box on one is a box that will sit empty forever.
+   * Existing boxes stay removable; drawing another is refused here and
+   * again on the server, because this is the UI for one of two clients.
+   */
+  const canDraw = !noSigning;
+
   // Active document
   const [activeDocId, setActiveDocId] = useState<string | null>(null);
   useEffect(() => {
@@ -140,11 +175,41 @@ const PlacementEditor = ({
     return m;
   }, [sigs]);
 
+  /**
+   * Which document the local `placements` array was last filled from, and
+   * the fingerprint of what the server holds for it.
+   *
+   * Hydration keys on the document ID, never on the object identity of the
+   * query result. Saving deletes every SignatureCoor row and recreates it,
+   * so a refetched document is never deeply equal to the one before — react
+   * query hands back a new object and this effect used to re-run, replacing
+   * the local array with one carrying entirely new keys. Two things broke:
+   *
+   *   A drag in flight still held the old key. Its next update matched
+   *   nothing, so it was appended instead of applied — the duplicate box.
+   *
+   *   Re-running also re-armed the auto-save, which saved, which refetched,
+   *   which re-hydrated. Production logs show that loop rewriting every box
+   *   roughly every 0.8 seconds for as long as the step stayed open.
+   *
+   * Once loaded, the local array is the truth. The server is told about it;
+   * it does not get to tell us back.
+   */
+  const hydratedFor = useRef<string | null>(null);
+  /** Fingerprint of what the server holds for the active document. State,
+   *  not a ref, because the Save button is painted from it. */
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null);
+
   useEffect(() => {
     if (!activeDoc) {
-      setPlacements([]);
+      if (hydratedFor.current !== null) {
+        hydratedFor.current = null;
+        setSavedFingerprint(null);
+        setPlacements([]);
+      }
       return;
     }
+    if (hydratedFor.current === activeDoc.id) return;
     const next: Placement[] = [];
     for (const p of activeDoc.pages) {
       for (const c of p.signCoor) {
@@ -162,6 +227,9 @@ const PlacementEditor = ({
         });
       }
     }
+    hydratedFor.current = activeDoc.id;
+    // What we just read IS what the server holds — nothing to save yet.
+    setSavedFingerprint(fingerprintOf(next));
     setPlacements(next);
   }, [activeDoc, arrIdToSlot]);
 
@@ -170,6 +238,9 @@ const PlacementEditor = ({
     if (!onMaxSlotChange) return;
     let max = 0;
     for (const d of docs) {
+      // The active document's server rows are stale the moment the user
+      // draws anything; `placements` below is the live version of it.
+      if (d.id === activeDocId) continue;
       for (const p of d.pages) {
         for (const c of p.signCoor) {
           const slot = c.signatoryArrangementId
@@ -182,7 +253,7 @@ const PlacementEditor = ({
     // also include unsaved local placements on active doc
     for (const p of placements) if (p.slotIndex > max) max = p.slotIndex;
     onMaxSlotChange(max);
-  }, [docs, placements, arrIdToSlot, onMaxSlotChange]);
+  }, [docs, placements, arrIdToSlot, activeDocId, onMaxSlotChange]);
 
   // Slot count is driven by the queue's signatories when they exist
   // (signatories are picked before this step). Falls back to a free-form
@@ -225,14 +296,22 @@ const PlacementEditor = ({
   const [tool, setTool] = useState<"select" | "draw">("draw");
 
   // Save (per document)
+  /**
+   * Saves an explicit document and an explicit set of boxes.
+   *
+   * It used to read both off component state at the moment it fired, which
+   * is fine for a button and wrong for anything scheduled: a save queued
+   * for document A and flushed after the user clicked document B would
+   * have written A's boxes onto B. Passing them in makes that impossible.
+   */
   const saveMu = useMutation({
-    mutationFn: () =>
+    mutationFn: (arg: { documentId: string; placements: Placement[] }) =>
       saveSignaturePlacements(token, {
         queueRoomId,
-        documentId: activeDocId as string,
+        documentId: arg.documentId,
         userId,
         lineId,
-        placements: placements.map((p) => ({
+        placements: arg.placements.map((p) => ({
           page: p.page,
           slotIndex: p.slotIndex,
           xAxis: p.xAxis,
@@ -242,6 +321,9 @@ const PlacementEditor = ({
         })),
       }),
     onSuccess: () => {
+      // Refetching here is safe again now that hydration keys on document
+      // ID: the response arrives, nothing re-reads it into local state, and
+      // the cache is correct for the next time this editor is mounted.
       qc.invalidateQueries({
         queryKey: ["dissemination", "documents", queueRoomId],
       });
@@ -256,32 +338,77 @@ const PlacementEditor = ({
     },
   });
 
-  // Auto-save: every time the placements array for the active document
-  // changes, debounce 700ms and persist. This kills the entire class of
-  // "I drew boxes but never clicked Save" bugs that left dispatched
-  // queues with zero SignatureCoor rows. Skips while the doc is still
-  // hydrating (no activeDocId yet).
-  const skipAutoSaveRef = useRef(true);
+  const fingerprint = useMemo(() => fingerprintOf(placements), [placements]);
+  const dirty = savedFingerprint !== null && fingerprint !== savedFingerprint;
+
+  /**
+   * True while a box is being drawn, moved or resized.
+   *
+   * Saving mid-drag is work thrown away — the user has not finished moving
+   * the box — and it is the moment the duplicate used to appear. The ref is
+   * what the effect reads; `dragTick` is what makes React look again when
+   * the pointer comes up, since a ref changing is invisible to it.
+   */
+  const draggingRef = useRef(false);
+  const [dragTick, setDragTick] = useState(0);
+  const setDragging = useCallback((on: boolean) => {
+    if (draggingRef.current === on) return;
+    draggingRef.current = on;
+    // Bump on BOTH edges. Going down has to re-run the effect so that a
+    // timer armed by an earlier edit is cleared before it can fire into
+    // the middle of this drag; coming up has to re-run it to arm the save
+    // the drag just earned.
+    setDragTick((n) => n + 1);
+  }, []);
+
+  // Auto-save: once the boxes actually differ from what the server holds,
+  // and the pointer is not mid-drag, debounce 700ms and persist. This kills
+  // the "I drew boxes but never clicked Save" class of bug without the
+  // write loop the naive version caused — an unchanged list is never sent.
   useEffect(() => {
-    // Skip first effect run for a freshly-loaded doc (hydration sets
-    // placements once, no need to round-trip back to the server).
-    if (skipAutoSaveRef.current) {
-      skipAutoSaveRef.current = false;
-      return;
-    }
     if (!activeDocId) return;
+    if (!dirty) return;
+    if (draggingRef.current) return;
+    // One save at a time. The server replaces a document's whole set of
+    // boxes, so two overlapping writes can land in either order and the
+    // loser silently wins. When this one settles the effect runs again.
+    if (saveMu.isPending) return;
+    const sending = fingerprint;
+    const docId = activeDocId;
+    const rows = placements;
     const t = setTimeout(() => {
-      saveMu.mutate();
+      saveMu.mutate(
+        { documentId: docId, placements: rows },
+        { onSuccess: () => setSavedFingerprint(sending) },
+      );
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placements, activeDocId]);
+  }, [fingerprint, dirty, activeDocId, dragTick, saveMu.isPending]);
 
-  // When the active doc changes, the next render will hydrate placements
-  // from the server response — don't echo that back as a "save".
-  useEffect(() => {
-    skipAutoSaveRef.current = true;
-  }, [activeDocId]);
+  /** The manual button. Same path as the auto-save, no debounce. */
+  const saveNow = () => {
+    if (!activeDocId || saveMu.isPending) return;
+    const sending = fingerprint;
+    saveMu.mutate(
+      { documentId: activeDocId, placements },
+      { onSuccess: () => setSavedFingerprint(sending) },
+    );
+  };
+
+  /**
+   * Move to another document, flushing anything the debounce is still
+   * holding. Switching used to drop up to 700ms of work on the floor,
+   * because hydrating the new document replaces the array the pending save
+   * would have read.
+   */
+  const switchDoc = (id: string) => {
+    if (id === activeDocId) return;
+    if (activeDocId && dirty) {
+      saveMu.mutate({ documentId: activeDocId, placements });
+    }
+    setActiveDocId(id);
+  };
 
   // Upload / remove docs
   const fileRef = useRef<HTMLInputElement>(null);
@@ -342,10 +469,21 @@ const PlacementEditor = ({
 
   const placementsForPage = (n: number) =>
     placements.filter((p) => p.page === n);
-  const upsert = (p: Placement) =>
+  const addBox = (p: Placement) => setPlacements((prev) => [...prev, p]);
+
+  /**
+   * Move or resize a box that already exists. Never appends.
+   *
+   * A drag registers window listeners that close over the placement as it
+   * was at pointer-down. If that box has since gone — deleted, or replaced
+   * by a re-hydration — the pointer is dragging something that no longer
+   * exists, and adding it back is how one box became two. Dropping the
+   * update is the honest outcome: there is nothing there to move.
+   */
+  const updateBox = (p: Placement) =>
     setPlacements((prev) => {
       const i = prev.findIndex((x) => x.key === p.key);
-      if (i === -1) return [...prev, p];
+      if (i === -1) return prev;
       const next = [...prev];
       next[i] = p;
       return next;
@@ -387,57 +525,78 @@ const PlacementEditor = ({
           className="hidden"
           onChange={(e) => handleUpload(e.target.files)}
         />
-        <div className="flex items-center bg-gray-100 rounded-md p-0.5 ml-2">
-          <button
-            type="button"
-            className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 ${
-              tool === "select"
-                ? "bg-white shadow-sm text-gray-900"
-                : "text-gray-600"
-            }`}
-            onClick={() => setTool("select")}
-          >
-            <MousePointer2 className="h-3 w-3" /> Select
-          </button>
-          <button
-            type="button"
-            className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 ${
-              tool === "draw"
-                ? "bg-white shadow-sm text-gray-900"
-                : "text-gray-600"
-            }`}
-            onClick={() => setTool("draw")}
-          >
-            <Square className="h-3 w-3" /> Draw
-          </button>
-        </div>
-        <div className="ml-2 text-[10px] text-gray-500">
-          Active slot:{" "}
-          <span
-            className="font-semibold px-1.5 py-0.5 rounded text-white"
-            style={{ background: colorFor(activeSlot).border }}
-          >
-            #{activeSlot}
-          </span>
-        </div>
+        {canDraw ? (
+          <div className="flex items-center bg-gray-100 rounded-md p-0.5 ml-2">
+            <button
+              type="button"
+              className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 ${
+                tool === "select"
+                  ? "bg-white shadow-sm text-gray-900"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setTool("select")}
+            >
+              <MousePointer2 className="h-3 w-3" /> Select
+            </button>
+            <button
+              type="button"
+              className={`h-6 px-2 rounded text-[10px] flex items-center gap-1 ${
+                tool === "draw"
+                  ? "bg-white shadow-sm text-gray-900"
+                  : "text-gray-600"
+              }`}
+              onClick={() => setTool("draw")}
+            >
+              <Square className="h-3 w-3" /> Draw
+            </button>
+          </div>
+        ) : (
+          <div className="ml-2 flex items-center gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            <Lock className="h-3 w-3" />
+            {placements.length > 0
+              ? "No signatories — these boxes can only be removed"
+              : "No signatories — nothing to place"}
+          </div>
+        )}
+        {canDraw ? (
+          <div className="ml-2 text-[10px] text-gray-500">
+            Active slot:{" "}
+            <span
+              className="font-semibold px-1.5 py-0.5 rounded text-white"
+              style={{ background: colorFor(activeSlot).border }}
+            >
+              #{activeSlot}
+            </span>
+          </div>
+        ) : null}
         <Badge variant="outline" className="text-[10px] h-6 px-2 ml-auto">
           {placements.length} box
           {placements.length === 1 ? "" : "es"} on this document
         </Badge>
         <Button
           size="sm"
+          variant={dirty ? "default" : "outline"}
           className="h-7 text-xs"
-          onClick={() => saveMu.mutate()}
-          disabled={
-            saveMu.isPending || !activeDocId || placements.length === 0
+          onClick={saveNow}
+          disabled={saveMu.isPending || !activeDocId || !dirty}
+          title={
+            dirty
+              ? "Save now instead of waiting for the auto-save"
+              : "Everything on this document is already saved"
           }
         >
           {saveMu.isPending ? (
             <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-          ) : (
+          ) : dirty ? (
             <Save className="h-3.5 w-3.5 mr-1" />
+          ) : (
+            <Check className="h-3.5 w-3.5 mr-1" />
           )}
-          Save placements
+          {saveMu.isPending
+            ? "Saving…"
+            : dirty
+              ? "Save placements"
+              : "Saved"}
         </Button>
       </div>
 
@@ -458,10 +617,13 @@ const PlacementEditor = ({
             <div className="divide-y">
               {docs.map((d) => {
                 const on = d.id === activeDocId;
-                const count = d.pages.reduce(
-                  (a, p) => a + p.signCoor.length,
-                  0,
-                );
+                // The active document's count comes from local state: the
+                // save deliberately no longer refetches this query, so its
+                // server-side signCoor rows are a snapshot from load time.
+                const count =
+                  d.id === activeDocId
+                    ? placements.length
+                    : d.pages.reduce((a, p) => a + p.signCoor.length, 0);
                 return (
                   <div
                     key={d.id}
@@ -472,7 +634,7 @@ const PlacementEditor = ({
                     <button
                       type="button"
                       className="flex-1 min-w-0 text-left flex items-center gap-2"
-                      onClick={() => setActiveDocId(d.id)}
+                      onClick={() => switchDoc(d.id)}
                     >
                       <FileText
                         className={`h-3.5 w-3.5 ${on ? "text-blue-600" : "text-gray-500"}`}
@@ -536,24 +698,51 @@ const PlacementEditor = ({
               }
             >
               <div className="py-4 px-4 flex flex-col items-center gap-4">
+                {noSigning ? (
+                  <div className="w-full max-w-[820px] rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+                    <Lock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-amber-900">
+                        Signature boxes are off for this routing
+                      </div>
+                      <div className="text-[10px] text-amber-800 leading-relaxed mt-0.5">
+                        {placements.length > 0
+                          ? "Nobody is signing, so these boxes would never be filled. Remove them, or go back and choose who signs."
+                          : "Nobody is signing this document. The recipients get it as it is — there is nothing to place on the page."}
+                      </div>
+                    </div>
+                    {onPickSignatories ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] shrink-0 bg-white"
+                        onClick={onPickSignatories}
+                      >
+                        Choose signatories
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
                 {Array.from({ length: numPages }, (_, i) => i + 1).map(
                   (pn) => (
                     <PageCanvas
                       key={pn}
                       pageNumber={pn}
-                      tool={tool}
+                      tool={canDraw ? tool : "select"}
+                      canDraw={canDraw}
                       activeSlot={activeSlot}
                       placements={placementsForPage(pn)}
                       onCreate={(rect) =>
-                        upsert({
+                        addBox({
                           key: uid(),
                           page: pn,
                           slotIndex: activeSlot,
                           ...rect,
                         })
                       }
-                      onUpdate={upsert}
+                      onUpdate={updateBox}
                       onRemove={removeBox}
+                      onDragChange={setDragging}
                     />
                   ),
                 )}
@@ -679,14 +868,19 @@ export default PlacementEditor;
 const PageCanvas = ({
   pageNumber,
   tool,
+  canDraw,
   activeSlot,
   placements,
   onCreate,
   onUpdate,
   onRemove,
+  onDragChange,
 }: {
   pageNumber: number;
   tool: "select" | "draw";
+  /** False when the routing has no signatories: existing boxes can still
+   *  be removed, but no new one may be drawn. */
+  canDraw: boolean;
   activeSlot: number;
   placements: Placement[];
   onCreate: (rect: {
@@ -697,6 +891,9 @@ const PageCanvas = ({
   }) => void;
   onUpdate: (p: Placement) => void;
   onRemove: (key: string) => void;
+  /** Raised while any pointer drag is in progress, so the auto-save can
+   *  wait for the user to let go. */
+  onDragChange: (dragging: boolean) => void;
 }) => {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState<null | {
@@ -743,6 +940,7 @@ const PageCanvas = ({
   }, [tool, cancelDraw]);
 
   const startDraw = (e: React.PointerEvent) => {
+    if (!canDraw) return;
     if (tool !== "draw") return;
     if (drawingId.current !== null) return; // one draw at a time
     if ((e.target as HTMLElement).closest("[data-box='1']")) return;
@@ -755,6 +953,7 @@ const PageCanvas = ({
     draftRef.current = seed;
     drawingId.current = e.pointerId;
     setDraft(seed);
+    onDragChange(true);
 
     const move = (ev: PointerEvent) => {
       if (ev.pointerId !== drawingId.current) return;
@@ -776,6 +975,7 @@ const PageCanvas = ({
       // Clear BEFORE creating: onCreate re-renders this overlay, and a draft
       // still sitting there during that render is the whole bug.
       cancelDraw();
+      onDragChange(false);
       if (!d || ev.type === "pointercancel") return;
       const w = Math.abs(d.w);
       const h = Math.abs(d.h);
@@ -809,7 +1009,7 @@ const PageCanvas = ({
         ref={wrapRef}
         className="absolute inset-0"
         style={{
-          cursor: tool === "draw" ? "crosshair" : "default",
+          cursor: canDraw && tool === "draw" ? "crosshair" : "default",
           touchAction: "none",
         }}
         onPointerDown={startDraw}
@@ -820,10 +1020,12 @@ const PageCanvas = ({
             placement={p}
             color={colorFor(p.slotIndex)}
             tool={tool}
+            canDraw={canDraw}
             onUpdate={onUpdate}
             onRemove={onRemove}
             onReassign={(slot) => onUpdate({ ...p, slotIndex: slot })}
             onInteract={cancelDraw}
+            onDragChange={onDragChange}
           />
         ))}
         {draft ? (
@@ -852,19 +1054,26 @@ const BoxView = ({
   placement,
   color,
   tool,
+  canDraw,
   onUpdate,
   onRemove,
   onReassign,
   onInteract,
+  onDragChange,
 }: {
   placement: Placement;
   color: { bg: string; border: string; text: string };
   tool: "select" | "draw";
+  /** False when the routing has no signatories — the box may be removed
+   *  but not reassigned to a slot that will never be filled. */
+  canDraw: boolean;
   onUpdate: (p: Placement) => void;
   onRemove: (key: string) => void;
   onReassign: (slot: number) => void;
   /** Called before a move or resize, so a half-drawn box is abandoned. */
   onInteract?: () => void;
+  /** Raised for the length of a move or resize, so the auto-save waits. */
+  onDragChange: (dragging: boolean) => void;
 }) => {
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -872,6 +1081,7 @@ const BoxView = ({
     if (tool === "draw") return;
     e.stopPropagation();
     onInteract?.();
+    onDragChange(true);
     const target = e.currentTarget as HTMLElement;
     const wrap = target.parentElement as HTMLElement;
     const wrapRect = wrap.getBoundingClientRect();
@@ -890,6 +1100,7 @@ const BoxView = ({
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       target.releasePointerCapture?.(ev.pointerId);
+      onDragChange(false);
     };
     target.setPointerCapture(e.pointerId);
     window.addEventListener("pointermove", move);
@@ -899,6 +1110,7 @@ const BoxView = ({
   const startResize = (e: React.PointerEvent) => {
     e.stopPropagation();
     onInteract?.();
+    onDragChange(true);
     const handle = e.currentTarget as HTMLElement;
     const wrap = (boxRef.current as HTMLElement).parentElement as HTMLElement;
     const wrapRect = wrap.getBoundingClientRect();
@@ -923,6 +1135,7 @@ const BoxView = ({
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       handle.releasePointerCapture?.(ev.pointerId);
+      onDragChange(false);
     };
     handle.setPointerCapture(e.pointerId);
     window.addEventListener("pointermove", move);
@@ -952,7 +1165,10 @@ const BoxView = ({
       >
         Slot #{placement.slotIndex}
       </div>
-      <div className="absolute -top-5 right-6 opacity-0 group-hover:opacity-100 transition flex items-center gap-0.5">
+      <div
+        className="absolute -top-5 right-6 opacity-0 group-hover:opacity-100 transition flex items-center gap-0.5"
+        hidden={!canDraw}
+      >
         {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
           <button
             key={s}

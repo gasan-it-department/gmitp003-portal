@@ -396,6 +396,7 @@ const NewDisseminationRoom = () => {
             userId={auth.userId as string}
             lineId={lineId as string}
             onMaxSlotChange={setMaxSlot}
+            onPickSignatories={() => setStep(1)}
           />
         ) : (
           <ReviewStep
