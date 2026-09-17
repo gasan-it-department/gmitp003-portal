@@ -1,5 +1,34 @@
 import axios from "../axios";
 
+/**
+ * HR renames an employee's login.
+ *
+ * The server writes Account.username (what the login form looks up) and
+ * User.username (what the app shows) together, and rejects a name already
+ * in use by anyone else.
+ */
+export const changeEmployeeUsername = async (
+  token: string,
+  /** The employee is identified by their ACCOUNT. Who is doing the renaming
+   *  comes from the token, not from here. */
+  body: { accountId: string; username: string },
+) => {
+  const res = await axios.patch("/user/username", body, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  return res.data as {
+    message: string;
+    username: string;
+    changed: boolean;
+    previous?: string;
+  };
+};
+
 export const getUserData = async (
   token: string,
   userProfileId: string,

@@ -3,7 +3,8 @@ import { useNavigate } from "react-router";
 import { useState, useRef, useEffect } from "react";
 import { suspendAccount } from "@/db/statement";
 import { sendResetLink } from "@/db/statements/account";
-import { removeUser } from "@/db/statements/user";
+import { changeEmployeeUsername, removeUser } from "@/db/statements/user";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
 import {
@@ -27,6 +28,7 @@ import {
   //Ban,
   Info,
   Mail,
+  AtSign,
 } from "lucide-react";
 
 interface Props {
@@ -46,6 +48,9 @@ const UserProfileAction = ({
 }: Props) => {
   const [onOpen, setOnOpen] = useState(0);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  /** The new login being typed, and whatever the server said about it. */
+  const [newUsername, setNewUsername] = useState("");
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
@@ -80,6 +85,39 @@ const UserProfileAction = ({
   const handleSuspendAccount = () => {
     mutateAsync();
   };
+
+  const renameMut = useMutation({
+    mutationFn: () =>
+      changeEmployeeUsername(token, {
+        accountId,
+        username: newUsername.trim(),
+      }),
+    onSuccess: async (r) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["user-data", userId],
+        refetchType: "active",
+      });
+      setOnOpen(0);
+      setUsernameError(null);
+      toast.success(
+        r.changed
+          ? `Username changed to ${r.username}`
+          : "That is already the username",
+        {
+          description: r.changed
+            ? "They must use the new one at their next sign-in. Any session they have open stays open."
+            : undefined,
+        },
+      );
+    },
+    onError: (e: any) => {
+      // The server's reason is the useful part — a taken name, a bad
+      // character, the wrong municipality. Show it on the field.
+      setUsernameError(
+        e?.response?.data?.message ?? e?.message ?? "Could not change it.",
+      );
+    },
+  });
 
   const removeUserAccount = useMutation({
     mutationFn: () => removeUser(token, accountId, userId, lineId),
@@ -127,6 +165,24 @@ const UserProfileAction = ({
               Account Management
             </p>
           </div>
+
+          <DropdownMenuItem
+            className="cursor-pointer py-2.5"
+            onClick={() => {
+              setNewUsername(userName === "User" ? "" : userName);
+              setUsernameError(null);
+              setOnOpen(4);
+              setDropdownOpen(false);
+            }}
+          >
+            <AtSign className="mr-2 h-4 w-4 text-gray-500" />
+            <div className="flex flex-col items-start">
+              <span>Change Username</span>
+              <span className="text-xs text-gray-500 mt-0.5">
+                The name they sign in with
+              </span>
+            </div>
+          </DropdownMenuItem>
 
           <DropdownMenuItem
             className="cursor-pointer py-2.5 focus:bg-red-50 focus:text-red-600"
@@ -319,6 +375,95 @@ const UserProfileAction = ({
                   <li>This action is logged in the audit trail</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change username */}
+      <Modal
+        title="Change username"
+        className="max-w-md"
+        onOpen={onOpen === 4}
+        setOnOpen={() => {
+          if (renameMut.isPending) return;
+          setOnOpen(0);
+          setUsernameError(null);
+        }}
+        loading={renameMut.isPending}
+        footer={true}
+        yesTitle={renameMut.isPending ? "Saving..." : "Change username"}
+        onFunction={() => {
+          const v = newUsername.trim();
+          if (!v) {
+            setUsernameError("Type the new username.");
+            return;
+          }
+          if (v === userName) {
+            setUsernameError("That is already their username.");
+            return;
+          }
+          setUsernameError(null);
+          renameMut.mutate();
+        }}
+      >
+        <div className="space-y-3">
+          <div className="flex items-start gap-2 rounded-md border bg-gray-50 p-2.5">
+            <AtSign className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+            <div className="min-w-0 text-xs">
+              <p className="text-gray-700">
+                Signs in now as{" "}
+                <span className="font-semibold text-gray-900">{userName}</span>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold text-gray-700">
+              New username
+            </label>
+            <Input
+              value={newUsername}
+              autoFocus
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={renameMut.isPending}
+              onChange={(e) => {
+                setNewUsername(e.target.value);
+                if (usernameError) setUsernameError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !renameMut.isPending) {
+                  e.preventDefault();
+                  const v = newUsername.trim();
+                  if (v && v !== userName) renameMut.mutate();
+                }
+              }}
+              placeholder="e.g. jdelacruz"
+              className="mt-1 h-9 text-sm"
+            />
+            {usernameError ? (
+              <p className="mt-1 text-[11px] font-medium text-red-600">
+                {usernameError}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] text-gray-500">
+                4-32 characters. Letters, numbers, dots, dashes and
+                underscores — no spaces.
+              </p>
+            )}
+          </div>
+
+          {/* What actually happens, because a login change is the kind of
+              thing people need to be able to warn somebody about. */}
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div className="text-[11px] leading-relaxed text-amber-900">
+              They sign in with the new username from now on. Their password
+              does not change, and any session they already have open stays
+              open — so tell them before they are next locked out of a login
+              box wondering why the old one stopped working.
             </div>
           </div>
         </div>
