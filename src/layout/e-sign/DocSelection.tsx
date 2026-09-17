@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
 import PlacementEditor from "./PlacementEditor";
@@ -12,6 +12,19 @@ const DocSelection = () => {
   const auth = useAuth();
   const { room } = useRoom();
   const nav = useNavigate();
+  const loc = useLocation();
+
+  /**
+   * Back to the wizard, not out of it.
+   *
+   * This route is a SIBLING of set-up/:newRoomId in the route tree rather
+   * than a child of it, so a relative `nav("..")` resolved all the way up
+   * to the routing list. Coming here to nudge one box therefore ejected you
+   * from the wizard, and getting back in restarted at Recipients — the
+   * entire setup again, to change nothing. Dropping the last segment lands
+   * exactly where the user came from.
+   */
+  const backToWizard = () => nav(loc.pathname.replace(/\/file\/?$/, ""));
 
   return (
     <main className="w-full h-full flex flex-col bg-white">
@@ -20,9 +33,9 @@ const DocSelection = () => {
           variant="ghost"
           size="sm"
           className="h-7 px-2 text-xs"
-          onClick={() => nav("..")}
+          onClick={backToWizard}
         >
-          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back
+          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Back to the routing
         </Button>
         <div className="leading-tight">
           <div className="text-xs font-semibold text-gray-900">

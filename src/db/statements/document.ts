@@ -717,7 +717,7 @@ export const setDisseminationSignatories = async (
   token: string,
   body: {
     queueRoomId: string;
-    signatories: { roomAuthorizedUserId: string }[];
+    signatories: { roomAuthorizedUserId: string; userId?: string | null }[];
     userId: string;
     lineId: string;
   },

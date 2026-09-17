@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   useMutation,
@@ -56,6 +56,7 @@ const StepBadge = ({
   done,
   label,
   hint,
+  onClick,
 }: {
   n: number;
   active: boolean;
@@ -63,8 +64,21 @@ const StepBadge = ({
   label: string;
   /** Small qualifier under the label, e.g. "optional". */
   hint?: string;
+  /** Jump straight to this step. Every step saves on the way out, so
+   *  there is nothing to protect the user from here. */
+  onClick?: () => void;
 }) => (
-  <div className="flex items-center gap-1.5">
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={!onClick || active}
+    title={onClick && !active ? `Go to ${label}` : undefined}
+    className={`flex items-center gap-1.5 rounded px-1 py-0.5 -mx-1 ${
+      onClick && !active
+        ? "hover:bg-gray-100 cursor-pointer"
+        : "cursor-default"
+    }`}
+  >
     <div
       className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-semibold border ${
         done
@@ -76,7 +90,7 @@ const StepBadge = ({
     >
       {done ? <CheckCircle2 className="h-3 w-3" /> : n}
     </div>
-    <span className="leading-none">
+    <span className="leading-none text-left">
       <span
         className={`text-xs ${active ? "font-semibold text-gray-900" : "text-gray-500"}`}
       >
@@ -88,7 +102,7 @@ const StepBadge = ({
         </span>
       ) : null}
     </span>
-  </div>
+  </button>
 );
 
 const NewDisseminationRoom = () => {
@@ -127,9 +141,17 @@ const NewDisseminationRoom = () => {
    *  signatories the user must pick in the Signatories step. */
   const [maxSlot, setMaxSlot] = useState(0);
 
+  /**
+   * Have we loaded this draft's own state yet?
+   *
+   * Hydration runs once. `data` arrives again on every refetch, and the
+   * user is editing these lists in between — re-applying the server's
+   * version would throw away whatever they had just clicked.
+   */
+  const hydrated = useRef(false);
+
   useEffect(() => {
-    if (!data) return;
-    // Hydrate targets
+    if (!data || hydrated.current) return;
     if (Array.isArray(data.targetRooms)) {
       setTargets(
         data.targetRooms.map((t: any) => ({
@@ -146,8 +168,84 @@ const NewDisseminationRoom = () => {
           .filter(Boolean),
       );
     }
-    // We can't hydrate signatories without a join, but the controller stores
-    // index/status — keep them empty; user re-picks if they need changes.
+    hydrated.current = true;
+  }, [data]);
+
+  /**
+   * Signatories, rebuilt from the saved arrangements.
+   *
+   * Needs the candidate list as well as the draft: the wizard works in
+   * RoomAuthorizedUser ids, while an arrangement records the User it
+   * belongs to. So this waits for both and matches on the user. Anyone no
+   * longer on the candidate list — they lost their room — is carried
+   * through from the arrangement itself rather than quietly dropped, because
+   * the owner needs to SEE a slot in trouble, not find it missing.
+   *
+   * Until this has run the Signatories step cannot save. An empty list is a
+   * real instruction ("nobody signs"), and sending one by accident is what
+   * used to delete the setup.
+   */
+  const sigsHydrated = useRef(false);
+  const [sigsReady, setSigsReady] = useState(false);
+
+  useEffect(() => {
+    if (sigsHydrated.current || !data) return;
+    const arr = (data as any).signatotyArrangement;
+    if (!Array.isArray(arr)) return;
+    if (arr.length === 0) {
+      sigsHydrated.current = true;
+      setSigsReady(true);
+      return;
+    }
+    const cands = sCands.data?.list;
+    // Waiting is right while it is still loading, but not forever: if the
+    // candidate list errored, rebuild from the arrangements alone rather
+    // than leaving the step permanently unusable.
+    if (!cands && !sCands.isError) return;
+
+    const byUser = new Map<string, SignatoryCandidate>();
+    for (const c of cands ?? []) {
+      const uid = c.user?.id;
+      if (uid && !byUser.has(uid)) byUser.set(uid, c);
+    }
+
+    const rebuilt: SignatoryCandidate[] = [];
+    for (const a of [...arr].sort((x: any, y: any) => x.index - y.index)) {
+      if (!a.userId) continue; // a slot nobody was ever assigned to
+      rebuilt.push(
+        byUser.get(a.userId) ?? {
+          id: a.id,
+          type: 1,
+          user: a.user ?? { id: a.userId },
+          receivingRoom: null,
+        },
+      );
+    }
+    setSignatories(rebuilt);
+    sigsHydrated.current = true;
+    setSigsReady(true);
+  }, [data, sCands.data, sCands.isError]);
+
+  /**
+   * Open on the step this draft actually reached.
+   *
+   * Starting at Recipients every single time is what made finishing a
+   * routing feel like starting one — four screens again to change one
+   * thing. Runs once, off the first payload.
+   */
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current || !data) return;
+    resumed.current = true;
+    const hasTargets = (data.targetRooms ?? []).length > 0;
+    const hasSigs = ((data as any).signatotyArrangement ?? []).length > 0;
+    const hasDocs = ((data as any).documents ?? []).length > 0;
+    // The furthest point that has anything in it — so you land on what you
+    // were doing, or on the next thing to do, never back at the beginning.
+    if (!hasTargets) return; // step 0, where it already is
+    if (hasDocs) setStep(3);
+    else if (hasSigs) setStep(2);
+    else setStep(1);
   }, [data]);
 
   // ── candidate queries (loaded once, filtered client-side) ─────────
@@ -232,7 +330,12 @@ const NewDisseminationRoom = () => {
     mutationFn: () =>
       setDisseminationSignatories(auth.token as string, {
         queueRoomId: roomId as string,
-        signatories: signatories.map((s) => ({ roomAuthorizedUserId: s.id })),
+        // The user id rides along so a signatory whose room membership has
+        // gone is still resolvable — see the note on the handler.
+        signatories: signatories.map((s) => ({
+          roomAuthorizedUserId: s.id,
+          userId: s.user?.id ?? null,
+        })),
         userId: auth.userId as string,
         lineId: lineId as string,
       }),
@@ -252,7 +355,9 @@ const NewDisseminationRoom = () => {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dissemination", "outbox"] });
-      nav("..");
+      // Show what was just sent, instead of dropping the user at a list
+      // where the obvious next click walks into setup all over again.
+      nav(`../view/${roomId}`);
     },
     onError: (e) => alert(surfaceErr(e)),
   });
@@ -345,7 +450,16 @@ const NewDisseminationRoom = () => {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <StepBadge n={1} active={step === 0} done={step > 0} label="Recipients" />
+          {/* Clickable. A wizard you can only walk forwards through is why
+              changing one recipient meant redoing all four screens. Each
+              step saves on the way out, so jumping back costs nothing. */}
+          <StepBadge
+            n={1}
+            active={step === 0}
+            done={step > 0}
+            label="Recipients"
+            onClick={() => setStep(0)}
+          />
           <span className="text-gray-300">›</span>
           <StepBadge
             n={2}
@@ -353,11 +467,24 @@ const NewDisseminationRoom = () => {
             done={step > 1}
             label="Signatories"
             hint="optional"
+            onClick={() => setStep(1)}
           />
           <span className="text-gray-300">›</span>
-          <StepBadge n={3} active={step === 2} done={step > 2} label="Documents" />
+          <StepBadge
+            n={3}
+            active={step === 2}
+            done={step > 2}
+            label="Documents"
+            onClick={() => setStep(2)}
+          />
           <span className="text-gray-300">›</span>
-          <StepBadge n={4} active={step === 3} done={false} label="Review" />
+          <StepBadge
+            n={4}
+            active={step === 3}
+            done={false}
+            label="Review"
+            onClick={() => setStep(3)}
+          />
         </div>
       </div>
 
@@ -452,20 +579,27 @@ const NewDisseminationRoom = () => {
                signature slots, they need signatories. */
             disabled={
               saveSignatories.isPending ||
+              !sigsReady ||
               (maxSlot > 0 && signatories.length < maxSlot)
             }
             title={
-              maxSlot > 0 && signatories.length < maxSlot
-                ? `Your documents use ${maxSlot} signature box${
-                    maxSlot === 1 ? "" : "es"
-                  }. Pick who signs them, or remove the boxes.`
-                : undefined
+              !sigsReady
+                ? "Still loading who was already chosen."
+                : maxSlot > 0 && signatories.length < maxSlot
+                  ? `Your documents use ${maxSlot} signature box${
+                      maxSlot === 1 ? "" : "es"
+                    }. Pick who signs them, or remove the boxes.`
+                  : undefined
             }
           >
             {saveSignatories.isPending ? (
               <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
             ) : null}
-            {signatories.length === 0 ? "Skip — no signatures" : "Next"}
+            {!sigsReady
+              ? "Loading…"
+              : signatories.length === 0
+                ? "Skip — no signatures"
+                : "Next"}
             <ArrowRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         ) : step === 2 ? (
