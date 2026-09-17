@@ -110,6 +110,47 @@ const SignatureSizeEditor = ({
       setOnOpen={onClose}
       className="sm:max-w-lg"
       footer={1}
+      actions={
+        <div className="flex w-full items-center gap-1.5">
+          <Button
+            size="sm"
+            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
+            disabled={saving}
+            onClick={() =>
+              onSave({
+                inkHeightPt: useFixed ? height : null,
+                baselinePct: baseline,
+                ink,
+              })
+            }
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+            Save size
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[10px] gap-1.5"
+            disabled={saving}
+            onClick={() =>
+              onSave({ inkHeightPt: null, baselinePct: 100, ink: FULL_INK })
+            }
+            title="Forget the boundary and the size: squeeze the whole file into whatever box was drawn on the page, the way it worked before"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Fit to box instead
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[10px] ml-auto"
+            disabled={saving}
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        </div>
+      }
     >
       <div className="space-y-3">
         {/* ── Preview ──────────────────────────────────────────────── */}
@@ -309,38 +350,6 @@ const SignatureSizeEditor = ({
           left hanging below the line. 100% puts the whole mark above it.
         </p>
 
-        <div className="flex items-center gap-1.5 pt-1">
-          <Button
-            size="sm"
-            className="h-7 text-[10px] gap-1.5 bg-blue-600 hover:bg-blue-700"
-            disabled={saving}
-            onClick={() =>
-              onSave({
-                inkHeightPt: useFixed ? height : null,
-                baselinePct: baseline,
-                ink,
-              })
-            }
-          >
-            {saving ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : null}
-            Save size
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-[10px] gap-1.5"
-            disabled={saving}
-            onClick={() =>
-              onSave({ inkHeightPt: null, baselinePct: 100, ink: FULL_INK })
-            }
-            title="Forget the boundary and the size: squeeze the whole file into whatever box was drawn on the page, the way it worked before"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Fit to box instead
-          </Button>
-        </div>
       </div>
     </Modal>
   );
