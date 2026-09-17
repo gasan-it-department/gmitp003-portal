@@ -114,6 +114,28 @@ const DisseminationViewPage = () => {
           "Nothing was signed — no slot is assigned to your account on this routing.\n\n" +
             "If you see slots marked 'Unassigned' on the right rail, click 'Claim' on the one you want to sign, then click 'Sign all my fields' again.",
         );
+        return;
+      }
+      /*
+        A signature is only drawn where a box says to draw it. Signing a slot
+        that has none succeeds, is recorded, and shows nothing on the
+        document — which reads as "it said success but there is no
+        signature". Dispatch now refuses that arrangement, but routings sent
+        before it could still be in that state, so say it plainly rather than
+        reporting a success the document will not back up.
+      */
+      const nowhere = res.unstamped ?? [];
+      if (nowhere.length > 0) {
+        alert(
+          `Signed ${res.signed} slot(s), but ` +
+            `${nowhere.length === 1 ? "slot" : "slots"} ` +
+            `${nowhere.map((n) => `#${n}`).join(", ")} ` +
+            `${nowhere.length === 1 ? "has" : "have"} no signature box on ` +
+            `this document, so ${nowhere.length === 1 ? "it" : "they"} will ` +
+            `not appear anywhere on the page.\n\n` +
+            `Your signature IS recorded against the routing. Ask the sending ` +
+            `office to place a box for ${nowhere.length === 1 ? "that slot" : "those slots"}.`,
+        );
       } else if (res.completed) {
         alert(`Signed ${res.signed} slot(s). All signatures collected — routing completed.`);
       }

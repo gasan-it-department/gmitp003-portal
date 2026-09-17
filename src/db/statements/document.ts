@@ -1053,6 +1053,20 @@ export const viewDissemination = async (token: string, id: string) => {
   return res.data as DisseminationView;
 };
 
+/** What the server reports back from a signing. */
+export interface SignMineResult {
+  signed: number;
+  completed?: boolean;
+  signedAt?: string;
+  copyFurnished?: number;
+  /**
+   * Slots that were signed but have no signature box anywhere, so nothing
+   * will be drawn for them. Empty for anything dispatched after the check
+   * was added; possible on older routings.
+   */
+  unstamped?: number[];
+}
+
 export const signMine = async (
   token: string,
   body: {
@@ -1064,7 +1078,7 @@ export const signMine = async (
   const res = await axios.post("/document/dissemination/sign-mine", body, {
     headers: jsonHeaders(token),
   });
-  return res.data as { message: string; signed: number; completed: boolean };
+  return res.data as SignMineResult & { message?: string };
 };
 
 export const claimSignatorySlot = async (
