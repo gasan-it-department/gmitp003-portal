@@ -41,6 +41,21 @@ const SignatureBoundaryPicker = ({
   const wrapRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [ratio, setRatio] = useState(2.2);
+  /**
+   * Tallest this editor is allowed to get, in px.
+   *
+   * The box has to keep the image's exact aspect ratio — the boundary is
+   * stored as fractions of it and the <img> fills it edge to edge, so any
+   * distortion would move where the red rectangle lands on the real file.
+   * That meant the height was whatever the uploaded image's shape demanded,
+   * and a portrait or square signature produced an editor taller than the
+   * screen, inside a modal only as wide as a form field.
+   *
+   * Capping the WIDTH instead keeps the ratio exact: at MAX_EDITOR_H * ratio
+   * wide the box is exactly MAX_EDITOR_H tall, and for a wide signature the
+   * limit never binds at all.
+   */
+  const MAX_EDITOR_H = 240;
   const [hint, setHint] = useState<string | null>(null);
   /** The pointer currently drawing or dragging, if any. */
   const gesture = useRef<number | null>(null);
@@ -210,10 +225,16 @@ const SignatureBoundaryPicker = ({
         </div>
       </div>
 
+      <div className="flex justify-center">
       <div
         ref={wrapRef}
         className="relative w-full select-none overflow-hidden rounded-md border-2 border-dashed border-emerald-500 bg-white"
-        style={{ aspectRatio: String(ratio), touchAction: "none", cursor: "crosshair" }}
+        style={{
+          aspectRatio: String(ratio),
+          maxWidth: `${Math.round(MAX_EDITOR_H * ratio)}px`,
+          touchAction: "none",
+          cursor: "crosshair",
+        }}
         onPointerDown={startDraw}
       >
         <img
@@ -279,6 +300,7 @@ const SignatureBoundaryPicker = ({
             }}
           />
         ))}
+      </div>
       </div>
 
       <p className="text-[10px] text-gray-500 leading-snug">
