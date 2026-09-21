@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { describeApiError } from "@/utils/apiError";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
@@ -51,15 +52,14 @@ import {
   Users,
 } from "lucide-react";
 
-const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
-  const e = err as any;
-  return (
-    e?.response?.data?.message ||
-    e?.response?.data?.error ||
-    e?.message ||
-    fallback
-  );
-};
+/**
+ * Kept as a thin alias so every call site here reads the same, but the
+ * logic now lives in one place — see describeApiError. The old version
+ * ended at `e.message`, which is how a gateway timeout reached HR as
+ * "Request failed with status code 500".
+ */
+const surfaceErr = (err: unknown, fallback = "Something went wrong") =>
+  describeApiError(err, fallback);
 
 const fmtDate = (v?: string | null) =>
   v

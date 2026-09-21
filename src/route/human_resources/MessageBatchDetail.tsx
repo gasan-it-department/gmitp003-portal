@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { describeApiError } from "@/utils/apiError";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
@@ -52,15 +53,14 @@ import {
   X,
 } from "lucide-react";
 
-const surfaceErr = (err: unknown, fallback = "Something went wrong") => {
-  const e = err as any;
-  return (
-    e?.response?.data?.message ||
-    e?.response?.data?.error ||
-    e?.message ||
-    fallback
-  );
-};
+/**
+ * Kept as a thin alias so every call site here reads the same, but the
+ * logic now lives in one place — see describeApiError. The old version
+ * ended at `e.message`, which is how a gateway timeout reached HR as
+ * "Request failed with status code 500".
+ */
+const surfaceErr = (err: unknown, fallback = "Something went wrong") =>
+  describeApiError(err, fallback);
 
 const fmtDate = (v?: string | null) =>
   v
@@ -176,7 +176,17 @@ const MessageBatchDetail = () => {
       const what = r.resent
         ? `${r.dispatched} sent (${r.resent} re-sent)`
         : `${r.dispatched} sent`;
-      if (r.failed === 0) toast.success(`${what}.${tail}`);
+      if (r.stoppedEarly) {
+        // The server stopped the wave on the clock rather than let the
+        // request be cut off mid-send. Nothing is lost — say so plainly and
+        // point at the button, instead of leaving a half-done batch looking
+        // like a failure.
+        toast.warning(
+          `${what}, then this wave ran long and stopped. ` +
+            `${r.pending} still waiting — press Send again to continue.`,
+          { duration: 8000 },
+        );
+      } else if (r.failed === 0) toast.success(`${what}.${tail}`);
       else
         toast.warning(
           `${what} — ${r.sent} delivered, ${r.failed} failed so far.${tail}`,

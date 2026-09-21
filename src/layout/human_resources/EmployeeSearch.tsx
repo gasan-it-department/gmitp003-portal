@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router";
 import { useDebouncedCallback } from "use-debounce";
 
 import {
@@ -15,7 +14,7 @@ import Modal from "@/components/custom/Modal";
 import UnitSelection from "../medicine/item/UnitSelection";
 import ApplicantTagsSelect from "../FormTags";
 
-import { ListFilterPlus, Search, UserPlus, Users, X } from "lucide-react";
+import { ListFilterPlus, Search, Users, X } from "lucide-react";
 
 import { EmployeeFilterSchema } from "@/interface/zod";
 import type { EmployeeFilterProps } from "@/interface/data";
@@ -36,7 +35,6 @@ const EmployeeSearch = ({
   handleChangeParams,
 }: Props) => {
   const [onOpen, setOnOpen] = useState(false);
-  const nav = useNavigate();
 
   const form = useForm<EmployeeFilterProps>({
     resolver: zodResolver(EmployeeFilterSchema),
@@ -132,15 +130,6 @@ const EmployeeSearch = ({
             {activeFilterCount}
           </Badge>
         )}
-      </Button>
-
-      <Button
-        onClick={() => nav("add")}
-        size="sm"
-        className="h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700"
-      >
-        <UserPlus className="h-3 w-3" />
-        Add Employee
       </Button>
 
       <Modal

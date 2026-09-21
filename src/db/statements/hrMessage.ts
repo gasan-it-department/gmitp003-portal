@@ -273,6 +273,10 @@ export const sendMessageBatch = async (
     pending: number;
     sent: number;
     failed: number;
+    /** The wave ran out of time and handed the rest back. They are still
+     *  pending; sending again continues from where it stopped. */
+    stoppedEarly?: boolean;
+    remaining?: number;
     done: boolean;
   };
 };
