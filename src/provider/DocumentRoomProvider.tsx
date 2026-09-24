@@ -56,7 +56,20 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     refetchOnReconnect: false,
   });
 
-  console.log({ data });
+  /**
+   * Does this person actually belong to a document room?
+   *
+   * This is the question that decides whether the module opens, and it used
+   * to be asked the wrong way round: the gate below checked for a
+   * roomRegistration, which only exists if you REQUESTED a room and HR
+   * approved it. Anyone added by a room admin as a signatory or receiver has
+   * a membership and no registration, so the module met them with the
+   * "register for a room" form instead of their inbox — including room
+   * owners created that way. Membership is the authoritative fact; the
+   * registration is only one of the two roads to it.
+   */
+  const member = data?.authorizedUser ?? null;
+  const belongs = !!member && !!data?.room;
 
   if (isFetching) {
     return (
@@ -66,7 +79,10 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!data?.roomRegistration) {
+  // Membership wins. Somebody added straight to a room has no registration
+  // to show, and asking them to apply for the room they are already in is
+  // the bug this replaces.
+  if (!belongs && !data?.roomRegistration) {
     return (
       <SignatoryRegistry
         lineId={lineId as string}
@@ -77,7 +93,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (data.roomRegistration.status === 0) {
+  if (!belongs && data.roomRegistration?.status === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50/30 to-indigo-50/30">
         <div className="max-w-md w-full text-center space-y-6">
@@ -189,6 +205,8 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
   // Registration says approved but no ReceivingRoom is actually wired
   // for this user. Silently passing through would leave every downstream
   // component with `room.id === undefined`. Show a self-repair button.
+  // Approved, but no room was ever wired up. Members never reach here —
+  // `belongs` already required a room.
   if (!data.room) {
     return (
       <MissingRoomScreen
@@ -201,7 +219,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <DocumentRoomContext.Provider
-      value={{ room: data.room, me: data.authorizedUser ?? null }}
+      value={{ room: data.room, me: member }}
     >
       {children}
     </DocumentRoomContext.Provider>
