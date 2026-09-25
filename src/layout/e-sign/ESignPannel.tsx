@@ -21,6 +21,7 @@ import {
   Building2,
   Smartphone,
   Users,
+  Stamp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,6 +100,13 @@ const TILES: Tile[] = [
     path: "manage-signature",
     badge: (o) =>
       o.signatures.mine ? `${o.signatures.mine} on file` : null,
+  },
+  {
+    name: "Manage Receive Stamp",
+    description:
+      "Your office's own receiving stamp, with the date, your name and your signature filled in for you.",
+    Icon: Stamp,
+    path: "receive-stamp",
   },
   {
     name: "Self Sign",

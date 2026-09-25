@@ -106,6 +106,7 @@ import Archive from "./route/e-sign/Archive.tsx";
 import AcrhiveNewDocs from "./route/e-sign/AcrhiveNewDocs.tsx";
 import RoomDetails from "./layout/human_resources/document/RoomDetails.tsx";
 import ManageSignature from "./route/e-sign/ManageSignature.tsx";
+import ManageReceiveStamp from "./route/e-sign/ManageReceiveStamp.tsx";
 import ArchiveDetail from "./route/e-sign/ArchiveDetail.tsx";
 //Patients
 import PatientsIndex from "./route/patients/Index.tsx";
@@ -488,6 +489,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="archive" element={<Archive />} />
                 <Route path="archive/:archiveId" element={<ArchiveDetail />} />
                 <Route path="manage-signature" element={<ManageSignature />} />
+                <Route
+                  path="receive-stamp"
+                  element={<ManageReceiveStamp />}
+                />
                 <Route path="members" element={<OfficeMembers />} />
                 <Route path="self-sign" element={<SelfSign />} />
                 <Route path="self-sign/:docId" element={<SelfSignEditor />} />
