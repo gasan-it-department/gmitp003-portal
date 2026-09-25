@@ -12,6 +12,7 @@ import {
   disseminationDetail,
   finalizeDissemination,
   setDisseminationSignatories,
+  setRoutingSequential,
   setDisseminationTargets,
   signatoryCandidates,
   targetRoomCandidates,
@@ -140,6 +141,15 @@ const NewDisseminationRoom = () => {
   /** Max slot # used across placements — drives the minimum number of
    *  signatories the user must pick in the Signatories step. */
   const [maxSlot, setMaxSlot] = useState(0);
+  /**
+   * Must the signatures be collected in order?
+   *
+   * Off is the old behaviour and stays the default: anyone on the list may
+   * sign whenever. On makes the list a chain — slot 3 waits for 1 and 2 —
+   * which is what an approval sequence actually means. Saved with the
+   * signatories and fixed at dispatch.
+   */
+  const [sequential, setSequential] = useState(false);
 
   /**
    * Have we loaded this draft's own state yet?
@@ -168,6 +178,7 @@ const NewDisseminationRoom = () => {
           .filter(Boolean),
       );
     }
+    setSequential(!!(data as { sequential?: boolean }).sequential);
     hydrated.current = true;
   }, [data]);
 
@@ -336,8 +347,15 @@ const NewDisseminationRoom = () => {
   });
 
   const saveSignatories = useMutation({
-    mutationFn: () =>
-      setDisseminationSignatories(auth.token as string, {
+    mutationFn: async () => {
+      // The order rule belongs with the people it orders, so it is saved on
+      // the way out of the same step rather than in a settings screen
+      // somebody would never find.
+      await setRoutingSequential(auth.token as string, {
+        queueRoomId: roomId as string,
+        sequential,
+      });
+      return setDisseminationSignatories(auth.token as string, {
         queueRoomId: roomId as string,
         // The user id rides along so a signatory whose room membership has
         // gone is still resolvable — see the note on the handler.
@@ -347,7 +365,8 @@ const NewDisseminationRoom = () => {
         })),
         userId: auth.userId as string,
         lineId: lineId as string,
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dissemination", "detail", roomId] });
       setStep(2);
@@ -521,6 +540,8 @@ const NewDisseminationRoom = () => {
             loading={sCands.isLoading}
             selected={signatories}
             requiredSlots={maxSlot}
+            sequential={sequential}
+            setSequential={setSequential}
             add={addSignatory}
             remove={removeSignatory}
             move={moveSig}
@@ -901,12 +922,16 @@ const SignatoriesStep = ({
   loading,
   selected,
   requiredSlots,
+  sequential,
+  setSequential,
   add,
   remove,
   move,
 }: {
   query: string;
   setQuery: (v: string) => void;
+  sequential: boolean;
+  setSequential: (v: boolean) => void;
   candidates: SignatoryCandidate[];
   total: number;
   loading: boolean;
@@ -1033,6 +1058,30 @@ const SignatoriesStep = ({
             )}
           </div>
         </div>
+        {/*
+          The rule that makes the list above mean something. Unticked, the
+          order is only the order the boxes are numbered in and anyone may
+          sign whenever. Ticked, it is enforced on the server.
+        */}
+        <label className="flex items-start gap-2 px-3 py-2 border-b bg-gray-50/70 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={sequential}
+            onChange={(e) => setSequential(e.target.checked)}
+            className="mt-0.5 h-3.5 w-3.5 accent-blue-600"
+            disabled={selected.length < 2}
+          />
+          <span className="min-w-0">
+            <span className="block text-[11px] font-medium text-gray-800">
+              Sign in this exact order
+            </span>
+            <span className="block text-[10px] text-gray-500 leading-snug">
+              {selected.length < 2
+                ? "Add a second signatory to use this."
+                : "Each person waits for the one above them. Without this, anyone on the list can sign at any time."}
+            </span>
+          </span>
+        </label>
         <div className="flex-1 overflow-auto p-3">
           {requiredSlots > 0 && selected.length < requiredSlots ? (
             <div className="mb-2 px-2 py-1.5 rounded border border-amber-200 bg-amber-50 text-[10px] text-amber-800">

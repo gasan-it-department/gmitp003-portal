@@ -336,6 +336,17 @@ const DisseminationViewPage = () => {
             <span className="text-xs font-semibold">
               Signatories ({arrangements.length})
             </span>
+            {/* Say the rule out loud. Somebody refused for being third in a
+                queue should already know why before they click. */}
+            {queue.sequential ? (
+              <Badge
+                variant="outline"
+                className="ml-auto text-[9px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200"
+                title="Each signatory waits for the one above them."
+              >
+                In order
+              </Badge>
+            ) : null}
           </div>
           <div className="flex-1 overflow-auto divide-y">
             {arrangements.length === 0 ? (
@@ -386,10 +397,18 @@ const DisseminationViewPage = () => {
                           <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Signed
                         </Badge>
                         {a.signedAt ? (
-                          <span className="text-[9px] text-gray-500 mt-0.5">
-                            {new Date(a.signedAt).toLocaleDateString(undefined, {
+                          // A date alone does not settle anything. Two people
+                          // signing the same afternoon, an order queried later
+                          // — the question is always WHEN, so show the time.
+                          <span
+                            className="text-[9px] text-gray-500 mt-0.5 tabular-nums"
+                            title={new Date(a.signedAt).toLocaleString()}
+                          >
+                            {new Date(a.signedAt).toLocaleString(undefined, {
                               month: "short",
                               day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
                             })}
                           </span>
                         ) : null}

@@ -22,6 +22,9 @@ import { Loader2, Wrench } from "lucide-react";
 import SignatoryRegistry from "@/layout/e-sign/SignatoryRegistry";
 import { roomRegistration } from "@/utils/helper";
 
+/** A room the caller belongs to, with the role they hold in it. */
+export type MyRoom = ReceivingRoom & { myType?: number | null };
+
 const DocumentRoomContext = createContext<{
   room: ReceivingRoom | null;
   /**
@@ -32,9 +35,22 @@ const DocumentRoomContext = createContext<{
    * second request for something already in hand.
    */
   me: RoomAuthorizedUserProps | null;
+  /**
+   * EVERY room the caller belongs to.
+   *
+   * One person can sit in more than one — a signatory here, an owner there
+   * — and the module used to resolve that with a single arbitrary pick, so
+   * the other room's inbox was simply unreachable. Screens that show mail
+   * need the list so the reader can say which room they are looking at.
+   */
+  rooms: MyRoom[];
+  /** Switch which room the mail screens are showing. */
+  setRoom: (roomId: string) => void;
 }>({
   room: null,
   me: null,
+  rooms: [],
+  setRoom: () => undefined,
 });
 
 const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
@@ -42,10 +58,20 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
   const { lineId } = useParams();
   const queryClient = useQueryClient();
 
+  /**
+   * Which of the caller's rooms the mail screens are showing.
+   *
+   * Null means "whatever the server says is the default", which is the
+   * room they own, or their oldest. Remembered for the tab so switching
+   * rooms survives moving between inbox, outbox and a routing.
+   */
+  const [pickedRoomId, setPickedRoomId] = useState<string | null>(null);
+
   const { data, isFetching } = useQuery<{
     roomRegistration: RoomRegistration | null;
     authorizedUser: RoomAuthorizedUserProps | null;
     room: ReceivingRoom | null;
+    rooms?: MyRoom[];
   }>({
     queryKey: ["signatory-registry", auth.userId],
     queryFn: () =>
@@ -69,7 +95,11 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
    * registration is only one of the two roads to it.
    */
   const member = data?.authorizedUser ?? null;
-  const belongs = !!member && !!data?.room;
+  const rooms: MyRoom[] = data?.rooms ?? (data?.room ? [data.room] : []);
+  // A remembered choice only counts while it is still one of their rooms.
+  const active =
+    rooms.find((r) => r.id === pickedRoomId) ?? data?.room ?? rooms[0] ?? null;
+  const belongs = !!member && !!active;
 
   if (isFetching) {
     return (
@@ -93,7 +123,10 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!belongs && data.roomRegistration?.status === 0) {
+  // Pull the registration out once so the block below reads it without
+  // re-narrowing `data` at every line.
+  const registration = data?.roomRegistration ?? null;
+  if (!belongs && registration?.status === 0) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50/30 to-indigo-50/30">
         <div className="max-w-md w-full text-center space-y-6">
@@ -115,7 +148,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
           {/* Status Message */}
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-gray-900">
-              {roomRegistration[data.roomRegistration.status]}
+              {roomRegistration[registration.status]}
             </h2>
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full">
               <Bell className="h-4 w-4" />
@@ -139,14 +172,14 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
                       Application ID
                     </span>
                     <code className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
-                      {data.roomRegistration.id.substring(0, 8)}...
+                      {registration.id.substring(0, 8)}...
                     </code>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Submitted</span>
                     <span className="text-sm font-medium">
                       {new Date(
-                        data.roomRegistration.timestamp,
+                        registration.timestamp,
                       ).toLocaleDateString()}
                     </span>
                   </div>
@@ -207,7 +240,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
   // component with `room.id === undefined`. Show a self-repair button.
   // Approved, but no room was ever wired up. Members never reach here —
   // `belongs` already required a room.
-  if (!data.room) {
+  if (!active) {
     return (
       <MissingRoomScreen
         token={auth.token as string}
@@ -219,7 +252,7 @@ const DocumentRoomProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <DocumentRoomContext.Provider
-      value={{ room: data.room, me: member }}
+      value={{ room: active, me: member, rooms, setRoom: setPickedRoomId }}
     >
       {children}
     </DocumentRoomContext.Provider>

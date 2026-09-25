@@ -730,6 +730,24 @@ export const setDisseminationSignatories = async (
   return res.data;
 };
 
+/**
+ * Require signatures IN ORDER on this routing, or stop requiring them.
+ *
+ * Draft only — the server refuses once dispatched, because signatories act
+ * on the rule they were given.
+ */
+export const setRoutingSequential = async (
+  token: string,
+  body: { queueRoomId: string; sequential: boolean },
+) => {
+  const res = await axios.patch(
+    "/document/dissemination/sequential",
+    body,
+    { headers: jsonHeaders(token) },
+  );
+  return res.data as { message: string; sequential: boolean };
+};
+
 export const finalizeDissemination = async (
   token: string,
   body: { queueRoomId: string; userId: string; lineId: string },
@@ -1003,6 +1021,10 @@ export interface SigningDocument {
 
 export interface DisseminationView {
   queue: {
+    /** Signatures must be collected in order — slot N waits for N-1.
+     *  Enforced on the server; shown here so a signatory knows before
+     *  they click rather than after they are refused. */
+    sequential?: boolean;
     id: string;
     title: string | null;
     status: number;

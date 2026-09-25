@@ -24,7 +24,7 @@ import {
 const Dissemination = () => {
   const [params, setParams] = useSearchParams({ tab: "outbox" });
   const { userId, token } = useAuth();
-  const { room } = useRoom();
+  const { room, rooms, setRoom } = useRoom();
   const qc = useQueryClient();
 
   const [resetOpen, setResetOpen] = useState(false);
@@ -80,7 +80,30 @@ const Dissemination = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {room?.code ? (
+          {/*
+            One person can belong to more than one room, and the module used
+            to pick one of them silently — so the other room's mail looked
+            like an inbox that did not work. Where there is a choice, it is
+            shown as a choice.
+          */}
+          {rooms.length > 1 ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-500">Room</span>
+              <select
+                value={room?.id ?? ""}
+                onChange={(e) => setRoom(e.target.value)}
+                className="h-6 rounded-md border bg-white px-1.5 text-[10px] font-mono text-gray-800"
+                title="You belong to more than one room. This is the one whose mail you are reading."
+              >
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.code}
+                    {r.myType === 0 ? " (yours)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : room?.code ? (
             <Badge
               variant="outline"
               className="text-[10px] h-6 px-2 font-mono"
