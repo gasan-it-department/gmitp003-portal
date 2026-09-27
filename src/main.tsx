@@ -107,6 +107,7 @@ import AcrhiveNewDocs from "./route/e-sign/AcrhiveNewDocs.tsx";
 import RoomDetails from "./layout/human_resources/document/RoomDetails.tsx";
 import ManageSignature from "./route/e-sign/ManageSignature.tsx";
 import ManageReceiveStamp from "./route/e-sign/ManageReceiveStamp.tsx";
+import StampDocument from "./route/e-sign/StampDocument.tsx";
 import ArchiveDetail from "./route/e-sign/ArchiveDetail.tsx";
 //Patients
 import PatientsIndex from "./route/patients/Index.tsx";
@@ -492,6 +493,11 @@ createRoot(document.getElementById("root")!).render(
                 <Route
                   path="receive-stamp"
                   element={<ManageReceiveStamp />}
+                />
+                {/* Stamping one document: page picker + drag the stamp on. */}
+                <Route
+                  path="receive-stamp/:documentId"
+                  element={<StampDocument />}
                 />
                 <Route path="members" element={<OfficeMembers />} />
                 <Route path="self-sign" element={<SelfSign />} />

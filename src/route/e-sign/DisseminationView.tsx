@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   Download,
   Archive,
+  Stamp,
 } from "lucide-react";
 
 // pdf.js worker — same setup as PlacementEditor.
@@ -499,6 +500,8 @@ const DocumentBlock = ({
   myUserId: string;
 }) => {
   const auth = useAuth();
+  const nav = useNavigate();
+  const { lineId } = useParams();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState(0);
 
@@ -534,6 +537,22 @@ const DocumentBlock = ({
         <span className="text-xs font-semibold truncate">
           {doc.title || doc.file?.fileName || "Untitled document"}
         </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto h-6 px-2 text-[10px] shrink-0"
+          onClick={() =>
+            nav(
+              `/${lineId}/documents/receive-stamp/${doc.id}?name=` +
+                encodeURIComponent(
+                  doc.title || doc.file?.fileName || "document",
+                ),
+            )
+          }
+          title="Put your receiving stamp on this document"
+        >
+          <Stamp className="h-3 w-3 mr-1" /> Receive stamp
+        </Button>
       </div>
       <div className="p-4 flex justify-center">
         {!pdfUrl ? (

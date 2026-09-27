@@ -43,15 +43,15 @@ import {
   CalendarDays,
   Type,
   RefreshCw,
+  Ruler,
   Trash2,
   AlertCircle,
   Save,
   Check,
 } from "lucide-react";
 
-/** The stamp is a physical object: 58mm x 30mm, in points. */
-const STAMP_W_PT = (58 / 25.4) * 72;
-const STAMP_H_PT = (30 / 25.4) * 72;
+/** Millimetres to PDF points — the stamp is a physical object. */
+const mmToPt = (mm: number) => (mm / 25.4) * 72;
 const BP = 10000;
 
 /** What the editor is holding, before it is saved. */
@@ -90,6 +90,15 @@ const ManageReceiveStamp = () => {
   });
 
   const [draft, setDraft] = useState<Draft>(DEFAULTS);
+  /**
+   * How big the office's stamp actually is.
+   *
+   * Asked BEFORE the artwork, because the artwork is checked against this
+   * shape and laid out at this size — 58 x 30 is the common one, not the
+   * only one, and a rubber stamp is whatever the shop cut.
+   */
+  const [widthMm, setWidthMm] = useState(58);
+  const [heightMm, setHeightMm] = useState(30);
   const [savedFp, setSavedFp] = useState<string | null>(null);
   const hydrated = useRef(false);
 
@@ -110,6 +119,8 @@ const ManageReceiveStamp = () => {
       : DEFAULTS;
     setDraft(next);
     setSavedFp(fp(next));
+    setWidthMm(data.stampSize?.widthMm ?? 58);
+    setHeightMm(data.stampSize?.heightMm ?? 30);
     hydrated.current = true;
   }, [data]);
 
@@ -138,7 +149,8 @@ const ManageReceiveStamp = () => {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadMu = useMutation({
-    mutationFn: (f: File) => uploadReceiveStampImage(token, f),
+    mutationFn: (f: File) =>
+      uploadReceiveStampImage(token, f, { widthMm, heightMm }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["receive-stamp", auth.userId] });
       toast.success("Stamp artwork uploaded.");
@@ -148,7 +160,7 @@ const ManageReceiveStamp = () => {
   });
 
   const saveMu = useMutation({
-    mutationFn: () => saveReceiveStamp(token, draft),
+    mutationFn: () => saveReceiveStamp(token, { ...draft, widthMm, heightMm }),
     onSuccess: () => {
       setSavedFp(fp(draft));
       qc.invalidateQueries({ queryKey: ["receive-stamp", auth.userId] });
@@ -205,7 +217,7 @@ const ManageReceiveStamp = () => {
   }, [artUrl]);
 
   /** Points to on-screen pixels, so type is shown at its true size. */
-  const pxPerPt = canvasH > 0 ? canvasH / STAMP_H_PT : 0;
+  const pxPerPt = canvasH > 0 ? canvasH / mmToPt(heightMm) : 0;
 
   const startDrag = (which: Handle, mode: "move" | "resize") =>
     (e: React.PointerEvent) => {
@@ -280,7 +292,7 @@ const ManageReceiveStamp = () => {
           </div>
         </div>
         <Badge variant="outline" className="ml-auto text-[10px] h-6 px-2">
-          {data?.stampSize.widthMm ?? 58}mm × {data?.stampSize.heightMm ?? 30}mm
+          {widthMm}mm × {heightMm}mm
         </Badge>
         <Button
           size="sm"
@@ -321,6 +333,60 @@ const ManageReceiveStamp = () => {
             </div>
           ) : null}
 
+          {/* ── How big the stamp is ──────────────────────────────────
+              First, because everything below is checked and laid out
+              against it. ─────────────────────────────────────────────── */}
+          <div className="rounded-md border bg-white p-3">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Ruler className="h-3 w-3 text-gray-600" />
+              <span className="text-[11px] font-semibold text-gray-800">
+                The size of your stamp
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-2 leading-relaxed">
+              Measure the inked area of your rubber stamp. Most are 58 × 30 mm,
+              but yours is whatever the shop cut — the artwork is checked
+              against this shape and printed at this size.
+            </p>
+            <div className="flex items-end gap-2">
+              <label className="min-w-0">
+                <span className="block text-[10px] text-gray-600">
+                  Width (mm)
+                </span>
+                <Input
+                  type="number"
+                  min={10}
+                  max={150}
+                  step={0.5}
+                  value={widthMm}
+                  onChange={(e) => setWidthMm(Number(e.target.value))}
+                  className="h-8 w-24 text-xs"
+                />
+              </label>
+              <span className="pb-2 text-xs text-gray-400">×</span>
+              <label className="min-w-0">
+                <span className="block text-[10px] text-gray-600">
+                  Height (mm)
+                </span>
+                <Input
+                  type="number"
+                  min={10}
+                  max={150}
+                  step={0.5}
+                  value={heightMm}
+                  onChange={(e) => setHeightMm(Number(e.target.value))}
+                  className="h-8 w-24 text-xs"
+                />
+              </label>
+              {hasArtwork ? (
+                <span className="pb-2 text-[10px] text-gray-500">
+                  Changing this re-lays the stamp — replace the artwork if its
+                  shape changed too.
+                </span>
+              ) : null}
+            </div>
+          </div>
+
           {/* ── The artwork ───────────────────────────────────────────── */}
           {!hasArtwork ? (
             <div
@@ -342,7 +408,7 @@ const ManageReceiveStamp = () => {
                 A PNG of your office's own stamp — the box with RECEIVED, the
                 office name, and the empty DATE and BY lines.{" "}
                 <span className="font-medium text-gray-700">
-                  58mm × 30mm
+                  {widthMm}mm × {heightMm}mm
                 </span>
                 , with a transparent background so it inks over the page
                 instead of covering it.
@@ -375,7 +441,7 @@ const ManageReceiveStamp = () => {
                   ref={canvasRef}
                   className="relative w-full select-none rounded-md border-2 border-dashed border-gray-300 bg-white overflow-hidden"
                   style={{
-                    aspectRatio: `${STAMP_W_PT} / ${STAMP_H_PT}`,
+                    aspectRatio: `${widthMm} / ${heightMm}`,
                     touchAction: "none",
                   }}
                 >

@@ -13,6 +13,9 @@ export interface ReceiveStampConfig {
   userId: string;
   lineId: string | null;
   mime: string;
+  /** The office's own stamp size, in millimetres. */
+  widthMm: number;
+  heightMm: number;
   imageW: number;
   imageH: number;
   hasImage?: boolean;
@@ -35,8 +38,21 @@ export interface ReceiveStampState {
   stamp: ReceiveStampConfig | null;
   /** The caller's ACTIVE signature — the one the stamp will carry. */
   signature: { id: string; title: string; hasImage: boolean } | null;
+  /** The caller's own size, or the default they will start from. */
   stampSize: { widthMm: number; heightMm: number };
+  defaultSize: { widthMm: number; heightMm: number };
   lineId: string | null;
+}
+
+/** Where somebody stamped a document they received. */
+export interface ReceiveStampMark {
+  id: string;
+  page: number;
+  xBp: number;
+  yBp: number;
+  stampedAt: string;
+  userId: string;
+  user?: { firstName: string | null; lastName: string | null } | null;
 }
 
 const jsonHeaders = (token: string) => ({
@@ -62,8 +78,23 @@ export const receiveStampImage = async (token: string) => {
   return res.data as Blob;
 };
 
-export const uploadReceiveStampImage = async (token: string, file: File) => {
+/**
+ * Upload the artwork, with the size it represents.
+ *
+ * The size rides along so "say how big your stamp is, then pick the file"
+ * is one action — the server checks the artwork's shape against what was
+ * declared, and a mismatch names both numbers.
+ */
+export const uploadReceiveStampImage = async (
+  token: string,
+  file: File,
+  size?: { widthMm: number; heightMm: number },
+) => {
   const form = new FormData();
+  if (size) {
+    form.append("widthMm", String(size.widthMm));
+    form.append("heightMm", String(size.heightMm));
+  }
   form.append("file", file);
   const res = await axios.post("/document/receive-stamp/image", form, {
     headers: { Authorization: `Bearer ${token}` },
@@ -96,4 +127,55 @@ export const deleteReceiveStamp = async (token: string) => {
     headers: jsonHeaders(token),
   });
   return res.data as { message: string };
+};
+
+// ── Stamping a document you received ──────────────────────────────────
+
+/** Put your stamp on a page, at a point you chose. */
+export const applyReceiveStamp = async (
+  token: string,
+  body: { documentId: string; page: number; xBp: number; yBp: number },
+) => {
+  const res = await axios.post("/document/receive-stamp/apply", body, {
+    headers: jsonHeaders(token),
+  });
+  return res.data as {
+    message: string;
+    mark: ReceiveStampMark;
+    pages: number;
+  };
+};
+
+/** Every stamp on this document, and which one is mine. */
+export const receiveStampMarks = async (token: string, documentId: string) => {
+  const res = await axios.get("/document/receive-stamp/marks", {
+    headers: jsonHeaders(token),
+    params: { documentId },
+  });
+  return res.data as { marks: ReceiveStampMark[]; mine: ReceiveStampMark | null };
+};
+
+export const removeReceiveStampMark = async (
+  token: string,
+  documentId: string,
+) => {
+  const res = await axios.delete("/document/receive-stamp/mark", {
+    headers: jsonHeaders(token),
+    params: { documentId },
+  });
+  return res.data as { message: string };
+};
+
+/**
+ * The office's copy: the document as it arrived, with the stamps composed
+ * onto it. Generated on demand — the stored file is never rewritten, so any
+ * seal over its bytes survives.
+ */
+export const stampedDocument = async (token: string, documentId: string) => {
+  const res = await axios.get("/document/receive-stamp/stamped", {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/pdf" },
+    params: { documentId },
+    responseType: "blob",
+  });
+  return res.data as Blob;
 };
