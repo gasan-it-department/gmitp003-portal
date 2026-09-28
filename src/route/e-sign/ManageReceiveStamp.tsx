@@ -5,11 +5,17 @@
  * the office name, and two empty lines — DATE and BY. A clerk inks it onto
  * whatever arrives and writes the date and their name by hand.
  *
- * This is that, done once. Upload the office's own artwork, drag the date,
- * the name and your signature to where they belong ON YOUR stamp, and the
- * app fills those three in from then on. The artwork is never invented
- * here: a receiving stamp that does not look like the office's receiving
- * stamp is not evidence of anything.
+ * This is that, done once FOR THE WHOLE OFFICE. There is one rubber stamp
+ * on the counter and whoever is on duty inks it, so the artwork, the size
+ * and the layout belong to the Document Room and everybody in it shares
+ * them. Upload it once and a colleague added next month already has it.
+ *
+ * Two things stay personal: the name on the BY line, and the signature —
+ * whichever one they have marked active. Those are set per person, which is
+ * why this screen separates "the office's stamp" from "your name on it".
+ *
+ * The artwork is never invented here: a receiving stamp that does not look
+ * like the office's receiving stamp is not evidence of anything.
  *
  * Everything is positioned in basis points of the artwork (0-10000 of its
  * width and height, measured from the top-left) — the same unit the server
@@ -21,6 +27,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useAuth } from "@/provider/ProtectedRoute";
+import { useRoom } from "@/provider/DocumentRoomProvider";
 import {
   deleteReceiveStamp,
   myReceiveStamp,
@@ -45,6 +52,8 @@ import {
   RefreshCw,
   Ruler,
   Trash2,
+  Building2,
+  Users,
   AlertCircle,
   Save,
   Check,
@@ -54,13 +63,20 @@ import {
 const mmToPt = (mm: number) => (mm / 25.4) * 72;
 const BP = 10000;
 
-/** What the editor is holding, before it is saved. */
+/**
+ * What the editor is holding, before it is saved.
+ *
+ * `nickname` is in here with the rest even though it is the one personal
+ * field, because it is edited on the same canvas and saved by the same
+ * button. The server is what keeps them apart: the placements land on the
+ * office's stamp, the nickname lands on the caller's row alone.
+ */
 type Draft = Pick<
   ReceiveStampConfig,
   | "sigX" | "sigY" | "sigW" | "sigH"
-  | "nickname" | "nameX" | "nameY" | "nameSizePt"
+  | "nameX" | "nameY" | "nameSizePt"
   | "dateX" | "dateY" | "dateSizePt"
->;
+> & { nickname: string };
 
 const DEFAULTS: Draft = {
   sigX: 5200, sigY: 6200, sigW: 3600, sigH: 2600,
@@ -70,11 +86,28 @@ const DEFAULTS: Draft = {
 
 const fp = (d: Draft) => JSON.stringify(d);
 
-/** Today, formatted exactly the way the server will print it. */
-const todayText = () =>
-  new Date().toLocaleDateString("en-PH", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-  });
+/**
+ * Now, formatted exactly the way the server will print it.
+ *
+ * Written out rather than slashed, with the time of day, and always in
+ * Philippine time — the same three decisions the renderer makes. If this
+ * drifts from the server the user drags the date against a width it will
+ * not actually take.
+ */
+const todayText = () => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Manila",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? "";
+  const period = get("dayPeriod").toLowerCase().replace(/\./g, "");
+  return `${get("day")} ${get("month")} ${get("year")} ${get("hour")}:${get("minute")} ${period}`;
+};
 
 type Handle = "sig" | "name" | "date";
 
@@ -82,11 +115,18 @@ const ManageReceiveStamp = () => {
   const auth = useAuth();
   const qc = useQueryClient();
   const token = auth.token as string;
+  /*
+    Which office. The provider already knows — every mail screen in the
+    module is scoped by it — so there is no second picker to get out of
+    step with the one in the inbox.
+  */
+  const { room, rooms, setRoom } = useRoom();
+  const roomId = room?.id;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["receive-stamp", auth.userId],
-    queryFn: () => myReceiveStamp(token),
-    enabled: !!token,
+    queryKey: ["receive-stamp", roomId],
+    queryFn: () => myReceiveStamp(token, roomId),
+    enabled: !!token && !!roomId,
   });
 
   const [draft, setDraft] = useState<Draft>(DEFAULTS);
@@ -110,7 +150,8 @@ const ManageReceiveStamp = () => {
       ? {
           sigX: data.stamp.sigX, sigY: data.stamp.sigY,
           sigW: data.stamp.sigW, sigH: data.stamp.sigH,
-          nickname: data.stamp.nickname ?? "",
+          // Mine, not the stamp's: a colleague's name is not my name.
+          nickname: data.myName ?? "",
           nameX: data.stamp.nameX, nameY: data.stamp.nameY,
           nameSizePt: data.stamp.nameSizePt,
           dateX: data.stamp.dateX, dateY: data.stamp.dateY,
@@ -134,7 +175,7 @@ const ManageReceiveStamp = () => {
     if (!hasArtwork) { setArtUrl(null); return; }
     let dead = false;
     let url: string | null = null;
-    receiveStampImage(token)
+    receiveStampImage(token, roomId)
       .then((b) => {
         if (dead) return;
         url = URL.createObjectURL(b);
@@ -145,25 +186,28 @@ const ManageReceiveStamp = () => {
       dead = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [hasArtwork, token, data?.stamp?.updatedAt]);
+  }, [hasArtwork, token, roomId, data?.stamp?.updatedAt]);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadMu = useMutation({
     mutationFn: (f: File) =>
-      uploadReceiveStampImage(token, f, { widthMm, heightMm }),
+      uploadReceiveStampImage(token, f, { widthMm, heightMm }, roomId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["receive-stamp", auth.userId] });
-      toast.success("Stamp artwork uploaded.");
+      qc.invalidateQueries({ queryKey: ["receive-stamp", roomId] });
+      toast.success("Stamp artwork uploaded.", {
+        description: "Everyone in this office can now stamp with it.",
+      });
     },
     onError: (e) =>
       toast.error(describeApiError(e, "Could not upload that image.")),
   });
 
   const saveMu = useMutation({
-    mutationFn: () => saveReceiveStamp(token, { ...draft, widthMm, heightMm }),
+    mutationFn: () =>
+      saveReceiveStamp(token, { ...draft, widthMm, heightMm, roomId }),
     onSuccess: () => {
       setSavedFp(fp(draft));
-      qc.invalidateQueries({ queryKey: ["receive-stamp", auth.userId] });
+      qc.invalidateQueries({ queryKey: ["receive-stamp", roomId] });
       refreshPreview();
       toast.success("Saved.");
     },
@@ -171,12 +215,12 @@ const ManageReceiveStamp = () => {
   });
 
   const removeMu = useMutation({
-    mutationFn: () => deleteReceiveStamp(token),
+    mutationFn: () => deleteReceiveStamp(token, roomId),
     onSuccess: () => {
       hydrated.current = false;
       setDraft(DEFAULTS);
       setSavedFp(null);
-      qc.invalidateQueries({ queryKey: ["receive-stamp", auth.userId] });
+      qc.invalidateQueries({ queryKey: ["receive-stamp", roomId] });
       toast.success("Stamp removed.");
     },
     onError: (e) => toast.error(describeApiError(e, "Could not remove it.")),
@@ -188,7 +232,7 @@ const ManageReceiveStamp = () => {
   const refreshPreview = useCallback(() => {
     if (!hasArtwork) return;
     setPreviewing(true);
-    receiveStampPreview(token, 900)
+    receiveStampPreview(token, 900, roomId)
       .then((b) => {
         setPreviewUrl((old) => {
           if (old) URL.revokeObjectURL(old);
@@ -197,7 +241,7 @@ const ManageReceiveStamp = () => {
       })
       .catch(() => undefined)
       .finally(() => setPreviewing(false));
-  }, [hasArtwork, token]);
+  }, [hasArtwork, token, roomId]);
 
   useEffect(() => {
     if (hasArtwork) refreshPreview();
@@ -287,13 +331,36 @@ const ManageReceiveStamp = () => {
             Manage Receive Stamp
           </div>
           <div className="text-[10px] text-gray-500">
-            Your office's own stamp, with the date, your name and your
-            signature filled in automatically
+            One stamp for the whole office — your name and signature are the
+            only parts that are yours
           </div>
         </div>
-        <Badge variant="outline" className="ml-auto text-[10px] h-6 px-2">
-          {widthMm}mm × {heightMm}mm
-        </Badge>
+
+        {/* Which office. Only shown when there is a choice to make. */}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {rooms.length > 1 ? (
+            <select
+              value={roomId ?? ""}
+              onChange={(e) => setRoom(e.target.value)}
+              className="h-7 rounded-md border border-gray-200 bg-white px-2 text-[11px] text-gray-700"
+              title="Which office's stamp you are setting up"
+            >
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.code}
+                </option>
+              ))}
+            </select>
+          ) : room?.code ? (
+            <Badge variant="outline" className="text-[10px] h-6 px-2 gap-1">
+              <Building2 className="h-3 w-3" />
+              {room.code}
+            </Badge>
+          ) : null}
+          <Badge variant="outline" className="text-[10px] h-6 px-2">
+            {widthMm}mm × {heightMm}mm
+          </Badge>
+        </div>
         <Button
           size="sm"
           variant={dirty ? "default" : "outline"}
@@ -315,6 +382,32 @@ const ManageReceiveStamp = () => {
 
       <div className="flex-1 min-h-0 overflow-auto p-4">
         <div className="mx-auto max-w-5xl space-y-4">
+          {/* The thing people get wrong: this is not a personal stamp. */}
+          <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 p-3">
+            <Users className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-[11px] text-blue-900 leading-relaxed">
+              <span className="font-semibold">
+                This stamp belongs to the office, not to you.
+              </span>{" "}
+              The artwork, the size and where everything sits are shared by
+              everyone in
+              {room?.code ? ` ${room.code}` : " this Document Room"} — change
+              them and you change them for your colleagues too. Only{" "}
+              <span className="font-semibold">the name on the BY line</span>{" "}
+              and your signature are your own.
+              {data?.colleagues?.length ? (
+                <>
+                  {" "}
+                  Already set up for{" "}
+                  {data.colleagues
+                    .map((c) => c.nickname || c.name)
+                    .filter(Boolean)
+                    .join(", ")}
+                  .
+                </>
+              ) : null}
+            </div>
+          </div>
           {/* No signature on file — say so before anything else, because the
               stamp cannot be completed without one. */}
           {!hasSignature ? (
@@ -522,6 +615,9 @@ const ManageReceiveStamp = () => {
                     <span className="text-[11px] font-semibold text-gray-800">
                       Name on the BY line
                     </span>
+                    <span className="ml-auto rounded-sm bg-sky-50 border border-sky-200 px-1 text-[9px] font-semibold text-sky-700">
+                      YOURS ONLY
+                    </span>
                   </div>
                   <Input
                     value={draft.nickname}
@@ -552,6 +648,8 @@ const ManageReceiveStamp = () => {
                     />
                   </label>
                   <p className="text-[10px] text-gray-500">
+                    Only yours. A colleague stamping the next document gets
+                    the same stamp with their own name in this spot.
                     A nickname is fine — it is how colleagues recognise who
                     took delivery.
                   </p>

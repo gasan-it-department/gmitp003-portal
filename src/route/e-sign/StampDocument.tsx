@@ -21,6 +21,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { toast } from "sonner";
 
 import { useAuth } from "@/provider/ProtectedRoute";
+import { useRoom } from "@/provider/DocumentRoomProvider";
 import { fetchDocumentFile } from "@/db/statements/document";
 import {
   applyReceiveStamp,
@@ -66,6 +67,13 @@ const StampDocument = () => {
   const nav = useNavigate();
   const qc = useQueryClient();
   const { lineId, documentId } = useParams();
+  /*
+    Which office is taking delivery. The stamp is the room's, so a person in
+    two offices stamps as whichever one the module is currently showing —
+    the same room the inbox they opened this from is scoped to.
+  */
+  const { room } = useRoom();
+  const roomId = room?.id;
   const [search] = useSearchParams();
   const docName = search.get("name") || "document";
 
@@ -75,9 +83,9 @@ const StampDocument = () => {
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const { data: setup, isLoading: loadingSetup } = useQuery({
-    queryKey: ["receive-stamp", auth.userId],
-    queryFn: () => myReceiveStamp(token),
-    enabled: !!token,
+    queryKey: ["receive-stamp", roomId],
+    queryFn: () => myReceiveStamp(token, roomId),
+    enabled: !!token && !!roomId,
   });
 
   const { data: marks } = useQuery({
@@ -138,7 +146,7 @@ const StampDocument = () => {
     if (!hasArtwork) return;
     let cancelled = false;
     let revoke: string | null = null;
-    receiveStampPreview(token, 600)
+    receiveStampPreview(token, 600, roomId)
       .then((b) => {
         if (cancelled) return;
         const u = URL.createObjectURL(b);
@@ -151,7 +159,7 @@ const StampDocument = () => {
       cancelled = true;
       if (revoke) URL.revokeObjectURL(revoke);
     };
-  }, [hasArtwork, token]);
+  }, [hasArtwork, token, roomId]);
 
   /**
    * The rendered page, and what one PDF point is worth on screen.
@@ -218,6 +226,7 @@ const StampDocument = () => {
         page: pageNo,
         xBp: pos?.x ?? 0,
         yBp: pos?.y ?? 0,
+        roomId,
       }),
     onSuccess: () => {
       setSavedAt(`${pageNo}:${pos?.x}:${pos?.y}`);
@@ -347,12 +356,14 @@ const StampDocument = () => {
               <AlertCircle className="h-5 w-5 text-amber-600" />
             </div>
             <p className="text-sm font-semibold text-gray-800">
-              You have no receiving stamp yet
+              This office has no receiving stamp yet
             </p>
             <p className="text-[11px] text-gray-600 leading-relaxed">
-              Set one up first: state its size in millimetres, upload your
-              office's stamp artwork, and drag the date, your name and your
-              signature onto it. Then you can stamp anything you receive.
+              Somebody has to set it up once: state its size in millimetres,
+              upload the office's stamp artwork, and drag the date, the name
+              and the signature onto it. Anyone in
+              {room?.code ? ` ${room.code}` : " the office"} can do it, and it
+              then works for everybody — you would only add your own name.
             </p>
             <Button
               size="sm"
@@ -461,8 +472,8 @@ const StampDocument = () => {
                         title={`Stamped by ${
                           `${m.user?.firstName ?? ""} ${
                             m.user?.lastName ?? ""
-                          }`.trim() || "another office"
-                        }`}
+                          }`.trim() || "somebody else"
+                        }${m.room?.code ? ` (${m.room.code})` : ""}`}
                       />
                     ))}
 
