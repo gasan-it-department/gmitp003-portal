@@ -4,7 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
 //
-import { documentOverview } from "@/db/statements/document";
+import {
+  documentAlerts,
+  documentOverview,
+  type DocumentAlerts,
+} from "@/db/statements/document";
+import CountBadge from "@/components/custom/CountBadge";
 //
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,7 +38,20 @@ interface Tile {
   description: string;
   Icon: LucideIcon;
   path: string;
+  /** A fact about the tile. Grey, and never competes with the count. */
   badge?: (o: OverviewLike) => string | null;
+  /**
+   * What needs DOING behind this tile.
+   *
+   * Red when the module is waiting on a person, amber when work is merely
+   * piling up. A tile with nothing to do gets no badge at all — that is
+   * what makes the red ones mean something.
+   */
+  alert?: (a: DocumentAlerts) => {
+    count: number;
+    tone: "urgent" | "warn";
+    title: string;
+  } | null;
   accent?: string;
 }
 
@@ -51,6 +69,14 @@ const TILES: Tile[] = [
       "Registry of barcode-stickered documents logged by receiving personnel.",
     Icon: Inbox,
     path: "receiving",
+    alert: (a) =>
+      a.receiving.unrouted
+        ? {
+            count: a.receiving.unrouted,
+            tone: "warn",
+            title: `${a.receiving.unrouted} logged at the desk and never sent onward`,
+          }
+        : null,
   },
   {
     name: "Mobile Access",
@@ -77,6 +103,25 @@ const TILES: Tile[] = [
     description: "Route documents to other offices for signature and delivery.",
     Icon: Send,
     path: "dissemination",
+    alert: (a) => {
+      // Mail nobody has opened is the loud one. The rest is housekeeping.
+      if (a.inbox.unopened)
+        return {
+          count: a.inbox.unopened,
+          tone: "urgent",
+          title: `${a.inbox.unopened} in your inbox nobody has opened yet`,
+        };
+      const chores = a.inbox.unacknowledged + a.outbox.drafts;
+      return chores
+        ? {
+            count: chores,
+            tone: "warn",
+            title:
+              `${a.inbox.unacknowledged} waiting for your receipt · ` +
+              `${a.outbox.drafts} unsent draft${a.outbox.drafts === 1 ? "" : "s"}`,
+          }
+        : null;
+    },
     badge: (o) =>
       o.dissemination.active
         ? `${o.dissemination.active} active`
@@ -140,6 +185,35 @@ const ESignPannel = () => {
     refetchOnWindowFocus: false,
   });
 
+  /*
+    The counts that carry a badge. Kept apart from the overview because
+    they answer a different question — not "how much is there" but "what
+    is waiting on somebody" — and because they are worth refetching when
+    the window comes back into focus. Mail arrives while you are in Word.
+  */
+  const { data: alertData } = useQuery({
+    queryKey: ["document-alerts", lineId, room?.id, auth.userId],
+    queryFn: () =>
+      documentAlerts(auth.token as string, lineId as string, room?.id),
+    enabled: !!auth.token && !!lineId,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
+
+  const alerts: DocumentAlerts = useMemo(
+    () =>
+      alertData ?? {
+        roomId: room?.id ?? null,
+        inbox: { unopened: 0, unacknowledged: 0 },
+        signatures: { awaitingMe: 0, queued: 0 },
+        outbox: { drafts: 0, awaitingAck: 0 },
+        receiving: { unrouted: 0 },
+        urgent: 0,
+      },
+    [alertData, room?.id],
+  );
+
   const overview: OverviewLike = useMemo(
     () =>
       data ?? {
@@ -151,7 +225,24 @@ const ESignPannel = () => {
     [data, room?.id],
   );
 
-  const stats = [
+  /*
+    Two of these four are tasks and two are totals, and until now they all
+    looked identical — the same grey card whether it said "1,284 archived"
+    or "3 documents are waiting for your signature". The two that can
+    demand something now turn red when they do, card and all, so the
+    difference is visible from across the room.
+  */
+  const stats: Array<{
+    label: string;
+    value: number;
+    Icon: LucideIcon;
+    bg: string;
+    fg: string;
+    hint?: string;
+    /** Non-zero means this card is a task right now. */
+    urgent?: number;
+    urgentTitle?: string;
+  }> = [
     {
       label: "Archive total",
       value: overview.archive.total,
@@ -168,19 +259,28 @@ const ESignPannel = () => {
       hint: `${overview.dissemination.draft} draft · ${overview.dissemination.completed} done`,
     },
     {
-      label: "Inbox",
-      value: overview.myRoom.inbox,
+      label: "Unopened in my inbox",
+      value: alerts.inbox.unopened,
       Icon: Inbox,
       bg: "bg-emerald-50",
       fg: "text-emerald-600",
-      hint: room?.code ? `Room ${room.code}` : "No room assigned",
+      urgent: alerts.inbox.unopened,
+      urgentTitle: "Nobody in your office has opened these yet",
+      hint: `${overview.myRoom.inbox} received in total${
+        room?.code ? ` · Room ${room.code}` : ""
+      }`,
     },
     {
-      label: "Pending my signature",
-      value: overview.signatures.pendingForMe,
+      label: "Waiting for my signature",
+      value: alerts.signatures.awaitingMe,
       Icon: Clock,
       bg: "bg-amber-50",
       fg: "text-amber-600",
+      urgent: alerts.signatures.awaitingMe,
+      urgentTitle: "The routing cannot move until you sign these",
+      hint: alerts.signatures.queued
+        ? `${alerts.signatures.queued} more, not yet your turn`
+        : undefined,
     },
   ];
 
@@ -202,10 +302,24 @@ const ESignPannel = () => {
             · {room.address}
           </span>
         ) : null}
-        <Badge variant="outline" className="ml-auto text-[10px] h-5 px-1.5">
-          <CheckCircle2 className="h-2.5 w-2.5 mr-1 text-emerald-600" />
-          Operational
-        </Badge>
+        {/* The one number worth reading first. */}
+        {alerts.urgent ? (
+          <div className="ml-auto flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2 py-1">
+            <CountBadge
+              count={alerts.urgent}
+              tone="urgent"
+              title="Things waiting on you right now"
+            />
+            <span className="text-[10px] font-semibold text-red-700">
+              {alerts.urgent === 1 ? "item needs" : "items need"} your attention
+            </span>
+          </div>
+        ) : (
+          <Badge variant="outline" className="ml-auto text-[10px] h-5 px-1.5">
+            <CheckCircle2 className="h-2.5 w-2.5 mr-1 text-emerald-600" />
+            Nothing waiting on you
+          </Badge>
+        )}
       </div>
 
       {/* Stats grid */}
@@ -213,14 +327,29 @@ const ESignPannel = () => {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="border rounded-lg bg-white overflow-hidden"
+            title={s.urgent ? s.urgentTitle : undefined}
+            className={`border rounded-lg overflow-hidden ${
+              s.urgent
+                ? "border-red-300 bg-red-50 ring-1 ring-red-200"
+                : "bg-white"
+            }`}
           >
             <div className="px-3 py-2 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide truncate">
+                <p
+                  className={`text-[10px] uppercase tracking-wide truncate ${
+                    s.urgent
+                      ? "text-red-700 font-semibold"
+                      : "text-gray-500"
+                  }`}
+                >
                   {s.label}
                 </p>
-                <p className="text-base font-bold text-gray-900 mt-0.5">
+                <p
+                  className={`text-base font-bold mt-0.5 tabular-nums ${
+                    s.urgent ? "text-red-700" : "text-gray-900"
+                  }`}
+                >
                   {isLoading ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-300" />
                   ) : (
@@ -228,13 +357,29 @@ const ESignPannel = () => {
                   )}
                 </p>
               </div>
-              <div className={`p-1.5 rounded-md flex-shrink-0 ${s.bg}`}>
-                <s.Icon className={`h-3.5 w-3.5 ${s.fg}`} />
+              <div
+                className={`p-1.5 rounded-md flex-shrink-0 ${
+                  s.urgent ? "bg-red-100" : s.bg
+                }`}
+              >
+                <s.Icon
+                  className={`h-3.5 w-3.5 ${s.urgent ? "text-red-600" : s.fg}`}
+                />
               </div>
             </div>
             {s.hint ? (
-              <div className="px-3 py-1 border-t bg-gray-50">
-                <p className="text-[10px] text-gray-500 truncate">{s.hint}</p>
+              <div
+                className={`px-3 py-1 border-t ${
+                  s.urgent ? "border-red-200 bg-red-100/50" : "bg-gray-50"
+                }`}
+              >
+                <p
+                  className={`text-[10px] truncate ${
+                    s.urgent ? "text-red-700" : "text-gray-500"
+                  }`}
+                >
+                  {s.hint}
+                </p>
               </div>
             ) : null}
           </div>
@@ -256,17 +401,50 @@ const ESignPannel = () => {
         <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {TILES.map((t) => {
             const badge = t.badge?.(overview);
+            const alert = t.alert?.(alerts) ?? null;
+            const loud = alert?.tone === "urgent";
             return (
+              /*
+                The badge hangs off the corner, so it cannot live inside the
+                tile: the tile clips its own overflow to keep the header and
+                footer bars inside its rounded edge, and clipped the badge
+                along with them. The wrapper does not clip; the tile still
+                does.
+              */
+              <div key={t.path} className="relative">
+                {alert ? (
+                  <CountBadge
+                    count={alert.count}
+                    tone={alert.tone}
+                    title={alert.title}
+                    corner
+                  />
+                ) : null}
               <button
-                key={t.path}
                 type="button"
                 onClick={() => nav(t.path)}
-                className="group text-left border rounded-lg bg-white overflow-hidden hover:border-blue-300 hover:shadow-sm transition"
+                className={`group w-full text-left border rounded-lg overflow-hidden transition hover:shadow-sm ${
+                  loud
+                    ? "border-red-300 ring-1 ring-red-200 bg-white hover:border-red-400"
+                    : "bg-white hover:border-blue-300"
+                }`}
               >
-                <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between gap-2">
+                <div
+                  className={`px-3 py-2 border-b flex items-center justify-between gap-2 ${
+                    loud ? "bg-red-50 border-red-200" : "bg-gray-50"
+                  }`}
+                >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <t.Icon className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                    <span className="text-xs font-semibold text-gray-800 truncate">
+                    <t.Icon
+                      className={`h-3.5 w-3.5 flex-shrink-0 ${
+                        loud ? "text-red-600" : "text-blue-600"
+                      }`}
+                    />
+                    <span
+                      className={`text-xs font-semibold truncate ${
+                        loud ? "text-red-800" : "text-gray-800"
+                      }`}
+                    >
                       {t.name}
                     </span>
                   </div>
@@ -288,6 +466,7 @@ const ESignPannel = () => {
                   <ExternalLink className="h-3 w-3 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
                 </div>
               </button>
+              </div>
             );
           })}
         </div>

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/provider/ProtectedRoute";
 import { useRoom } from "@/provider/DocumentRoomProvider";
-import { resetRoomMembership } from "@/db/statements/document";
+import { documentAlerts, resetRoomMembership } from "@/db/statements/document";
+import CountBadge from "@/components/custom/CountBadge";
 //
 import { Tabs, TabsContent, TabsTrigger, TabsList } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,21 @@ const Dissemination = () => {
   const [resetting, setResetting] = useState(false);
 
   const currentTab = params.get("tab") || "outbox";
+
+  /*
+    The numbers on the tabs. Without them the Inbox looks identical whether
+    it holds nothing or holds four memos nobody has opened, which is the
+    single most useful thing this screen could tell somebody.
+  */
+  const { data: alerts } = useQuery({
+    queryKey: ["document-alerts", room?.lineId, room?.id, userId],
+    queryFn: () =>
+      documentAlerts(token as string, room?.lineId as string, room?.id),
+    enabled: !!token && !!room?.lineId,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 60_000,
+  });
 
   const handleChangeParams = (key: string, value: string) => {
     setParams(
@@ -140,6 +156,18 @@ const Dissemination = () => {
                 <div className="flex items-center gap-1.5">
                   <ExternalLink className="h-3.5 w-3.5" />
                   <span>Outbox</span>
+                  {/* Unsent drafts, then offices that have not confirmed. */}
+                  <CountBadge
+                    count={
+                      (alerts?.outbox.drafts ?? 0) +
+                      (alerts?.outbox.awaitingAck ?? 0)
+                    }
+                    tone="warn"
+                    title={
+                      `${alerts?.outbox.drafts ?? 0} draft(s) never sent · ` +
+                      `${alerts?.outbox.awaitingAck ?? 0} not yet confirmed received`
+                    }
+                  />
                 </div>
               </TabsTrigger>
               <TabsTrigger
@@ -149,6 +177,24 @@ const Dissemination = () => {
                 <div className="flex items-center gap-1.5">
                   <Inbox className="h-3.5 w-3.5" />
                   <span>Inbox</span>
+                  {/*
+                    Unopened is red; everything else on this tab is amber.
+                    Two badges would be two things to read, so it shows the
+                    louder one and explains the rest on hover.
+                  */}
+                  {alerts?.inbox.unopened ? (
+                    <CountBadge
+                      count={alerts.inbox.unopened}
+                      tone="urgent"
+                      title={`${alerts.inbox.unopened} nobody in your office has opened`}
+                    />
+                  ) : (
+                    <CountBadge
+                      count={alerts?.inbox.unacknowledged ?? 0}
+                      tone="warn"
+                      title={`${alerts?.inbox.unacknowledged ?? 0} opened but not yet confirmed received`}
+                    />
+                  )}
                 </div>
               </TabsTrigger>
             </TabsList>

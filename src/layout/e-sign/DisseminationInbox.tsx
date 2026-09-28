@@ -270,15 +270,39 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
               const sender = q.user
                 ? `${q.user.firstName ?? ""} ${q.user.lastName ?? ""}`.trim()
                 : "—";
+              /*
+                Nobody in this office has opened it. Until now that row was
+                pixel-identical to one somebody read a fortnight ago, which
+                is how a memo sits unopened for a fortnight.
+              */
+              const unread = !r.viewedAt;
               return (
                 <div
                   key={r.id}
-                  className="px-3 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3"
+                  className={`px-3 py-2 cursor-pointer flex items-center gap-3 border-l-[3px] ${
+                    unread
+                      ? "border-l-red-600 bg-red-50/70 hover:bg-red-50"
+                      : "border-l-transparent hover:bg-gray-50"
+                  }`}
                   onClick={() => nav(`view/${q.id}`)}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-gray-900 truncate">
+                      {unread ? (
+                        <span
+                          className="shrink-0 rounded-full bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
+                          title="Nobody in your office has opened this yet"
+                        >
+                          New
+                        </span>
+                      ) : null}
+                      <span
+                        className={`text-xs truncate ${
+                          unread
+                            ? "font-bold text-gray-900"
+                            : "font-medium text-gray-900"
+                        }`}
+                      >
                         {q.title || "(no subject)"}
                       </span>
                       <RoutingStatusBadge status={q.status ?? 1} />
@@ -298,6 +322,15 @@ const DisseminationInbox = ({ roomId, token }: Props) => {
                           className="text-[10px] h-5 px-2 font-semibold bg-emerald-700 text-white border-emerald-700"
                         >
                           Received
+                        </Badge>
+                      ) : !unread ? (
+                        // Somebody looked, nobody has said "we have it".
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-2 font-semibold bg-amber-500 text-white border-amber-500"
+                          title="Opened, but this office has not confirmed receipt"
+                        >
+                          Not confirmed
                         </Badge>
                       ) : null}
                     </div>

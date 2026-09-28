@@ -264,6 +264,12 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
               const got = (r.targetRooms ?? []).filter(
                 (t: any) => t.acknowledgedAt,
               ).length;
+              /*
+                The number the sender actually wants at 4pm on a Friday:
+                how many offices have said nothing. Only meaningful once it
+                has gone out — a draft has not asked anybody anything.
+              */
+              const waiting = r.status >= 1 ? Math.max(0, tgts - got) : 0;
               return (
                 <div
                   key={r.id}
@@ -280,6 +286,14 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                         {r.title || "(no subject)"}
                       </span>
                       <RoutingStatusBadge status={r.status} />
+                      {r.status === 0 ? (
+                        <span
+                          className="shrink-0 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
+                          title="Started but never sent — nobody has received this"
+                        >
+                          Never sent
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-0.5 text-[10px] text-gray-500 flex items-center gap-3">
                       <span className="flex items-center gap-1">
@@ -295,6 +309,16 @@ const DisseminationOutbox = ({ roomId, userId, token, lineId }: Props) => {
                         <Check className="h-3 w-3" />
                         {got} received
                       </span>
+                      {waiting ? (
+                        <span
+                          className="flex items-center gap-1 rounded-full bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold text-white"
+                          title={`${waiting} office${
+                            waiting === 1 ? " has" : "s have"
+                          } not confirmed receipt yet`}
+                        >
+                          {waiting} not confirmed
+                        </span>
+                      ) : null}
                       <span className="flex items-center gap-1">
                         <FileText className="h-3 w-3" />
                         {docs} doc{docs === 1 ? "" : "s"}

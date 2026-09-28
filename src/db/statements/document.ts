@@ -971,6 +971,34 @@ export const documentOverview = async (token: string, lineId: string) => {
   return res.data as DocumentOverview;
 };
 
+/**
+ * Only the counts that mean somebody has to act.
+ *
+ * Deliberately separate from documentOverview, which is totals. A total is
+ * a fact; these are tasks, and only tasks get a red badge.
+ */
+export interface DocumentAlerts {
+  roomId: string | null;
+  inbox: { unopened: number; unacknowledged: number };
+  signatures: { awaitingMe: number; queued: number };
+  outbox: { drafts: number; awaitingAck: number };
+  receiving: { unrouted: number };
+  /** What goes in red: unopened mail plus signatures it is my turn to give. */
+  urgent: number;
+}
+
+export const documentAlerts = async (
+  token: string,
+  lineId: string,
+  roomId?: string | null,
+) => {
+  const res = await axios.get("/document/alerts", {
+    headers: jsonHeaders(token),
+    params: roomId ? { lineId, roomId } : { lineId },
+  });
+  return res.data as DocumentAlerts;
+};
+
 export const resetRoomMembership = async (token: string, userId: string) => {
   const res = await axios.post(
     "/document/room/reset-membership",
