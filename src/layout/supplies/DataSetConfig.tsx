@@ -91,9 +91,7 @@ const DataSetConfig = () => {
         <div className="p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-                <Database className="h-4 w-4 text-white" />
-              </div>
+              <Database className="h-4 w-4 text-blue-500 shrink-0" />
               <div>
                 <h1 className="text-sm font-bold text-gray-900">
                   Data Set Configuration
@@ -115,7 +113,7 @@ const DataSetConfig = () => {
             <Button
               size="sm"
               onClick={() => setOnOpen(1)}
-              className="gap-1.5 h-7 text-xs bg-gradient-to-r from-blue-600 to-blue-700"
+              className="gap-1.5 h-7 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               New Data Set
@@ -142,9 +140,7 @@ const DataSetConfig = () => {
         footer={true}
         title={
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <Database className="h-3.5 w-3.5 text-white" />
-            </div>
+            <Database className="h-3.5 w-3.5 text-blue-500 shrink-0" />
             <span className="text-sm font-semibold">New Data Set</span>
           </div>
         }

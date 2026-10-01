@@ -223,9 +223,7 @@ const UserDispenseRecord = () => {
         {/* Header - Compact */}
         <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <History className="h-4 w-4 text-white" />
-            </div>
+            <History className="h-4 w-4 text-blue-500 shrink-0" />
             <div>
               <h1 className="text-base font-bold text-gray-900">
                 Dispense Records

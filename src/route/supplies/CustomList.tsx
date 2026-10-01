@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageShell, Toolbar } from "@/components/custom/page";
 import { useSearchParams, useParams } from "react-router";
 import { useAuth } from "@/provider/ProtectedRoute";
 import {
@@ -56,163 +57,47 @@ const CustomList = () => {
     }
   };
 
-  return (
-    <div className="w-full h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header - Compact */}
-      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
-        <div className="px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <Package className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-semibold text-gray-900 truncate">
-                Supplies Management
-              </h1>
-              <p className="text-[10px] text-gray-500 truncate">
-                {containerId
-                  ? `Container: ${containerId.slice(0, 8)}...`
-                  : "No container"}{" "}
-                •{listId ? ` List: ${listId.slice(0, 8)}...` : " No list"}
-              </p>
-            </div>
-          </div>
-        </div>
+  /*
+    One tab list, built from one array.
 
-        {/* Desktop Tabs */}
-        <div className="hidden sm:block border-t">
-          <Tabs
-            value={currentTab}
-            onValueChange={handleChangeParam}
-            className="w-full"
-          >
-            <TabsList className="w-full justify-start h-10 bg-transparent px-3 gap-0">
+    There used to be two: a `hidden sm:block` set and a `sm:hidden` set,
+    each repeating all five triggers with slightly different padding. That
+    is 130 lines saying the same thing twice, and the failure mode is
+    silent — add a tab, update one copy, and half your users never see it.
+    A single row that scrolls horizontally works at every width.
+  */
+  const tabs = [
+    { value: "overview", label: "Overview", show: true },
+    { value: "report", label: "Reports", show: prev >= 2 },
+    { value: "orders", label: "Orders", show: showOrders },
+    { value: "transactions", label: "Transactions", show: prev >= 2 },
+    { value: "other", label: "Other", show: prev >= 3 },
+  ].filter((t) => t.show);
+
+  return (
+    <PageShell>
+      <Toolbar icon={Package} title="Supplies" />
+
+      <div className="bg-white border-b shrink-0">
+        <Tabs value={currentTab} onValueChange={handleChangeParam}>
+          <TabsList className="w-full h-9 justify-start px-2 gap-0 bg-transparent rounded-none overflow-x-auto flex-nowrap">
+            {tabs.map((t) => (
               <TabsTrigger
-                value="overview"
-                className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
+                key={t.value}
+                value={t.value}
+                className="px-3 py-1.5 shrink-0 text-xs font-medium rounded-none data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
               >
                 <div className="flex items-center gap-1.5">
-                  {getTabIcon("overview")}
-                  <span>Overview</span>
+                  {getTabIcon(t.value)}
+                  <span>{t.label}</span>
                 </div>
               </TabsTrigger>
-
-              {prev >= 2 && (
-                <TabsTrigger
-                  value="report"
-                  className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
-                >
-                  <div className="flex items-center gap-1.5">
-                    {getTabIcon("report")}
-                    <span>Reports</span>
-                  </div>
-                </TabsTrigger>
-              )}
-
-              {showOrders && (
-                <TabsTrigger
-                  value="orders"
-                  className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
-                >
-                  <div className="flex items-center gap-1.5">
-                    {getTabIcon("orders")}
-                    <span>Orders</span>
-                  </div>
-                </TabsTrigger>
-              )}
-              {prev >= 2 && (
-                <TabsTrigger
-                  value="transactions"
-                  className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
-                >
-                  <div className="flex items-center gap-1.5">
-                    {getTabIcon("transactions")}
-                    <span>Transactions</span>
-                  </div>
-                </TabsTrigger>
-              )}
-
-              {prev >= 3 && (
-                <TabsTrigger
-                  value="other"
-                  className="px-3 py-1.5 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none text-xs font-medium"
-                >
-                  <div className="flex items-center gap-1.5">
-                    {getTabIcon("other")}
-                    <span>Other</span>
-                  </div>
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* Mobile Tabs - Scrollable horizontal */}
-        <div className="sm:hidden border-t">
-          <Tabs value={currentTab} onValueChange={handleChangeParam}>
-            <TabsList className="w-full h-9 px-2 justify-start overflow-x-auto flex-nowrap rounded-none bg-transparent gap-0">
-              <TabsTrigger
-                value="overview"
-                className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-              >
-                <div className="flex items-center gap-1">
-                  {getTabIcon("overview")}
-                  <span>Overview</span>
-                </div>
-              </TabsTrigger>
-
-              {prev >= 2 && (
-                <TabsTrigger
-                  value="report"
-                  className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-                >
-                  <div className="flex items-center gap-1">
-                    {getTabIcon("report")}
-                    <span>Reports</span>
-                  </div>
-                </TabsTrigger>
-              )}
-
-              {showOrders && (
-                <TabsTrigger
-                  value="orders"
-                  className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-                >
-                  <div className="flex items-center gap-1">
-                    {getTabIcon("orders")}
-                    <span>Orders</span>
-                  </div>
-                </TabsTrigger>
-              )}
-              {prev >= 2 && (
-                <TabsTrigger
-                  value="transactions"
-                  className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-                >
-                  <div className="flex items-center gap-1">
-                    {getTabIcon("transactions")}
-                    <span>Transactions</span>
-                  </div>
-                </TabsTrigger>
-              )}
-              {prev >= 3 && (
-                <TabsTrigger
-                  value="other"
-                  className="px-2.5 py-1 shrink-0 text-xs data-[state=active]:border-b-2 data-[state=active]:border-blue-500 rounded-none"
-                >
-                  <div className="flex items-center gap-1">
-                    {getTabIcon("other")}
-                    <span>Other</span>
-                  </div>
-                </TabsTrigger>
-              )}
-            </TabsList>
-          </Tabs>
-        </div>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      {/* Content Area - Compact */}
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 min-h-0 p-3">
         <Tabs
           value={currentTab}
           onValueChange={handleChangeParam}
@@ -286,7 +171,7 @@ const CustomList = () => {
           )}
         </Tabs>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

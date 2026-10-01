@@ -233,9 +233,7 @@ const OrderCompletion = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="space-y-1.5">
                 <div className="flex items-center flex-wrap gap-2">
-                  <div className="p-1 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-                    <Package className="h-3.5 w-3.5 text-white" />
-                  </div>
+                  <Package className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                   <h1 className="text-base font-bold text-gray-900">
                     Order Completion
                   </h1>

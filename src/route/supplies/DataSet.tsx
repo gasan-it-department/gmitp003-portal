@@ -257,9 +257,7 @@ const DataSet = () => {
         <div className="p-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex-shrink-0">
-                <Database className="h-4 w-4 text-white" />
-              </div>
+              <Database className="h-4 w-4 text-blue-500 shrink-0" />
               <div className="min-w-0">
                 <div className="flex items-center flex-wrap gap-2">
                   <h1 className="text-sm font-bold text-gray-900 truncate max-w-[180px] sm:max-w-none">
@@ -368,9 +366,7 @@ const DataSet = () => {
       <Modal
         title={
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <Package className="h-3.5 w-3.5 text-white" />
-            </div>
+            <Package className="h-3.5 w-3.5 text-blue-500 shrink-0" />
             <span className="text-sm font-semibold">Add New Item</span>
           </div>
         }
@@ -486,9 +482,7 @@ const DataSet = () => {
       <Modal
         title={
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <FileUp className="h-3.5 w-3.5 text-white" />
-            </div>
+            <FileUp className="h-3.5 w-3.5 text-blue-500 shrink-0" />
             <span className="text-sm font-semibold">Upload Excel File</span>
           </div>
         }

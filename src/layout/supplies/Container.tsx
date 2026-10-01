@@ -18,6 +18,12 @@ import { CreateListSchame } from "@/interface/zod";
 //
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/custom/Modal";
+import {
+  PageShell,
+  Toolbar,
+  PageBody,
+  Panel,
+} from "@/components/custom/page";
 import ConfirmDelete from "../ConfirmDelete";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -162,43 +168,34 @@ const Container = () => {
   };
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header Section - Compact */}
-      <div className="border-b bg-white sticky top-0 z-10">
-        <div className="p-3">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md flex-shrink-0">
-                <FolderOpen className="h-4 w-4 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center flex-wrap gap-2">
-                  <h1 className="text-sm font-bold text-gray-900 truncate max-w-[180px] sm:max-w-none">
-                    {data?.data?.name || "Loading..."}
-                  </h1>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                    {data?.data?.code || "..."}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+    <PageShell>
+      {/*
+        One strip, not two. The container's name, its code and every control
+        that acts on it sit on the same line, which is what HR does and what
+        keeps the list itself above the fold on a counter PC.
+      */}
+      <Toolbar icon={FolderOpen} title={data?.data?.name || "Loading…"}>
+        <Badge
+          variant="outline"
+          className="text-[10px] px-1.5 py-0 font-mono shrink-0"
+        >
+          {data?.data?.code || "…"}
+        </Badge>
 
-            {isFetching && (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-              </div>
-            )}
+        <div className="flex-1 min-w-[160px]">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+            <Input
+              placeholder="Search lists..."
+              onChange={(e) => setText(e.target.value)}
+              className="h-8 pl-7 text-xs"
+            />
           </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-              <Input
-                placeholder="Search lists..."
-                onChange={(e) => setText(e.target.value)}
-                className="pl-8 h-8 text-xs bg-gray-50 border-gray-200"
-              />
-            </div>
+        {isFetching && (
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 shrink-0" />
+        )}
 
             <div className="flex items-center gap-2">
               <Popover>
@@ -264,22 +261,19 @@ const Container = () => {
               <Button
                 size="sm"
                 onClick={() => setOnOpen(1)}
-                className="gap-1.5 h-8 text-xs bg-gradient-to-r from-blue-600 to-blue-700"
+                className="gap-1.5 h-8 text-xs"
               >
-                <ScrollText className="h-3.5 w-3.5" />
+                <ScrollText className="h-3 w-3" />
                 New List
               </Button>
             </div>
-          </div>
-        </div>
-      </div>
+      </Toolbar>
 
-      {/* Main Content - Compact */}
-      <div className="p-3">
-        <div className="border rounded-lg bg-white overflow-hidden">
+      <PageBody>
+        <Panel>
           <InventoryList query={query} />
-        </div>
-      </div>
+        </Panel>
+      </PageBody>
 
       {/* Create List Modal - Compact */}
       <Modal
@@ -288,9 +282,7 @@ const Container = () => {
         yesTitle="Create List"
         title={
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-md">
-              <Package className="h-3.5 w-3.5 text-white" />
-            </div>
+            <Package className="h-3.5 w-3.5 text-blue-500 shrink-0" />
             <span className="text-sm font-semibold">Create New List</span>
           </div>
         }
@@ -369,7 +361,7 @@ const Container = () => {
         loading={removeContainer.isPending}
         yesTitle="Remove Container"
       />
-    </div>
+    </PageShell>
   );
 };
 

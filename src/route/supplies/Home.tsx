@@ -1,28 +1,23 @@
-//libs
 import { useEffect } from "react";
 import { Outlet } from "react-router";
-//
 
-//icons
-// import { Boxes } from "lucide-react";
-
-//
-
+/**
+ * The Inventory module shell.
+ *
+ * Deliberately nothing but a frame. It used to add `h-screen` inside an
+ * already-constrained parent and then 8px of padding around every child,
+ * which is why no Inventory screen could sit flush the way the HR screens
+ * do — each one was floating in a border it did not ask for, and each one
+ * compensated differently. The screens own their own spacing now.
+ */
 const Home = () => {
   useEffect(() => {
-    const main = () => {
-      window.document.title = "Inventory";
-    };
-    main();
+    window.document.title = "Inventory";
   }, []);
 
   return (
-    <div className=" w-full h-screen bg-neutral-100">
-      <div className="w-full h-full p-2">
-        <div className=" w-full h-full">
-          <Outlet />
-        </div>
-      </div>
+    <div className="w-full h-full min-h-0 overflow-hidden">
+      <Outlet />
     </div>
   );
 };
