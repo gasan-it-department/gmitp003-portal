@@ -21,12 +21,19 @@ import { Input } from "@/components/ui/input";
 import DataSetList from "./DataSetList";
 //
 import { Database, FileText, Plus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 //
 import { type AddNewDataSetProps } from "@/interface/data";
 import { AddNewDataSchema } from "@/interface/zod";
+import {
+  PageShell,
+  Toolbar,
+  ToolbarSpacer,
+  PageBody,
+  Panel,
+  PanelBody,
+} from "@/components/custom/page";
 
 //
 
@@ -85,55 +92,45 @@ const DataSetConfig = () => {
   };
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header Section - Compact */}
-      <div className="border-b bg-white sticky top-0 z-10">
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4 text-blue-500 shrink-0" />
-              <div>
-                <h1 className="text-sm font-bold text-gray-900">
-                  Data Set Configuration
-                </h1>
-                <p className="text-xs text-gray-500">
-                  Manage data structures for your container
-                </p>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-              Cont: {containerId?.slice(-8)}
-            </Badge>
-          </div>
+    <PageShell>
+      {/*
+        The old header spent three stacked rows on one sentence of
+        explanation and a truncated container id. The sentence said what a
+        data set is, which the empty state is the place for; the id was
+        debug output. Both are gone, and the control that was below the
+        fold on a short screen is now beside the title.
+      */}
+      <Toolbar
+        icon={Database}
+        title="Data Set Configuration"
+        subtitle="The structure items in this container are built from"
+      >
+        <ToolbarSpacer />
+        <Button
+          size="sm"
+          onClick={() => setOnOpen(1)}
+          className="gap-1.5 h-8 text-xs shrink-0"
+        >
+          <Plus className="h-3 w-3" />
+          New Data Set
+        </Button>
+      </Toolbar>
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-600 flex-1">
-              Data sets define the structure for items in this container.
-            </p>
-            <Button
-              size="sm"
-              onClick={() => setOnOpen(1)}
-              className="gap-1.5 h-7 text-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Data Set
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content Area - Compact */}
-      <div className="p-3">
-        <div className="border rounded-lg bg-white overflow-hidden">
-          <div className="px-3 py-2 border-b bg-gray-50">
-            <div className="flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5 text-blue-600" />
-              <h2 className="text-xs font-semibold text-gray-800">Data Sets</h2>
+      <PageBody>
+        <Panel>
+          <div className="px-3 py-2 border-b bg-gray-50 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <FileText className="h-3 w-3 text-blue-500" />
+              <h2 className="text-[10px] font-semibold text-gray-700 uppercase">
+                Data Sets
+              </h2>
             </div>
           </div>
-          <DataSetList />
-        </div>
-      </div>
+          <PanelBody>
+            <DataSetList />
+          </PanelBody>
+        </Panel>
+      </PageBody>
 
       {/* New Data Set Modal - Compact */}
       <Modal
@@ -148,7 +145,7 @@ const DataSetConfig = () => {
           <div className="space-y-3 p-1">
             <div className="p-2 bg-blue-50 rounded-md border">
               <div className="flex items-center gap-2">
-                <FileText className="h-3.5 w-3.5 text-blue-600" />
+                <FileText className="h-3 w-3 text-blue-500" />
                 <div>
                   <p className="text-xs font-medium text-blue-800">
                     Container: {containerId?.slice(-8)}
@@ -219,7 +216,7 @@ const DataSetConfig = () => {
         loading={isSubmitting}
         yesTitle="Create Data Set"
       />
-    </div>
+    </PageShell>
   );
 };
 

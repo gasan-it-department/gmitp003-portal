@@ -6,6 +6,7 @@ import { formatDate } from "@/utils/date";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  FileText,
   Loader2,
   Package,
   User,
@@ -22,6 +23,11 @@ import { Button } from "@/components/ui/button";
 import UpdateTransaction from "./UpdateTransaction";
 //interface/schema/types
 import type { SupplyDispenseRecordProps } from "@/interface/data";
+import {
+  PageShell,
+  Toolbar,
+  ToolbarSpacer,
+} from "@/components/custom/page";
 
 const DispenseRecordData = () => {
   const { transactionId, lineId } = useParams();
@@ -78,20 +84,13 @@ const DispenseRecordData = () => {
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-4 space-y-4">
-        {/* Header - Compact */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Dispense Record
-              </h1>
-              <p className="text-xs text-gray-500 font-mono">
-                ID: {data.id.slice(0, 8)}...
-              </p>
-            </div>
-          </div>
+    <PageShell>
+      <Toolbar
+        icon={FileText}
+        title="Dispense Record"
+        subtitle={data.refCode ? `Ref ${data.refCode}` : undefined}
+      >
+        <ToolbarSpacer />
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs px-3 py-1">
               {data.quantity} units dispensed
@@ -123,7 +122,9 @@ const DispenseRecordData = () => {
               />
             )}
           </div>
-        </div>
+      </Toolbar>
+
+      <div className="flex-1 min-h-0 overflow-auto p-3 space-y-3">
 
         <Separator className="my-2" />
 
@@ -136,7 +137,7 @@ const DispenseRecordData = () => {
               <div className="px-4 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Supply Details
                   </h3>
                 </div>
@@ -166,7 +167,7 @@ const DispenseRecordData = () => {
               <div className="px-4 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Transaction Information
                   </h3>
                 </div>
@@ -207,7 +208,7 @@ const DispenseRecordData = () => {
                 <div className="px-4 py-2 bg-gray-50 border-b">
                   <div className="flex items-center gap-2">
                     <Box className="h-4 w-4 text-blue-600" />
-                    <h3 className="text-sm font-semibold text-gray-800">
+                    <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                       Batch & Container
                     </h3>
                   </div>
@@ -238,8 +239,8 @@ const DispenseRecordData = () => {
             <div className="border rounded-lg bg-white overflow-hidden">
               <div className="px-4 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <User className="h-3 w-3 text-blue-500" />
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     People Involved
                   </h3>
                 </div>
@@ -302,7 +303,7 @@ const DispenseRecordData = () => {
               <div className="px-4 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Transaction Metadata
                   </h3>
                 </div>
@@ -330,7 +331,7 @@ const DispenseRecordData = () => {
                 <div className="px-4 py-2 bg-gray-50 border-b">
                   <div className="flex items-center gap-2">
                     <Hash className="h-4 w-4 text-blue-600" />
-                    <h3 className="text-sm font-semibold text-gray-800">
+                    <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                       Stock Information
                     </h3>
                   </div>
@@ -363,7 +364,7 @@ const DispenseRecordData = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 };
 

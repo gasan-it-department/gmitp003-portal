@@ -58,6 +58,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  PageShell,
+  Toolbar,
+  ToolbarSpacer,
+  PageBody,
+  Panel,
+  EmptyState,
+} from "@/components/custom/page";
 
 const DataSet = () => {
   const [onOpen, setOnOpen] = useState(0);
@@ -209,68 +217,57 @@ const DataSet = () => {
   });
 
   if (isFetching) {
+    /*
+      The skeleton uses the real shell, so the toolbar does not appear,
+      shift and settle when the data lands — the loading state is the same
+      page with the words missing.
+    */
     return (
-      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 overflow-auto">
-        <div className="p-4 space-y-4">
-          <div className="border rounded-lg p-4 bg-white">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <div className="space-y-1.5">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-          </div>
-          <div className="border rounded-lg bg-white overflow-hidden">
-            <Skeleton className="h-64 w-full" />
-          </div>
-        </div>
-      </div>
+      <PageShell>
+        <Toolbar icon={Database} title="Loading…" />
+        <PageBody>
+          <Panel>
+            <Skeleton className="h-full w-full" />
+          </Panel>
+        </PageBody>
+      </PageShell>
     );
   }
 
   if (!data) {
     return (
-      <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="border rounded-lg p-6 text-center bg-white max-w-md">
-          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-            <AlertTriangle className="h-7 w-7 text-gray-400" />
-          </div>
-          <h3 className="text-base font-semibold text-gray-700 mb-1">
-            Data Set Not Found
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            The data set you're looking for doesn't exist.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => nav(-1)}>
-            Go Back
-          </Button>
-        </div>
-      </div>
+      <PageShell>
+        <Toolbar icon={Database} title="Data set" />
+        <PageBody>
+          <Panel>
+            <EmptyState
+              icon={AlertTriangle}
+              title="That data set does not exist"
+              hint="It may have been deleted, or the link is out of date."
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => nav(-1)}
+                >
+                  Go back
+                </Button>
+              }
+            />
+          </Panel>
+        </PageBody>
+      </PageShell>
     );
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header Section - Compact */}
-      <div className="border-b bg-white sticky top-0 z-10">
-        <div className="p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Database className="h-4 w-4 text-blue-500 shrink-0" />
-              <div className="min-w-0">
-                <div className="flex items-center flex-wrap gap-2">
-                  <h1 className="text-sm font-bold text-gray-900 truncate max-w-[180px] sm:max-w-none">
-                    {data.data.title}
-                  </h1>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                    ID: {dataSetId?.slice(-8)}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
+    <PageShell>
+      {/* The truncated data-set id that used to sit beside the title was
+          debug output — it identified nothing a user could act on. */}
+      <Toolbar icon={Database} title={data.data.title}>
+        <ToolbarSpacer />
+        <div className="flex items-center gap-2 flex-shrink-0">
               {selected.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
                   {selected.length} selected
@@ -346,21 +343,18 @@ const DataSet = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-            </div>
-          </div>
         </div>
-      </div>
+      </Toolbar>
 
-      {/* Content Area - Compact */}
-      <div className="p-3">
-        <div className="border rounded-lg bg-white overflow-hidden">
+      <PageBody>
+        <Panel>
           <DataSetSupplies
             onSelect={onSelect}
             selected={selected}
             setSelected={setSelected}
           />
-        </div>
-      </div>
+        </Panel>
+      </PageBody>
 
       {/* Add Item Modal - Compact */}
       <Modal
@@ -634,7 +628,7 @@ const DataSet = () => {
         loading={deleteDateSetMutation.isPending}
         onFunction={() => deleteDateSetMutation.mutateAsync()}
       />
-    </div>
+    </PageShell>
   );
 };
 

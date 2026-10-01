@@ -101,21 +101,21 @@ const SupplyOverviewList = ({ listId, auth, query }: Props) => {
       <div className="flex-1 overflow-auto">
         <div className="min-w-[700px]">
           <Table>
-            <TableHeader className="sticky top-0 bg-gray-100 z-10">
+            <TableHeader className="bg-gray-100 sticky top-0 z-10">
               <TableRow className="hover:bg-transparent border-b">
-                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold w-12">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap w-12">
                   No.
                 </TableHead>
-                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold min-w-[100px]">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap min-w-[100px]">
                   Ref
                 </TableHead>
-                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold min-w-[160px]">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap min-w-[160px]">
                   Item
                 </TableHead>
-                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold text-center w-20">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap text-center w-20">
                   Stock
                 </TableHead>
-                <TableHead className="text-gray-700 py-2 px-3 text-xs font-semibold w-24">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap w-24">
                   Status
                 </TableHead>
               </TableRow>

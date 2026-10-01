@@ -157,7 +157,7 @@ const SupplyOther = ({ listId, token, userId, lineId, containerId }: Props) => {
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="w-full h-full overflow-auto">
       <div className="p-3 space-y-3">
         {/* List Information Card - Compact */}
         <div className="border rounded-lg bg-white overflow-hidden">

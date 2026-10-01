@@ -48,7 +48,7 @@ const SuppliesOverview = () => {
 
   if (isFetching && !data) {
     return (
-      <div className="w-full h-full flex flex-col space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="w-full h-full flex flex-col gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="border rounded-lg p-3 bg-white">
@@ -124,7 +124,7 @@ const SuppliesOverview = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col space-y-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="w-full h-full flex flex-col gap-3">
       {/* Stats Overview Cards - Compact */}
       <div className="grid grid-cols-3 gap-3">
         {/* Total Items Card */}
@@ -132,7 +132,7 @@ const SuppliesOverview = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] text-gray-500 uppercase">Total</p>
-              <p className="text-lg font-bold text-gray-900">{data.total}</p>
+              <p className="text-base font-bold text-gray-900 tabular-nums">{data.total}</p>
             </div>
             <div className="p-1 rounded-md bg-blue-50">
               <Package className="w-3.5 h-3.5 text-blue-600" />
@@ -145,7 +145,7 @@ const SuppliesOverview = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] text-gray-500 uppercase">Low Stock</p>
-              <p className="text-lg font-bold text-gray-900">{data.lowStock}</p>
+              <p className="text-base font-bold text-gray-900 tabular-nums">{data.lowStock}</p>
             </div>
             <div className="p-1 rounded-md bg-red-50">
               <AlertCircle className="w-3.5 h-3.5 text-red-600" />
@@ -158,7 +158,7 @@ const SuppliesOverview = () => {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-[10px] text-gray-500 uppercase">Orders</p>
-              <p className="text-lg font-bold text-gray-900">{data.order}</p>
+              <p className="text-base font-bold text-gray-900 tabular-nums">{data.order}</p>
             </div>
             <div className="p-1 rounded-md bg-purple-50">
               <TrendingUp className="w-3.5 h-3.5 text-purple-600" />

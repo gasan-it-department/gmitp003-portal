@@ -243,18 +243,18 @@ const DispenseTransactions = ({ listId, token }: Props) => {
       <div className="flex-1 overflow-auto bg-white rounded-b-lg">
         <div className="min-w-[800px]">
           <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="p-2 text-xs w-[160px]">
+            <TableHeader className="bg-gray-100 sticky top-0 z-10">
+              <TableRow className="hover:bg-transparent border-b">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap  w-[160px]">
                   Date & Time
                 </TableHead>
-                <TableHead className="p-2 text-xs">Transaction Ref.</TableHead>
-                <TableHead className="p-2 text-xs text-center w-[80px]">
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap ">Transaction Ref.</TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap  text-center w-[80px]">
                   Quantity
                 </TableHead>
-                <TableHead className="p-2 text-xs">Recipient</TableHead>
-                <TableHead className="p-2 text-xs">Dispensed By</TableHead>
-                <TableHead className="p-2 text-xs">Remarks</TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap ">Recipient</TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap ">Dispensed By</TableHead>
+                <TableHead className="text-[10px] font-semibold text-gray-700 uppercase px-3 py-2 whitespace-nowrap ">Remarks</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

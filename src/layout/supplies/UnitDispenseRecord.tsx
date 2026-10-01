@@ -7,7 +7,6 @@ import { useParams } from "react-router";
 import axios from "@/db/axios";
 
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Loader2,
   User,
@@ -36,6 +35,12 @@ import { Button } from "@/components/ui/button";
 //
 import type { SupplyDispenseRecordProps, Department } from "@/interface/data";
 import DispenseTransactionItem from "./items/DispenseTransactionItem";
+import {
+  PageShell,
+  Toolbar,
+  ToolbarSpacer,
+  PageBody,
+} from "@/components/custom/page";
 
 interface ListProps {
   list: SupplyDispenseRecordProps[];
@@ -197,37 +202,30 @@ const UnitDispenseRecord = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="p-4 flex-1 min-h-0 flex flex-col gap-4">
-        {/* Header - Compact */}
-        <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-blue-500 shrink-0" />
-            <div>
-              <h1 className="text-base font-bold text-gray-900">
-                Dispense Records
-              </h1>
-              <p className="text-xs text-gray-500">
-                Transaction history for {unitData.name}
-              </p>
-            </div>
-          </div>
-          <Badge variant="outline" className="text-xs px-3 py-1">
-            Total: {totalQuantity} units
-          </Badge>
-        </div>
+    <PageShell>
+      <Toolbar
+        icon={History}
+        title="Dispense Records"
+        subtitle={`Everything issued to ${unitData.name}`}
+      >
+        <ToolbarSpacer />
+        <Badge variant="outline" className="text-[10px] h-6 px-2 shrink-0">
+          Total: <span className="font-semibold ml-1 tabular-nums">{totalQuantity}</span>
+          <span className="ml-1">units</span>
+        </Badge>
+      </Toolbar>
 
-        <Separator className="flex-shrink-0 my-0" />
+      <PageBody className="flex flex-col gap-3">
 
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Left Sidebar - sticky / non-scrolling with page */}
           <div className="lg:col-span-1 space-y-3 lg:overflow-auto lg:pr-1">
             {/* Unit Info Card */}
             <div className="border rounded-lg bg-white overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b">
+              <div className="px-3 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <Building2 className="h-3 w-3 text-blue-500" />
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Unit Information
                   </h3>
                 </div>
@@ -250,10 +248,10 @@ const UnitDispenseRecord = () => {
 
             {/* Export Card */}
             <div className="border rounded-lg bg-white overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b">
+              <div className="px-3 py-2 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
                   <Download className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Export
                   </h3>
                 </div>
@@ -284,7 +282,7 @@ const UnitDispenseRecord = () => {
               <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b">
                 <div className="flex items-center gap-2">
                   <Package className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-[10px] font-semibold text-gray-700 uppercase">
                     Dispense Records
                   </h3>
                   <Badge variant="secondary" className="ml-auto text-xs">
@@ -397,8 +395,8 @@ const UnitDispenseRecord = () => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </PageBody>
+    </PageShell>
   );
 };
 
