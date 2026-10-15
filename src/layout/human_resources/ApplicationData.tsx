@@ -114,7 +114,7 @@ const ApplicationData = ({ applicationId }: Props) => {
     if (!applicationId) return;
     setDownloading(true);
     try {
-      await downloadPdsExcel({ applicationId });
+      await downloadPdsExcel({ applicationId, token: auth.token as string });
     } catch {
       toast.error("Failed to download PDS. Please try again.");
     } finally {

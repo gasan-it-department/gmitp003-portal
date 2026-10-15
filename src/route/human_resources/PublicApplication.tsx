@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useTemAuth } from "@/provider/TempAuthProvider";
 import {
   publicApplicationData,
-  downloadPdsExcel,
+  downloadOwnPdsExcel,
   resolveAddressNames,
   withdrawApplication,
   reuploadApplicationFile,
@@ -179,7 +179,11 @@ const PublicApplication = () => {
     if (!applicationId) return;
     setDownloading(true);
     try {
-      await downloadPdsExcel({ applicationId });
+      if (!token) {
+        toast.error("Your session has expired. Reopen the link and try again.");
+        return;
+      }
+      await downloadOwnPdsExcel(token);
     } catch {
       toast.error("Failed to download PDS. Please try again.");
     } finally {

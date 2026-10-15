@@ -2554,16 +2554,52 @@ export const getPSGCbarangays = async (municipalId: string) => {
  * Download a filled CS Form 212 (.xlsx). Pass `applicationId` for an
  * application, or `userId` for an onboarded employee. Triggers a browser
  * download with the filename from the response.
+ *
+ * The token is REQUIRED. /application/pds/export is gated by the
+ * `authenticated` preHandler, which rejects anything without an
+ * `Authorization: Bearer` header outright — it does not read the session
+ * cookie that `withCredentials` sends. Omitting it returns 401 before the
+ * exporter ever runs, which is exactly how this download failed: the call
+ * was written without the header every sibling request here passes.
  */
 export const downloadPdsExcel = async (params: {
   applicationId?: string;
   userId?: string;
+  token: string;
 }) => {
   const qs = params.applicationId
     ? `id=${encodeURIComponent(params.applicationId)}`
     : `userId=${encodeURIComponent(params.userId ?? "")}`;
   const response = await axios.get(`/application/pds/export?${qs}`, {
     responseType: "blob",
+    headers: { Authorization: `Bearer ${params.token}` },
+  });
+  const blob = response.data as Blob;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cd = response.headers["content-disposition"] as string | undefined;
+  const m = cd ? /filename="?([^"]+)"?/.exec(cd) : null;
+  a.download = m ? m[1] : "PDS.xlsx";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/**
+ * The applicant's own PDS, from the public application page.
+ *
+ * A separate endpoint from the HR download because the session is
+ * different: the public page holds a temp token scoped to one application,
+ * which the HR route's `authenticated` gate rejects outright. The server
+ * takes the application id from that token, so nothing is passed here but
+ * the token itself.
+ */
+export const downloadOwnPdsExcel = async (token: string) => {
+  const response = await axios.get("/application/pds/export/own", {
+    responseType: "blob",
+    headers: { Authorization: `Bearer ${token}` },
   });
   const blob = response.data as Blob;
   const url = URL.createObjectURL(blob);

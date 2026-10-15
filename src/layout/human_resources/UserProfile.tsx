@@ -160,7 +160,7 @@ const UserProfile = () => {
     if (!employeeId) return;
     setDownloading(true);
     try {
-      await downloadPdsExcel({ userId: employeeId });
+      await downloadPdsExcel({ userId: employeeId, token: auth.token as string });
     } catch {
       toast.error("Failed to download PDS. Please try again.");
     } finally {
