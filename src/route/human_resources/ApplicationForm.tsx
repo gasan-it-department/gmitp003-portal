@@ -739,6 +739,26 @@ const ApplicationForm = () => {
                   />
                   <FormField
                     control={control}
+                    name="placeOfBirth"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700">
+                          Place of Birth
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            className="bg-white border-gray-300 focus:border-blue-500"
+                            placeholder="City / Municipality, Province"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={control}
                     name="birthDate"
                     render={({ field }) => (
                       <FormItem>

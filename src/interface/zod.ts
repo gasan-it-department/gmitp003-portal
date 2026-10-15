@@ -217,6 +217,7 @@ export const AddUserSchema = z
     middleName: z.string().optional(),
     suffix: z.string().optional(),
     birthDate: z.date().optional(),
+    placeOfBirth: z.string().optional(),
     email: z.string().min(1, "Invalid email address"),
     gender: z.string().min(1, "Gender is required"),
     citizenship: CitizenshipSchema,
