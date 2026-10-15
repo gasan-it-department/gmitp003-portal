@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -33,6 +33,10 @@ import type { User } from "@/interface/data";
 const UserSideProfile = () => {
   const auth = useAuth();
   const nav = useNavigate();
+  // The panel lives inside the /:lineId shell, so the URL is the reliable
+  // source for it. user.lineId can be null on an account that has not been
+  // attached to a line, and "/undefined/profile" matches nothing.
+  const { lineId: routeLineId } = useParams();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -238,6 +242,17 @@ const UserSideProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* The panel is for glancing at; the page is for reading, and is
+          where this person gets their own PDS. */}
+      <Button
+        variant="outline"
+        className="w-full h-8 text-[11px] gap-1.5"
+        onClick={() => nav(`/${routeLineId ?? user.lineId}/profile`)}
+      >
+        <UserRound className="h-3 w-3" />
+        View full profile
+      </Button>
 
       {/* Identity QR — view it big, or download it to reprint */}
       <IdentityQrCard

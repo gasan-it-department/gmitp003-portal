@@ -151,6 +151,7 @@ import PositionDetail from "./route/human_resources/PositionDetail.tsx";
 import PositionSelectApplicant from "./route/human_resources/PositionSelectApplicant.tsx";
 import ReuqestDetail from "./layout/human_resources/document/ReuqestDetail.tsx";
 import DocumentRoomProvider from "./provider/DocumentRoomProvider.tsx";
+import MyProfile from "./route/profile/MyProfile";
 
 const queryClient = new QueryClient();
 
@@ -236,6 +237,11 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/:lineId/admin" element={<AdminPage />}>
                 <Route index={true} element={<AdminHome />} />
               </Route>
+              {/* A person's own profile, and their own PDS. Like Services,
+                  open to every line user with no module gate — everybody
+                  has a profile whether or not they are enrolled in
+                  anything. */}
+              <Route path="/:lineId/profile" element={<MyProfile />} />
               {/* Services portal — open to every line user, no module gate */}
               <Route path="/:lineId/services" element={<ServicesIndex />}>
                 <Route path="complaints" element={<Complaints />} />
