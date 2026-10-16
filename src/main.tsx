@@ -30,6 +30,8 @@ import AddEmployee from "./route/human_resources/AddEmployee.tsx";
 import Invite from "./route/human_resources/Invite.tsx";
 import SalaryGrade from "./route/human_resources/SalaryGrade.tsx";
 import SalaryGradeDetail from "./route/human_resources/SalaryGradeDetail.tsx";
+import StepIncrement from "./route/human_resources/StepIncrement.tsx";
+import StepIncrementDetail from "./route/human_resources/StepIncrementDetail.tsx";
 import Leaves from "./route/human_resources/Leaves.tsx";
 import Attendance from "./route/human_resources/Attendance.tsx";
 import AttendanceDetail from "./route/human_resources/AttendanceDetail.tsx";
@@ -425,6 +427,11 @@ createRoot(document.getElementById("root")!).render(
                 <Route
                   path="salary/:salaryGradeId"
                   element={<SalaryGradeDetail />}
+                />
+                <Route path="step-increments" element={<StepIncrement />} />
+                <Route
+                  path="step-increments/:employeeId"
+                  element={<StepIncrementDetail />}
                 />
                 <Route path="leaves" element={<Leaves />} />
                 <Route path="attendance" element={<Attendance />} />

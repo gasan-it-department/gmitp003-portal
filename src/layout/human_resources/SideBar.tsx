@@ -6,6 +6,7 @@ import {
   Blocks,
   Building2,
   CalendarDays,
+  ChevronsUp,
   Clock4,
   Component,
   File,
@@ -50,6 +51,7 @@ export const menuGroups = [
       { title: "Archived",      path: "archived",    Icon: Archive,       children: [], accord: false },
       { title: "Units",         path: "units",       Icon: Blocks,        children: [], accord: false },
       { title: "Salary Grades", path: "salary",      Icon: Landmark,      children: [], accord: false },
+      { title: "Step Increments", path: "step-increments", Icon: ChevronsUp, children: [], accord: false },
     ],
   },
   {
