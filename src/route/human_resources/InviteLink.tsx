@@ -1292,6 +1292,26 @@ const InviteLink = () => {
                             />
                     <FormField
                       control={control}
+                      name="spouseSuffix"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Spouse Name Extension (Jr., Sr.)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Jr., Sr., III"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
                       name="spouseOccupation"
                       render={({ field }) => (
                         <FormItem>
