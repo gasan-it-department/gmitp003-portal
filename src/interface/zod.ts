@@ -241,6 +241,8 @@ export const AddUserSchema = z
     spouseSurname: z.string().optional(),
     spouseFirstname: z.string().optional(),
     spouseMiddle: z.string().optional(),
+    spouseOccupation: z.string().optional(),
+    spouseEmployer: z.string().optional(),
     spouseBusinessAddress: z.string().optional(),
     spouseTelephone: z.string().optional(),
     father: ParentSchema,

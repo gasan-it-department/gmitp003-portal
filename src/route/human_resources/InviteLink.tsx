@@ -1290,6 +1290,46 @@ const InviteLink = () => {
                               {...field}
                               placeholder="Spouse middle name"
                             />
+                    <FormField
+                      control={control}
+                      name="spouseOccupation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Spouse Occupation
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Spouse occupation"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={control}
+                      name="spouseEmployer"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-700">
+                            Spouse Employer / Business Name
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="bg-white border-gray-300 focus:border-blue-500"
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Employer or business name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
