@@ -1,0 +1,44 @@
+# The portal's quality gate.
+#
+# The important line here is `tsc -b`, and it is easy to assume it is
+# redundant next to the build. It is not: `npm run build` is `vite build`,
+# which strips types without checking them. A file with a genuine type error
+# — including use-before-declaration, which throws at runtime — builds
+# perfectly happily and ships to Vercel. The type check has to be run
+# separately or it is not run at all.
+#
+# Lint is reported but not enforced yet: the codebase has a backlog of
+# existing warnings, and a gate that fails on day one for pre-existing
+# reasons gets switched off rather than fixed. Drop `continue-on-error`
+# once the backlog is clear.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Must come first and must be its own step: vite build will not do it.
+      - name: Typecheck (vite build does NOT do this)
+        run: npx tsc -b
+
+      - run: npm run build
+
+      - name: Lint (reported, not enforced)
+        run: npm run lint
+        continue-on-error: true
